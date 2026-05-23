@@ -2,6 +2,7 @@ import { Component, HostListener, signal, Inject, PLATFORM_ID } from '@angular/c
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../services/auth.service';
+import { ThemeToggleComponent } from '../components/theme-toggle/theme-toggle.component';
 
 interface NavItem {
   label: string;
@@ -12,7 +13,7 @@ interface NavItem {
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [CommonModule, RouterLink, RouterLinkActive, RouterOutlet, ThemeToggleComponent],
   template: `
     <div class="app-shell">
       <!-- Top Navbar (Full Width) -->
@@ -29,6 +30,7 @@ interface NavItem {
         </div>
 
         <div class="navbar-right">
+          <app-theme-toggle></app-theme-toggle>
           <div class="user-profile-container">
             <button class="profile-trigger" (click)="toggleProfileMenu($event)">
               <div class="avatar">
@@ -98,11 +100,6 @@ interface NavItem {
     :host {
       --primary: #10b981;
       --primary-dark: #059669;
-      --bg-dark: #0f172a;
-      --bg-sidebar: #020617;
-      --bg-card: #1e293b;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
       --sidebar-width: 260px;
       --sidebar-collapsed: 0px;
       --navbar-height: 60px;
@@ -114,8 +111,8 @@ interface NavItem {
       flex-direction: column;
       height: 100vh;
       width: 100vw;
-      background-color: var(--bg-dark);
-      color: var(--text-main);
+      background-color: var(--color-background);
+      color: var(--color-text);
       overflow: hidden;
       font-family: 'Inter', sans-serif;
     }
@@ -123,8 +120,8 @@ interface NavItem {
     /* Navbar Styling */
     .navbar {
       height: var(--navbar-height);
-      background-color: #0f172a;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      background-color: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -137,6 +134,12 @@ interface NavItem {
       display: flex;
       align-items: center;
       gap: 20px;
+    }
+
+    .navbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
     .logo-brand {
@@ -154,7 +157,7 @@ interface NavItem {
     .logo-img {
       width: 32px;
       height: 32px;
-      background: linear-gradient(135deg, var(--primary) 0%, #059669 100%);
+      background: linear-gradient(135deg, var(--color-primary) 0%, #059669 100%);
       border-radius: 8px;
       display: flex;
       align-items: center;
@@ -168,7 +171,7 @@ interface NavItem {
       font-size: 1.25rem;
       font-weight: 800;
       letter-spacing: -0.03em;
-      color: white;
+      color: var(--color-text);
       white-space: nowrap;
     }
 
@@ -177,13 +180,13 @@ interface NavItem {
     .divider {
       width: 1px;
       height: 24px;
-      background-color: rgba(255, 255, 255, 0.1);
+      background-color: var(--color-border);
     }
 
     .page-title {
       font-size: 1.125rem;
       font-weight: 600;
-      color: var(--text-main);
+      color: var(--color-text);
     }
 
     /* Main Container (Sidebar + Content) */
@@ -196,8 +199,8 @@ interface NavItem {
     /* Sidebar Styling */
     .sidebar {
       width: var(--sidebar-width);
-      background-color: var(--bg-sidebar);
-      border-right: 1px solid rgba(255, 255, 255, 0.05);
+      background-color: var(--color-surface-secondary);
+      border-right: 1px solid var(--color-border);
       display: flex;
       flex-direction: column;
       transition: var(--transition);
@@ -226,20 +229,20 @@ interface NavItem {
       align-items: center;
       padding: 12px;
       border-radius: 12px;
-      color: var(--text-muted);
+      color: var(--color-text-secondary);
       text-decoration: none;
       transition: var(--transition);
       position: relative;
     }
 
     .nav-item:hover {
-      background-color: rgba(16, 185, 129, 0.05);
-      color: var(--text-main);
+      background-color: var(--color-hover);
+      color: var(--color-text);
     }
 
     .nav-item.active {
-      background-color: rgba(16, 185, 129, 0.1);
-      color: var(--primary);
+      background-color: var(--color-secondary);
+      color: var(--color-primary);
     }
 
     .icon-box {
@@ -266,7 +269,7 @@ interface NavItem {
       transform: translateY(-50%);
       width: 4px;
       height: 0;
-      background-color: var(--primary);
+      background-color: var(--color-primary);
       border-radius: 0 4px 4px 0;
       transition: var(--transition);
     }
@@ -284,14 +287,14 @@ interface NavItem {
       gap: 12px;
       background: none;
       border: none;
-      color: var(--text-main);
+      color: var(--color-text);
       cursor: pointer;
       padding: 6px 12px;
       border-radius: 50px;
       transition: var(--transition);
     }
 
-    .profile-trigger:hover { background-color: rgba(255, 255, 255, 0.05); }
+    .profile-trigger:hover { background-color: var(--color-hover); }
 
     .avatar {
       width: 32px;
@@ -314,10 +317,10 @@ interface NavItem {
       top: calc(100% + 12px);
       right: 0;
       width: 220px;
-      background-color: #1e293b;
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      background-color: var(--color-surface);
+      border: 1px solid var(--color-border);
       border-radius: 16px;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+      box-shadow: var(--shadow-lg);
       padding: 8px;
       display: none;
       z-index: 110;
@@ -326,30 +329,29 @@ interface NavItem {
     .dropdown-menu.show { display: block; }
 
     .menu-header { padding: 12px; }
-    .menu-header .name { font-weight: 600; margin: 0; font-size: 0.9375rem; }
-    .menu-header .email { font-size: 0.75rem; color: var(--text-muted); margin: 4px 0 0 0; }
+    .menu-header .name { font-weight: 600; margin: 0; font-size: 0.9375rem; color: var(--color-text); }
+    .menu-header .email { font-size: 0.75rem; color: var(--color-text-secondary); margin: 4px 0 0 0; }
 
-    hr { border: 0; border-top: 1px solid rgba(255, 255, 255, 0.05); margin: 4px 0; }
+    hr { border: 0; border-top: 1px solid var(--color-border); margin: 4px 0; }
 
     .menu-item {
       display: flex; align-items: center; gap: 10px; padding: 10px 12px;
-      border-radius: 8px; color: var(--text-main); text-decoration: none;
+      border-radius: 8px; color: var(--color-text); text-decoration: none;
       font-size: 0.875rem; width: 100%; text-align: left; background: none;
       border: none; cursor: pointer; transition: var(--transition);
     }
 
-    .menu-item:hover { background-color: rgba(255, 255, 255, 0.05); }
-    .menu-item i { font-size: 1.125rem; color: var(--text-muted); }
-    .menu-item.logout { color: #ef4444; }
-    .menu-item.logout i { color: #ef4444; }
+    .menu-item:hover { background-color: var(--color-hover); }
+    .menu-item i { font-size: 1.125rem; color: var(--color-text-secondary); }
+    .menu-item.logout { color: var(--color-error); }
+    .menu-item.logout i { color: var(--color-error); }
 
     /* Page Content */
     .page-content {
       flex: 1;
       padding: 32px;
       overflow-y: auto;
-      background: radial-gradient(circle at top left, rgba(16, 185, 129, 0.02), transparent),
-                  radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.05), transparent);
+      background-color: var(--color-background);
     }
 
     /* Sidebar Collapse Toggle Button (Always Visible) */
@@ -359,10 +361,10 @@ interface NavItem {
       bottom: 24px;
       width: 40px;
       height: 40px;
-      background-color: var(--bg-card);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background-color: var(--color-surface);
+      border: 1px solid var(--color-border);
       border-radius: 8px;
-      color: var(--primary);
+      color: var(--color-primary);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -373,8 +375,7 @@ interface NavItem {
     }
 
     .sidebar-collapse-toggle:hover {
-      background-color: var(--primary);
-      color: white;
+      background-color: var(--color-hover);
     }
 
     .sidebar.collapsed .sidebar-collapse-toggle {
@@ -388,10 +389,10 @@ interface NavItem {
       left: 24px;
       width: 48px;
       height: 48px;
-      background-color: var(--bg-card);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background-color: var(--color-surface);
+      border: 1px solid var(--color-border);
       border-radius: 12px;
-      color: var(--primary);
+      color: var(--color-primary);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -402,7 +403,7 @@ interface NavItem {
       visibility: hidden;
       transform: scale(0.8);
       transition: var(--transition);
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+      box-shadow: var(--shadow-lg);
     }
 
     .floating-expand-btn.visible {
@@ -412,7 +413,7 @@ interface NavItem {
     }
 
     .floating-expand-btn:hover {
-      background-color: var(--primary);
+      background-color: var(--color-primary);
       color: white;
       transform: scale(1.1);
     }

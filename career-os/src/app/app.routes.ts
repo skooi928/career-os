@@ -4,6 +4,7 @@ import { SignupComponent } from './pages/signup/signup.component';
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
 import { AppShellComponent } from './layout/app-shell.component';
 import { authGuard } from './guards/auth.guard';
+import { PageNotFoundComponent } from './pages/page-not-found/page-not-found.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -16,6 +17,7 @@ export const routes: Routes = [
     children: [
       { path: 'dashboard', component: DashboardComponent },
       // Add more routes here as you create new pages
+      { path: '**', component: PageNotFoundComponent },
     ]
   },
   { path: '**', redirectTo: 'login' }

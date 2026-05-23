@@ -111,7 +111,7 @@ import { AuthService } from '../../services/auth.service';
     }
 
     .welcome-banner {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      background: linear-gradient(135deg, var(--color-primary) 0%, #059669 100%);
       padding: 40px;
       border-radius: 24px;
       color: white;
@@ -137,13 +137,13 @@ import { AuthService } from '../../services/auth.service';
     }
 
     .stat-card {
-      background: #1e293b;
+      background: var(--color-surface);
       padding: 24px;
       border-radius: 20px;
       display: flex;
       align-items: center;
       gap: 20px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--color-border);
       transition: transform 0.2s;
     }
 
@@ -162,15 +162,15 @@ import { AuthService } from '../../services/auth.service';
       font-size: 1.5rem;
     }
 
-    .stat-icon.applications { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-    .stat-icon.interviews { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+    .stat-icon.applications { background: rgba(16, 185, 129, 0.1); color: var(--color-primary); }
+    .stat-icon.interviews { background: rgba(59, 130, 246, 0.1); color: var(--color-info); }
     .stat-icon.offers { background: rgba(168, 85, 247, 0.1); color: #a855f7; }
 
     .stat-info { display: flex; flex-direction: column; }
-    .stat-label { font-size: 0.875rem; color: #94a3b8; font-weight: 500; }
-    .stat-value { font-size: 1.75rem; font-weight: 700; color: white; margin: 4px 0; }
-    .stat-change { font-size: 0.75rem; color: #64748b; }
-    .stat-change.positive { color: #10b981; }
+    .stat-label { font-size: 0.875rem; color: var(--color-text-secondary); font-weight: 500; }
+    .stat-value { font-size: 1.75rem; font-weight: 700; color: var(--color-text); margin: 4px 0; }
+    .stat-change { font-size: 0.75rem; color: var(--color-text-tertiary); }
+    .stat-change.positive { color: var(--color-success); }
 
     .content-sections {
       display: grid;
@@ -183,10 +183,10 @@ import { AuthService } from '../../services/auth.service';
     }
 
     .card {
-      background: #1e293b;
+      background: var(--color-surface);
       border-radius: 20px;
       padding: 24px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--color-border);
     }
 
     .card-header {
@@ -196,31 +196,31 @@ import { AuthService } from '../../services/auth.service';
       margin-bottom: 24px;
     }
 
-    .card-header h3 { margin: 0; font-size: 1.125rem; font-weight: 600; }
-    .btn-text { background: none; border: none; color: #10b981; font-weight: 600; cursor: pointer; }
+    .card-header h3 { margin: 0; font-size: 1.125rem; font-weight: 600; color: var(--color-text); }
+    .btn-text { background: none; border: none; color: var(--color-primary); font-weight: 600; cursor: pointer; }
 
     .activity-list, .tasks-list { display: flex; flex-direction: column; gap: 16px; }
 
     .activity-item { display: flex; gap: 16px; align-items: flex-start; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: #334155; margin-top: 6px; flex-shrink: 0; }
-    .dot.active { background: #10b981; box-shadow: 0 0 10px #10b981; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-text-tertiary); margin-top: 6px; flex-shrink: 0; }
+    .dot.active { background: var(--color-primary); box-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
     
-    .activity-title { margin: 0; font-size: 0.9375rem; color: #e2e8f0; }
-    .activity-time { margin: 4px 0 0 0; font-size: 0.8125rem; color: #64748b; }
+    .activity-title { margin: 0; font-size: 0.9375rem; color: var(--color-text); }
+    .activity-time { margin: 4px 0 0 0; font-size: 0.8125rem; color: var(--color-text-tertiary); }
 
     .task-item {
       display: flex;
       align-items: center;
       gap: 12px;
       padding: 12px 16px;
-      background: #0f172a;
+      background: var(--color-surface-secondary);
       border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--color-border);
       cursor: pointer;
     }
 
-    .task-item input { accent-color: #10b981; width: 18px; height: 18px; }
-    .task-item label { cursor: pointer; font-size: 0.9375rem; color: #cbd5e1; }
+    .task-item input { accent-color: var(--color-primary); width: 18px; height: 18px; }
+    .task-item label { cursor: pointer; font-size: 0.9375rem; color: var(--color-text-secondary); }
     .task-item input:checked + label { text-decoration: line-through; opacity: 0.4; }
   `]
 })
