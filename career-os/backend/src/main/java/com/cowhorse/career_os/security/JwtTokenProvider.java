@@ -48,6 +48,11 @@ public class JwtTokenProvider {
         return getClaimFromToken(token, Claims::getSubject);
     }
 
+    public String getUidFromToken(String token) {
+        // Supabase JWT tokens use "sub" claim for the UID
+        return getClaimFromToken(token, Claims::getSubject);
+    }
+
     public Long getUserIdFromToken(String token) {
         Claims claims = getAllClaimsFromToken(token);
         return claims.get("userId", Long.class);
@@ -78,3 +83,4 @@ public class JwtTokenProvider {
                 .getBody();
     }
 }
+

@@ -50,6 +50,9 @@ interface NavItem {
               <a routerLink="/profile" class="menu-item">
                 <i class="ph-user"></i> User Profile
               </a>
+              <a routerLink="/settings" class="menu-item">
+                <i class="ph-gear-six"></i> Settings
+              </a>
               <button (click)="onSignOut()" class="menu-item logout">
                 <i class="ph-sign-out"></i> Sign Out
               </button>
@@ -430,10 +433,11 @@ export class AppShellComponent {
   
   navItems = signal<NavItem[]>([
     { label: 'Dashboard', route: '/dashboard', icon: 'ph-house-simple' },
-    { label: 'Job Tracker', route: '/jobs', icon: 'ph-briefcase' },
     { label: 'Resume Builder', route: '/resume', icon: 'ph-file-text' },
-    { label: 'Analytics', route: '/analytics', icon: 'ph-chart-line' },
-    { label: 'Settings', route: '/settings', icon: 'ph-gear-six' }
+    { label: 'Job Application', route: '/jobs', icon: 'ph-briefcase' },
+    { label: 'Sharing Forum', route: '/forum', icon: 'ph-chat-teardrop' },
+    { label: 'Upskilling Courses', route: '/courses', icon: 'ph-chalkboard-teacher' },
+    { label: 'Analytics', route: '/insights', icon: 'ph-chart-bar' },
   ]);
 
   constructor(
@@ -470,7 +474,14 @@ export class AppShellComponent {
   }
 
   onSignOut() {
-    this.authService.logout();
-    this.router.navigate(['/login']);
+    this.authService.logout().subscribe({
+      next: () => {
+        this.router.navigate(['/login']);
+      },
+      error: (err) => {
+        console.error('Logout error:', err);
+        this.router.navigate(['/login']);
+      }
+    });
   }
 }
