@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "user_profiles")
+@Table(name = "user_profiles", schema = "dbo")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -24,6 +24,12 @@ public class UserProfile {
 
     @Column(name = "supabase_uid", unique = true, nullable = true)
     private String supabaseUid;
+
+    @Column(name = "first_name", length = 100)
+    private String firstName;
+
+    @Column(name = "last_name", length = 100)
+    private String lastName;
 
     @Column(columnDefinition = "TEXT")
     private String phone;

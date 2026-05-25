@@ -31,6 +31,13 @@ public class JwtTokenProvider {
         return createToken(claims, email);
     }
 
+    public String generateTokenWithSupabaseUid(String email, String supabaseUid) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("sub", supabaseUid);
+        claims.put("email", email);
+        return createToken(claims, supabaseUid);
+    }
+
     private String createToken(Map<String, Object> claims, String subject) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expirationTime);

@@ -1,7 +1,7 @@
 import { Injectable, PLATFORM_ID, Inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, from, tap, switchMap } from 'rxjs';
+import { BehaviorSubject, Observable, from, tap, switchMap, catchError,  map } from 'rxjs';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 export interface AuthResponse {
@@ -10,6 +10,15 @@ export interface AuthResponse {
   firstName: string;
   lastName: string;
   userId: string; // Changed from number to string (Supabase UUID)
+}
+
+export interface CreateProfileBackendResponse {
+  token: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  userId: string;
+  profile: any; 
 }
 
 @Injectable({
@@ -66,44 +75,46 @@ export class AuthService {
 
   signup(email: string, password: string, firstName: string, lastName: string): Observable<AuthResponse> {
     return from(
-      this.supabase.auth.signUp({ email, password })
+      this.supabase.auth.signUp({ email: email, password: password })
     ).pipe(
       switchMap(response => {
+        
+        console.log('Supabase signup response:', response);
+
+        // Check for explicit error first
         if (response.error) {
           throw new Error(response.error.message);
         }
-        if (!response.data.user || !response.data.session) {
+        if (!response.data.user) {
           throw new Error('Signup failed');
         }
 
         const userId = response.data.user.id;
-        const token = response.data.session.access_token;
 
-        // Create profile in backend
-        return this.http.post(`${this.PROFILE_API_URL}/create-profile`, {
+        // Create profile in backend using the new interface
+        return this.http.post<CreateProfileBackendResponse>(`${this.PROFILE_API_URL}/create-profile`, {
           userId,
           email,
           firstName,
           lastName
         }).pipe(
-          tap(() => {
+          // map transforms the backend response into your AuthResponse format
+          map((createProfileResponse: CreateProfileBackendResponse) => {
             const authResponse: AuthResponse = {
-              token,
+              token: createProfileResponse.token, // Now TypeScript knows this exists
               email,
               firstName,
               lastName,
               userId
             };
+            return authResponse;
+          }),
+          // tap handles side effects without altering the observable stream
+          tap((authResponse: AuthResponse) => {
+            console.log('Profile created successfully');
             this.storeAuthData(authResponse);
             this.currentUserSubject.next(authResponse);
-          }),
-          switchMap(() => from([{
-            token,
-            email,
-            firstName,
-            lastName,
-            userId
-          }]))
+          })
         );
       })
     );

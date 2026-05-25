@@ -1,8 +1,10 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { ProfileService, Experience, Education, Project, Skill, UserProfileDTO } from '../../services/profile.service';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 interface PersonalInfo {
   firstName: string;
@@ -21,7 +23,10 @@ interface PersonalInfo {
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.css']
 })
-export class ProfileComponent implements OnInit {
+export class ProfileComponent implements OnInit, OnDestroy {
+  // Unsubscribe subject for cleanup
+  private destroy$ = new Subject<void>();
+
   // State management
   isEditingPersonal = signal(false);
   expandedSection = signal<string | null>(null);
@@ -62,45 +67,61 @@ export class ProfileComponent implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     
-    // Get user basic info from auth service (same as navbar - firstName, lastName, email)
+    // Get authenticated user from Supabase via auth service
     const currentUser = this.authService.getCurrentUser();
-    if (currentUser) {
-      this.personalInfo.set({
-        firstName: currentUser.firstName,
-        lastName: currentUser.lastName,
-        email: currentUser.email,
-        phone: '',
-        location: '',
-        bio: '',
-        profileImage: ''
-      });
+    if (!currentUser) {
+      this.errorMessage.set('User not authenticated. Please log in again.');
+      this.isLoading.set(false);
+      return;
     }
+
+    // Ensure we have valid user data
+    const firstName = currentUser.firstName || 'User';
+    const lastName = currentUser.lastName || '';
+
+    // Update personal info with auth user data first (guarantee display)
+    this.personalInfo.set({
+      firstName,
+      lastName,
+      email: currentUser.email || '',
+      phone: '',
+      location: '',
+      bio: '',
+      profileImage: ''
+    });
     
     // Fetch additional profile details from backend
-    this.profileService.getUserProfile().subscribe({
-      next: (profile: UserProfileDTO) => {
-        // Update only the profile-specific fields
-        this.personalInfo.update(current => ({
-          ...current,
-          phone: profile.phone || '',
-          location: profile.location || '',
-          bio: profile.bio || '',
-          profileImage: profile.profileImageUrl || ''
-        }));
+    // JWT interceptor will automatically add the authorization header with Supabase token
+    this.profileService.getUserProfile()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (profile: UserProfileDTO) => {
+          // Update only the profile-specific fields
+          this.personalInfo.update(current => ({
+            ...current,
+            firstName: profile.firstName || current.firstName,
+            lastName: profile.lastName || current.lastName,
+            email: profile.email || current.email,
+            phone: profile.phone || '',
+            location: profile.location || '',
+            bio: profile.bio || '',
+            profileImage: profile.profileImageUrl || ''
+          }));
 
-        this.experiences.set(profile.experiences || []);
-        this.education.set(profile.education || []);
-        this.projects.set(profile.projects || []);
-        this.skills.set(profile.skills || []);
+          this.experiences.set(profile.experiences || []);
+          this.education.set(profile.education || []);
+          this.projects.set(profile.projects || []);
+          this.skills.set(profile.skills || []);
 
-        this.isLoading.set(false);
-      },
-      error: (err) => {
-        console.error('Error loading profile:', err);
-        this.errorMessage.set('Failed to load profile details. Basic info will still display.');
-        this.isLoading.set(false);
-      }
-    });
+          this.isLoading.set(false);
+        },
+        error: (err) => {
+          console.error('Error loading profile:', err);
+          this.errorMessage.set('Failed to load additional profile details.');
+          this.isLoading.set(false);
+          // Keep the basic user info displayed even if API fails
+        }
+      });
   }
 
   toggleSection(section: string) {
@@ -123,18 +144,20 @@ export class ProfileComponent implements OnInit {
       profileImageUrl: this.personalInfo().profileImage
     };
 
-    this.profileService.updateUserProfile(profileDTO).subscribe({
-      next: (response) => {
-        this.isLoading.set(false);
-        this.isEditingPersonal.set(false);
-        this.errorMessage.set(null);
-      },
-      error: (err) => {
-        console.error('Error saving profile:', err);
-        this.errorMessage.set('Failed to save profile. Please try again.');
-        this.isLoading.set(false);
-      }
-    });
+    this.profileService.updateUserProfile(profileDTO)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.isLoading.set(false);
+          this.isEditingPersonal.set(false);
+          this.errorMessage.set(null);
+        },
+        error: (err) => {
+          console.error('Error saving profile:', err);
+          this.errorMessage.set('Failed to save profile. Please try again.');
+          this.isLoading.set(false);
+        }
+      });
   }
 
   addExperience(formData: any) {
@@ -149,30 +172,34 @@ export class ProfileComponent implements OnInit {
       description: formData.description
     };
 
-    this.profileService.addExperience(experienceDTO).subscribe({
-      next: (response) => {
-        this.experiences.update(exp => [...exp, response]);
-        this.showAddExperience.set(false);
-        this.isLoading.set(false);
-      },
-      error: (err) => {
-        console.error('Error adding experience:', err);
-        this.errorMessage.set('Failed to add experience. Please try again.');
-        this.isLoading.set(false);
-      }
-    });
+    this.profileService.addExperience(experienceDTO)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.experiences.update(exp => [...exp, response]);
+          this.showAddExperience.set(false);
+          this.isLoading.set(false);
+        },
+        error: (err) => {
+          console.error('Error adding experience:', err);
+          this.errorMessage.set('Failed to add experience. Please try again.');
+          this.isLoading.set(false);
+        }
+      });
   }
 
   deleteExperience(id: number) {
-    this.profileService.deleteExperience(id).subscribe({
-      next: () => {
-        this.experiences.update(exp => exp.filter(e => e.id !== id));
-      },
-      error: (err) => {
-        console.error('Error deleting experience:', err);
-        this.errorMessage.set('Failed to delete experience. Please try again.');
-      }
-    });
+    this.profileService.deleteExperience(id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.experiences.update(exp => exp.filter(e => e.id !== id));
+        },
+        error: (err) => {
+          console.error('Error deleting experience:', err);
+          this.errorMessage.set('Failed to delete experience. Please try again.');
+        }
+      });
   }
 
   addEducation(formData: any) {
@@ -187,30 +214,34 @@ export class ProfileComponent implements OnInit {
       current: formData.current === 'true' || formData.current === true
     };
 
-    this.profileService.addEducation(educationDTO).subscribe({
-      next: (response) => {
-        this.education.update(edu => [...edu, response]);
-        this.showAddEducation.set(false);
-        this.isLoading.set(false);
-      },
-      error: (err) => {
-        console.error('Error adding education:', err);
-        this.errorMessage.set('Failed to add education. Please try again.');
-        this.isLoading.set(false);
-      }
-    });
+    this.profileService.addEducation(educationDTO)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.education.update(edu => [...edu, response]);
+          this.showAddEducation.set(false);
+          this.isLoading.set(false);
+        },
+        error: (err) => {
+          console.error('Error adding education:', err);
+          this.errorMessage.set('Failed to add education. Please try again.');
+          this.isLoading.set(false);
+        }
+      });
   }
 
   deleteEducation(id: number) {
-    this.profileService.deleteEducation(id).subscribe({
-      next: () => {
-        this.education.update(edu => edu.filter(e => e.id !== id));
-      },
-      error: (err) => {
-        console.error('Error deleting education:', err);
-        this.errorMessage.set('Failed to delete education. Please try again.');
-      }
-    });
+    this.profileService.deleteEducation(id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.education.update(edu => edu.filter(e => e.id !== id));
+        },
+        error: (err) => {
+          console.error('Error deleting education:', err);
+          this.errorMessage.set('Failed to delete education. Please try again.');
+        }
+      });
   }
 
   addProject(formData: any) {
@@ -225,30 +256,34 @@ export class ProfileComponent implements OnInit {
       endDate: formData.endDate || undefined
     };
 
-    this.profileService.addProject(projectDTO).subscribe({
-      next: (response) => {
-        this.projects.update(proj => [...proj, response]);
-        this.showAddProject.set(false);
-        this.isLoading.set(false);
-      },
-      error: (err) => {
-        console.error('Error adding project:', err);
-        this.errorMessage.set('Failed to add project. Please try again.');
-        this.isLoading.set(false);
-      }
-    });
+    this.profileService.addProject(projectDTO)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.projects.update(proj => [...proj, response]);
+          this.showAddProject.set(false);
+          this.isLoading.set(false);
+        },
+        error: (err) => {
+          console.error('Error adding project:', err);
+          this.errorMessage.set('Failed to add project. Please try again.');
+          this.isLoading.set(false);
+        }
+      });
   }
 
   deleteProject(id: number) {
-    this.profileService.deleteProject(id).subscribe({
-      next: () => {
-        this.projects.update(proj => proj.filter(p => p.id !== id));
-      },
-      error: (err) => {
-        console.error('Error deleting project:', err);
-        this.errorMessage.set('Failed to delete project. Please try again.');
-      }
-    });
+    this.profileService.deleteProject(id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.projects.update(proj => proj.filter(p => p.id !== id));
+        },
+        error: (err) => {
+          console.error('Error deleting project:', err);
+          this.errorMessage.set('Failed to delete project. Please try again.');
+        }
+      });
   }
 
   addSkill(formData: any) {
@@ -260,30 +295,34 @@ export class ProfileComponent implements OnInit {
       endorsed: 0
     };
 
-    this.profileService.addSkill(skillDTO).subscribe({
-      next: (response) => {
-        this.skills.update(s => [...s, response]);
-        this.showAddSkill.set(false);
-        this.isLoading.set(false);
-      },
-      error: (err) => {
-        console.error('Error adding skill:', err);
-        this.errorMessage.set('Failed to add skill. Please try again.');
-        this.isLoading.set(false);
-      }
-    });
+    this.profileService.addSkill(skillDTO)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.skills.update(s => [...s, response]);
+          this.showAddSkill.set(false);
+          this.isLoading.set(false);
+        },
+        error: (err) => {
+          console.error('Error adding skill:', err);
+          this.errorMessage.set('Failed to add skill. Please try again.');
+          this.isLoading.set(false);
+        }
+      });
   }
 
   deleteSkill(id: number) {
-    this.profileService.deleteSkill(id).subscribe({
-      next: () => {
-        this.skills.update(s => s.filter(skill => skill.id !== id));
-      },
-      error: (err) => {
-        console.error('Error deleting skill:', err);
-        this.errorMessage.set('Failed to delete skill. Please try again.');
-      }
-    });
+    this.profileService.deleteSkill(id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.skills.update(s => s.filter(skill => skill.id !== id));
+        },
+        error: (err) => {
+          console.error('Error deleting skill:', err);
+          this.errorMessage.set('Failed to delete skill. Please try again.');
+        }
+      });
   }
 
   getProficiencyColor(proficiency: string): string {
@@ -307,6 +346,14 @@ export class ProfileComponent implements OnInit {
   }
 
   getInitials(firstName: string, lastName: string): string {
+    if (!firstName || !lastName) {
+      return '?';
+    }
     return `${firstName[0]}${lastName[0]}`.toUpperCase();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

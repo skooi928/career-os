@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -340,6 +341,8 @@ public class ProfileService {
         // Create new UserProfile for Supabase user
         UserProfile userProfile = UserProfile.builder()
                 .supabaseUid(supabaseUid)
+                .firstName(firstName)
+                .lastName(lastName)
                 .phone(null)
                 .location(null)
                 .bio("Add your professional bio here...")
@@ -347,6 +350,54 @@ public class ProfileService {
                 .build();
 
         userProfileRepository.save(userProfile);
+
+        // Create initial empty rows in related tables
+        LocalDate today = LocalDate.now();
+        
+        // Create initial Experience row
+        Experience experience = Experience.builder()
+                .supabaseUid(supabaseUid)
+                .jobTitle("Add your job title")
+                .company("Add your company")
+                .startDate(today)
+                .endDate(null)
+                .isCurrent(false)
+                .description(null)
+                .build();
+        experienceRepository.save(experience);
+
+        // Create initial Education row
+        Education education = Education.builder()
+                .supabaseUid(supabaseUid)
+                .degree("Add your degree")
+                .institution("Add your institution")
+                .field("Add your field")
+                .startDate(today)
+                .endDate(null)
+                .isCurrent(false)
+                .build();
+        educationRepository.save(education);
+
+        // Create initial Project row
+        Project project = Project.builder()
+                .supabaseUid(supabaseUid)
+                .title("Add your project")
+                .description(null)
+                .technologies(null)
+                .link(null)
+                .startDate(today)
+                .endDate(null)
+                .build();
+        projectRepository.save(project);
+
+        // Create initial Skill row
+        Skill skill = Skill.builder()
+                .supabaseUid(supabaseUid)
+                .name("Add your skill")
+                .proficiency(Skill.ProficiencyLevel.BEGINNER)
+                .endorsed(0)
+                .build();
+        skillRepository.save(skill);
 
         return UserProfileDTO.builder()
                 .firstName(firstName)
@@ -356,10 +407,10 @@ public class ProfileService {
                 .location(null)
                 .bio("Add your professional bio here...")
                 .profileImageUrl(null)
-                .experiences(List.of())
-                .education(List.of())
-                .projects(List.of())
-                .skills(List.of())
+                .experiences(List.of(convertToExperienceDTO(experience)))
+                .education(List.of(convertToEducationDTO(education)))
+                .projects(List.of(convertToProjectDTO(project)))
+                .skills(List.of(convertToSkillDTO(skill)))
                 .build();
     }
 
@@ -382,8 +433,8 @@ public class ProfileService {
 
         return UserProfileDTO.builder()
                 .id(userProfile.getId())
-                .firstName("") // Will be populated by frontend from AuthService
-                .lastName("")  // Will be populated by frontend from AuthService
+                .firstName(userProfile.getFirstName())
+                .lastName(userProfile.getLastName())
                 .email("")     // Will be populated by frontend from AuthService
                 .phone(userProfile.getPhone())
                 .location(userProfile.getLocation())

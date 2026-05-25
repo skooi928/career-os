@@ -27,14 +27,27 @@ public class ProfileController {
 
     // Create profile after Supabase signup
     @PostMapping("/create-profile")
-    public ResponseEntity<UserProfileDTO> createProfile(@RequestBody CreateProfileRequest request) {
+    public ResponseEntity<CreateProfileResponse> createProfile(@RequestBody CreateProfileRequest request) {
         UserProfileDTO profile = profileService.createProfileForSupabaseUser(
             request.getUserId(),
             request.getEmail(),
             request.getFirstName(),
             request.getLastName()
         );
-        return ResponseEntity.status(HttpStatus.CREATED).body(profile);
+        
+        // Generate JWT token with Supabase UID for future API calls
+        String token = jwtTokenProvider.generateTokenWithSupabaseUid(request.getEmail(), request.getUserId());
+        
+        CreateProfileResponse response = CreateProfileResponse.builder()
+            .token(token)
+            .email(request.getEmail())
+            .firstName(request.getFirstName())
+            .lastName(request.getLastName())
+            .userId(request.getUserId())
+            .profile(profile)
+            .build();
+            
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     // User Profile Endpoints
