@@ -1,7 +1,7 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, OnInit, Inject, PLATFORM_ID } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { CommonModule } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
 import { ThemeToggleComponent } from '../../components/theme-toggle/theme-toggle.component';
 
@@ -12,21 +12,45 @@ import { ThemeToggleComponent } from '../../components/theme-toggle/theme-toggle
   templateUrl: './login.component.html',
   styleUrl: './login.component.css'
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   loginForm: FormGroup;
   loading = signal(false);
   submitted = signal(false);
   error = signal<string | null>(null);
+  microsoftLoading = signal(false);
+  private sessionChecked = false;
 
   constructor(
     private formBuilder: FormBuilder,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.loginForm = this.formBuilder.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(6)]]
     });
+  }
+
+  ngOnInit(): void {
+    if (isPlatformBrowser(this.platformId) && !this.sessionChecked) {
+      this.checkOAuthSession();
+    }
+  }
+
+  private async checkOAuthSession(): Promise<void> {
+    this.sessionChecked = true;
+    try {
+      this.loading.set(true);
+      const user = await this.authService.verifySupabaseSession();
+      if (user) {
+        this.router.navigate(['/dashboard']);
+      }
+    } catch (err) {
+      console.error('OAuth session check failed:', err);
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   get f() {
@@ -58,6 +82,17 @@ export class LoginComponent {
         this.disableForm(false);
       }
     });
+  }
+
+  async signInWithMicrosoft(): Promise<void> {
+    try {
+      this.microsoftLoading.set(true);
+      this.error.set(null);
+      await this.authService.signInWithMicrosoft();
+    } catch (err) {
+      this.error.set('Microsoft login failed. Please try again.');
+      this.microsoftLoading.set(false);
+    }
   }
 
   private disableForm(disabled: boolean): void {

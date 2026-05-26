@@ -3,6 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, throwError } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
+import { getSupabaseClient } from './supabase';
 
 export interface AuthResponse {
   token: string;
@@ -69,6 +70,56 @@ export class AuthService {
   }
 
   /**
+   * Sign in with Microsoft via Supabase
+   */
+  async signInWithMicrosoft(): Promise<void> {
+    const supabaseClient = getSupabaseClient();
+    if (!supabaseClient) throw new Error('Supabase client not available');
+
+    const { error } = await supabaseClient.auth.signInWithOAuth({
+      provider: 'azure',
+      options: {
+        redirectTo: `${window.location.origin}/login`,
+        scopes: 'email offline_access'
+      }
+    });
+
+    if (error) throw error;
+  }
+
+  /**
+   * Check and verify Supabase OAuth session
+   */
+  async verifySupabaseSession(): Promise<AuthResponse | null> {
+    try {
+      if (!isPlatformBrowser(this.platformId)) return null;
+
+      const supabaseClient = getSupabaseClient();
+      if (!supabaseClient) return null;
+
+      const { data, error } = await supabaseClient.auth.getSession();
+      if (error || !data.session) return null;
+
+      const session = data.session;
+      const authResponse: AuthResponse = {
+        token: session.access_token,
+        email: session.user.email || '',
+        userId: session.user.id,
+        firstName: session.user.user_metadata?.first_name || '',
+        lastName: session.user.user_metadata?.last_name || '',
+        emailVerified: session.user.email_confirmed_at !== null
+      };
+
+      this.storeAuthData(authResponse);
+      this.currentUserSubject.next(authResponse);
+      return authResponse;
+    } catch (err) {
+      console.error('Session verification error:', err);
+      return null;
+    }
+  }
+
+  /**
    * Logout and clear auth data
    */
   logout(): Observable<void> {
@@ -76,6 +127,12 @@ export class AuthService {
       if (isPlatformBrowser(this.platformId)) {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user_data');
+        
+        // Also sign out from Supabase to clear OAuth sessions
+        const supabaseClient = getSupabaseClient();
+        if (supabaseClient) {
+          supabaseClient.auth.signOut().catch((err: any) => console.error('Supabase logout error:', err));
+        }
       }
       this.currentUserSubject.next(null);
       observer.next();
