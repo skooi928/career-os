@@ -26,6 +26,7 @@ public class AuthService {
     private final SupabaseClient supabaseClient;
     private final JwtTokenProvider jwtTokenProvider;
     private final RestTemplate restTemplate;
+    private final OnboardingService onboardingService;
 
     public AuthResponse login(LoginRequest request) {
         try {
@@ -144,11 +145,18 @@ public class AuthService {
                         emailVerified = (Boolean) responseMetadata.get("email_verified");
                     }
                 } 
-                
+
                 if (userId == null || email == null) {
                     log.error("Supabase signup response missing id or email. Response: {}", responseBody);
                     throw new RuntimeException("Signup failed: id or email missing from response");
                 }
+                
+                // Initialize user profile and related records
+                onboardingService.initializeNewUserProfile(
+                        request.getFirstName(),
+                        request.getLastName(),
+                        userId
+                );
                 
                 // Generate backend JWT token with Supabase UID
                 String token = jwtTokenProvider.generateTokenWithSupabaseUid(email, userId);

@@ -346,10 +346,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   getInitials(firstName: string, lastName: string): string {
-    if (!firstName || !lastName) {
-      return '?';
-    }
-    return `${firstName[0]}${lastName[0]}`.toUpperCase();
+    const fn = firstName?.[0] ?? '';
+    const ln = lastName?.[0] ?? '';
+    const initials = (fn + ln).toUpperCase();
+    return initials || '?';
   }
 
   ngOnDestroy(): void {

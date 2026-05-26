@@ -77,6 +77,10 @@ export class ProfileService {
     return this.http.get<UserProfileDTO>(this.API_URL);
   }
 
+  getProfile(userId: string): Observable<UserProfileDTO> {
+    return this.http.get<UserProfileDTO>(`${this.API_URL}?userId=${userId}`);
+  }
+
   updateUserProfile(profileDTO: Partial<UserProfileDTO>): Observable<UserProfileDTO> {
     return this.http.put<UserProfileDTO>(this.API_URL, profileDTO);
   }

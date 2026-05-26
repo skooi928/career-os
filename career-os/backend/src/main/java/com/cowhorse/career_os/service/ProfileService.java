@@ -4,128 +4,102 @@ import com.cowhorse.career_os.dto.*;
 import com.cowhorse.career_os.entity.*;
 import com.cowhorse.career_os.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class ProfileService {
-    private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
     private final ExperienceRepository experienceRepository;
     private final EducationRepository educationRepository;
     private final ProjectRepository projectRepository;
     private final SkillRepository skillRepository;
 
-    // ==================== Email-based Methods ====================
+    // ==================== User Profile Methods ====================
 
-    // User Profile Methods
-    public UserProfileDTO getUserProfileByEmail(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
-        return getUserProfile(user.getId());
-    }
+    public UserProfileDTO getUserProfileBySupabaseUid(String supabaseUid) {
+        log.info("Fetching profile for Supabase UID/UUID: {}", supabaseUid);
+        UUID userUuid;
+        try {
+            userUuid = UUID.fromString(supabaseUid);
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid UUID format: {}", supabaseUid);
+            throw new RuntimeException("Invalid user ID format");
+        }
+        
+        UserProfile userProfile = userProfileRepository.findByUserId(userUuid)
+                .orElseThrow(() -> {
+                    log.error("UserProfile not found for UUID: {}", userUuid);
+                    return new RuntimeException("Profile not found for UUID: " + supabaseUid);
+                });
 
-    public UserProfileDTO updateUserProfileByEmail(String email, UserProfileDTO profileDTO) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
-        return updateUserProfile(user.getId(), profileDTO);
-    }
+        log.debug("Found UserProfile: {}. Fetching related records...", userProfile.getId());
 
-    // Experience Methods
-    public ExperienceDTO addExperienceByEmail(String email, ExperienceDTO experienceDTO) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
-        return addExperience(user.getId(), experienceDTO);
-    }
-
-    // Education Methods
-    public EducationDTO addEducationByEmail(String email, EducationDTO educationDTO) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
-        return addEducation(user.getId(), educationDTO);
-    }
-
-    // Project Methods
-    public ProjectDTO addProjectByEmail(String email, ProjectDTO projectDTO) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
-        return addProject(user.getId(), projectDTO);
-    }
-
-    // Skill Methods
-    public SkillDTO addSkillByEmail(String email, SkillDTO skillDTO) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
-        return addSkill(user.getId(), skillDTO);
-    }
-
-    // ==================== ID-based Methods (existing) ====================
-
-    // User Profile Methods
-    public UserProfileDTO getUserProfile(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        UserProfile userProfile = userProfileRepository.findByUserId(userId)
-                .orElse(null);
-
-        List<ExperienceDTO> experiences = experienceRepository.findByUserId(userId)
+        List<ExperienceDTO> experiences = experienceRepository.findByUserId(userUuid)
                 .stream().map(this::convertToExperienceDTO).collect(Collectors.toList());
+        log.debug("Loaded {} experiences", experiences.size());
 
-        List<EducationDTO> education = educationRepository.findByUserId(userId)
+        List<EducationDTO> education = educationRepository.findByUserId(userUuid)
                 .stream().map(this::convertToEducationDTO).collect(Collectors.toList());
+        log.debug("Loaded {} education records", education.size());
 
-        List<ProjectDTO> projects = projectRepository.findByUserId(userId)
+        List<ProjectDTO> projects = projectRepository.findByUserId(userUuid)
                 .stream().map(this::convertToProjectDTO).collect(Collectors.toList());
+        log.debug("Loaded {} projects", projects.size());
 
-        List<SkillDTO> skills = skillRepository.findByUserId(userId)
+        List<SkillDTO> skills = skillRepository.findByUserId(userUuid)
                 .stream().map(this::convertToSkillDTO).collect(Collectors.toList());
+        log.debug("Loaded {} skills", skills.size());
 
         return UserProfileDTO.builder()
-                .id(userProfile != null ? userProfile.getId() : null)
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .email(user.getEmail())
-                .phone(userProfile != null ? userProfile.getPhone() : null)
-                .location(userProfile != null ? userProfile.getLocation() : null)
-                .bio(userProfile != null ? userProfile.getBio() : null)
-                .profileImageUrl(userProfile != null ? userProfile.getProfileImageUrl() : null)
+                .id(userProfile.getId())
+                .firstName(userProfile.getFirstName())
+                .lastName(userProfile.getLastName())
+                .email("")     // Typically provided by client or auth service
+                .phone(userProfile.getPhone())
+                .location(userProfile.getLocation())
+                .bio(userProfile.getBio())
+                .profileImageUrl(userProfile.getProfileImageUrl())
                 .experiences(experiences)
                 .education(education)
                 .projects(projects)
                 .skills(skills)
+                .userId(supabaseUid)
                 .build();
     }
 
-    public UserProfileDTO updateUserProfile(Long userId, UserProfileDTO profileDTO) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public UserProfileDTO updateUserProfileBySupabaseUid(String supabaseUid, UserProfileDTO profileDTO) {
+        UUID userUuid = UUID.fromString(supabaseUid);
+        UserProfile userProfile = userProfileRepository.findByUserId(userUuid)
+                .orElseThrow(() -> new RuntimeException("Profile not found for UUID: " + supabaseUid));
 
-        UserProfile userProfile = userProfileRepository.findByUserId(userId)
-                .orElse(UserProfile.builder().user(user).build());
-
+        userProfile.setFirstName(profileDTO.getFirstName());
+        userProfile.setLastName(profileDTO.getLastName());
         userProfile.setPhone(profileDTO.getPhone());
         userProfile.setLocation(profileDTO.getLocation());
         userProfile.setBio(profileDTO.getBio());
         userProfile.setProfileImageUrl(profileDTO.getProfileImageUrl());
 
         userProfileRepository.save(userProfile);
-        return getUserProfile(userId);
+
+        return getUserProfileBySupabaseUid(supabaseUid);
     }
 
     // Experience Methods
-    public ExperienceDTO addExperience(Long userId, ExperienceDTO experienceDTO) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
+    public ExperienceDTO addExperienceBySupabaseUid(String supabaseUid, ExperienceDTO experienceDTO) {
+        UUID userUuid = UUID.fromString(supabaseUid);
+        
         Experience experience = Experience.builder()
-                .user(user)
+                .userId(userUuid)
                 .jobTitle(experienceDTO.getJobTitle())
                 .company(experienceDTO.getCompany())
                 .startDate(experienceDTO.getStartDate())
@@ -158,12 +132,11 @@ public class ProfileService {
     }
 
     // Education Methods
-    public EducationDTO addEducation(Long userId, EducationDTO educationDTO) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public EducationDTO addEducationBySupabaseUid(String supabaseUid, EducationDTO educationDTO) {
+        UUID userUuid = UUID.fromString(supabaseUid);
 
         Education education = Education.builder()
-                .user(user)
+                .userId(userUuid)
                 .degree(educationDTO.getDegree())
                 .institution(educationDTO.getInstitution())
                 .field(educationDTO.getField())
@@ -196,16 +169,15 @@ public class ProfileService {
     }
 
     // Project Methods
-    public ProjectDTO addProject(Long userId, ProjectDTO projectDTO) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public ProjectDTO addProjectBySupabaseUid(String supabaseUid, ProjectDTO projectDTO) {
+        UUID userUuid = UUID.fromString(supabaseUid);
 
         String technologiesStr = projectDTO.getTechnologies() != null 
                 ? String.join(",", projectDTO.getTechnologies()) 
                 : "";
 
         Project project = Project.builder()
-                .user(user)
+                .userId(userUuid)
                 .title(projectDTO.getTitle())
                 .description(projectDTO.getDescription())
                 .technologies(technologiesStr)
@@ -242,15 +214,14 @@ public class ProfileService {
     }
 
     // Skill Methods
-    public SkillDTO addSkill(Long userId, SkillDTO skillDTO) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public SkillDTO addSkillBySupabaseUid(String supabaseUid, SkillDTO skillDTO) {
+        UUID userUuid = UUID.fromString(supabaseUid);
 
         Skill.ProficiencyLevel proficiency = Skill.ProficiencyLevel.valueOf(
                 skillDTO.getProficiency().toUpperCase());
 
         Skill skill = Skill.builder()
-                .user(user)
+                .userId(userUuid)
                 .name(skillDTO.getName())
                 .proficiency(proficiency)
                 .endorsed(0)
@@ -304,7 +275,7 @@ public class ProfileService {
     }
 
     private ProjectDTO convertToProjectDTO(Project project) {
-        List<String> technologies = project.getTechnologies() != null 
+        List<String> technologies = project.getTechnologies() != null && !project.getTechnologies().isEmpty()
                 ? List.of(project.getTechnologies().split(","))
                 : List.of();
 
@@ -326,222 +297,5 @@ public class ProfileService {
                 .proficiency(skill.getProficiency().toString())
                 .endorsed(skill.getEndorsed())
                 .build();
-    }
-
-    // ==================== Supabase UID-based Methods ====================
-
-    // Create profile for Supabase user after signup
-    public UserProfileDTO createProfileForSupabaseUser(String supabaseUid, String email, String firstName, String lastName) {
-        // Check if profile already exists
-        UserProfile existing = userProfileRepository.findBySupabaseUid(supabaseUid).orElse(null);
-        if (existing != null) {
-            return getUserProfileBySupabaseUid(supabaseUid);
-        }
-
-        // Create new UserProfile for Supabase user
-        UserProfile userProfile = UserProfile.builder()
-                .supabaseUid(supabaseUid)
-                .firstName(firstName)
-                .lastName(lastName)
-                .phone(null)
-                .location(null)
-                .bio("Add your professional bio here...")
-                .profileImageUrl(null)
-                .build();
-
-        userProfileRepository.save(userProfile);
-
-        // Create initial empty rows in related tables
-        LocalDate today = LocalDate.now();
-        
-        // Create initial Experience row
-        Experience experience = Experience.builder()
-                .supabaseUid(supabaseUid)
-                .jobTitle("Add your job title")
-                .company("Add your company")
-                .startDate(today)
-                .endDate(null)
-                .isCurrent(false)
-                .description(null)
-                .build();
-        experienceRepository.save(experience);
-
-        // Create initial Education row
-        Education education = Education.builder()
-                .supabaseUid(supabaseUid)
-                .degree("Add your degree")
-                .institution("Add your institution")
-                .field("Add your field")
-                .startDate(today)
-                .endDate(null)
-                .isCurrent(false)
-                .build();
-        educationRepository.save(education);
-
-        // Create initial Project row
-        Project project = Project.builder()
-                .supabaseUid(supabaseUid)
-                .title("Add your project")
-                .description(null)
-                .technologies(null)
-                .link(null)
-                .startDate(today)
-                .endDate(null)
-                .build();
-        projectRepository.save(project);
-
-        // Create initial Skill row
-        Skill skill = Skill.builder()
-                .supabaseUid(supabaseUid)
-                .name("Add your skill")
-                .proficiency(Skill.ProficiencyLevel.BEGINNER)
-                .endorsed(0)
-                .build();
-        skillRepository.save(skill);
-
-        return UserProfileDTO.builder()
-                .firstName(firstName)
-                .lastName(lastName)
-                .email(email)
-                .phone(null)
-                .location(null)
-                .bio("Add your professional bio here...")
-                .profileImageUrl(null)
-                .experiences(List.of(convertToExperienceDTO(experience)))
-                .education(List.of(convertToEducationDTO(education)))
-                .projects(List.of(convertToProjectDTO(project)))
-                .skills(List.of(convertToSkillDTO(skill)))
-                .build();
-    }
-
-    // User Profile Methods - Supabase UID based
-    public UserProfileDTO getUserProfileBySupabaseUid(String supabaseUid) {
-        UserProfile userProfile = userProfileRepository.findBySupabaseUid(supabaseUid)
-                .orElseThrow(() -> new RuntimeException("Profile not found for UID: " + supabaseUid));
-
-        List<ExperienceDTO> experiences = experienceRepository.findBySupabaseUid(supabaseUid)
-                .stream().map(this::convertToExperienceDTO).collect(Collectors.toList());
-
-        List<EducationDTO> education = educationRepository.findBySupabaseUid(supabaseUid)
-                .stream().map(this::convertToEducationDTO).collect(Collectors.toList());
-
-        List<ProjectDTO> projects = projectRepository.findBySupabaseUid(supabaseUid)
-                .stream().map(this::convertToProjectDTO).collect(Collectors.toList());
-
-        List<SkillDTO> skills = skillRepository.findBySupabaseUid(supabaseUid)
-                .stream().map(this::convertToSkillDTO).collect(Collectors.toList());
-
-        return UserProfileDTO.builder()
-                .id(userProfile.getId())
-                .firstName(userProfile.getFirstName())
-                .lastName(userProfile.getLastName())
-                .email("")     // Will be populated by frontend from AuthService
-                .phone(userProfile.getPhone())
-                .location(userProfile.getLocation())
-                .bio(userProfile.getBio())
-                .profileImageUrl(userProfile.getProfileImageUrl())
-                .experiences(experiences)
-                .education(education)
-                .projects(projects)
-                .skills(skills)
-                .build();
-    }
-
-    public UserProfileDTO updateUserProfileBySupabaseUid(String supabaseUid, UserProfileDTO profileDTO) {
-        UserProfile userProfile = userProfileRepository.findBySupabaseUid(supabaseUid)
-                .orElseThrow(() -> new RuntimeException("Profile not found for UID: " + supabaseUid));
-
-        userProfile.setPhone(profileDTO.getPhone());
-        userProfile.setLocation(profileDTO.getLocation());
-        userProfile.setBio(profileDTO.getBio());
-        userProfile.setProfileImageUrl(profileDTO.getProfileImageUrl());
-
-        userProfileRepository.save(userProfile);
-
-        return getUserProfileBySupabaseUid(supabaseUid);
-    }
-
-    // Experience Methods - Supabase UID based
-    public ExperienceDTO addExperienceBySupabaseUid(String supabaseUid, ExperienceDTO experienceDTO) {
-        // Validate profile exists
-        userProfileRepository.findBySupabaseUid(supabaseUid)
-                .orElseThrow(() -> new RuntimeException("Profile not found for UID: " + supabaseUid));
-
-        Experience experience = Experience.builder()
-                .supabaseUid(supabaseUid)
-                .jobTitle(experienceDTO.getJobTitle())
-                .company(experienceDTO.getCompany())
-                .startDate(experienceDTO.getStartDate())
-                .endDate(experienceDTO.getEndDate())
-                .isCurrent(experienceDTO.getCurrent())
-                .description(experienceDTO.getDescription())
-                .build();
-
-        Experience saved = experienceRepository.save(experience);
-        return convertToExperienceDTO(saved);
-    }
-
-    // Education Methods - Supabase UID based
-    public EducationDTO addEducationBySupabaseUid(String supabaseUid, EducationDTO educationDTO) {
-        // Validate profile exists
-        userProfileRepository.findBySupabaseUid(supabaseUid)
-                .orElseThrow(() -> new RuntimeException("Profile not found for UID: " + supabaseUid));
-
-        Education education = Education.builder()
-                .supabaseUid(supabaseUid)
-                .degree(educationDTO.getDegree())
-                .institution(educationDTO.getInstitution())
-                .field(educationDTO.getField())
-                .startDate(educationDTO.getStartDate())
-                .endDate(educationDTO.getEndDate())
-                .isCurrent(educationDTO.getCurrent())
-                .build();
-
-        Education saved = educationRepository.save(education);
-        return convertToEducationDTO(saved);
-    }
-
-    // Project Methods - Supabase UID based
-    public ProjectDTO addProjectBySupabaseUid(String supabaseUid, ProjectDTO projectDTO) {
-        // Validate profile exists
-        userProfileRepository.findBySupabaseUid(supabaseUid)
-                .orElseThrow(() -> new RuntimeException("Profile not found for UID: " + supabaseUid));
-
-        String technologiesStr = projectDTO.getTechnologies() != null 
-                ? String.join(",", projectDTO.getTechnologies()) 
-                : "";
-
-        Project project = Project.builder()
-                .supabaseUid(supabaseUid)
-                .title(projectDTO.getTitle())
-                .description(projectDTO.getDescription())
-                .technologies(technologiesStr)
-                .link(projectDTO.getLink())
-                .startDate(projectDTO.getStartDate())
-                .endDate(projectDTO.getEndDate())
-                .build();
-
-        Project saved = projectRepository.save(project);
-        return convertToProjectDTO(saved);
-    }
-
-    // Skill Methods - Supabase UID based
-    public SkillDTO addSkillBySupabaseUid(String supabaseUid, SkillDTO skillDTO) {
-        // Validate profile exists
-        userProfileRepository.findBySupabaseUid(supabaseUid)
-                .orElseThrow(() -> new RuntimeException("Profile not found for UID: " + supabaseUid));
-
-        Skill.ProficiencyLevel proficiency = Skill.ProficiencyLevel.valueOf(
-                skillDTO.getProficiency().toUpperCase());
-
-        Skill skill = Skill.builder()
-                .supabaseUid(supabaseUid)
-                .name(skillDTO.getName())
-                .proficiency(proficiency)
-                .endorsed(0)
-                .build();
-
-        Skill saved = skillRepository.save(skill);
-        return convertToSkillDTO(saved);
     }
 }

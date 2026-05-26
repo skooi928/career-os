@@ -1,7 +1,9 @@
 package com.cowhorse.career_os.controller;
 
 import com.cowhorse.career_os.dto.*;
+import com.cowhorse.career_os.exception.AuthenticationException;
 import com.cowhorse.career_os.service.ProfileService;
+import com.cowhorse.career_os.service.OnboardingService;
 import com.cowhorse.career_os.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -14,26 +16,38 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin(origins = "*")
 public class ProfileController {
     private final ProfileService profileService;
+    private final OnboardingService onboardingService;
     private final JwtTokenProvider jwtTokenProvider;
 
     // Helper method to extract Supabase UID from JWT token in Authorization header
     private String getUidFromHeader(String authorizationHeader) {
-        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-            String token = authorizationHeader.substring(7);
-            return jwtTokenProvider.getUidFromToken(token);
+        if (authorizationHeader == null || authorizationHeader.isEmpty()) {
+            throw new AuthenticationException("Missing Authorization header");
         }
-        throw new RuntimeException("Invalid or missing Authorization header");
+        if (!authorizationHeader.startsWith("Bearer ")) {
+            throw new AuthenticationException("Invalid Authorization header format. Expected 'Bearer <token>'");
+        }
+        
+        String token = authorizationHeader.substring(7);
+        try {
+            return jwtTokenProvider.getUidFromToken(token);
+        } catch (Exception e) {
+            throw new AuthenticationException("Invalid or expired token: " + e.getMessage());
+        }
     }
 
     // Create profile after Supabase signup
     @PostMapping("/create-profile")
     public ResponseEntity<CreateProfileResponse> createProfile(@RequestBody CreateProfileRequest request) {
-        UserProfileDTO profile = profileService.createProfileForSupabaseUser(
-            request.getUserId(),
-            request.getEmail(),
+        // Initialize user records using OnboardingService
+        onboardingService.initializeNewUserProfile(
             request.getFirstName(),
-            request.getLastName()
+            request.getLastName(),
+            request.getUserId()
         );
+
+        // Fetch the newly created profile
+        UserProfileDTO profile = profileService.getUserProfileBySupabaseUid(request.getUserId());
         
         // Generate JWT token with Supabase UID for future API calls
         String token = jwtTokenProvider.generateTokenWithSupabaseUid(request.getEmail(), request.getUserId());
@@ -53,15 +67,16 @@ public class ProfileController {
     // User Profile Endpoints
     @GetMapping
     public ResponseEntity<UserProfileDTO> getUserProfile(
-            @RequestHeader("Authorization") String authorizationHeader) {
-        String uid = getUidFromHeader(authorizationHeader);
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestParam(required = false) String userId) {
+        String uid = (userId != null && !userId.isEmpty()) ? userId : getUidFromHeader(authorizationHeader);
         UserProfileDTO profile = profileService.getUserProfileBySupabaseUid(uid);
         return ResponseEntity.ok(profile);
     }
 
     @PutMapping
     public ResponseEntity<UserProfileDTO> updateUserProfile(
-            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
             @RequestBody UserProfileDTO profileDTO) {
         String uid = getUidFromHeader(authorizationHeader);
         UserProfileDTO updated = profileService.updateUserProfileBySupabaseUid(uid, profileDTO);
@@ -71,7 +86,7 @@ public class ProfileController {
     // Experience Endpoints
     @PostMapping("/experience")
     public ResponseEntity<ExperienceDTO> addExperience(
-            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
             @RequestBody ExperienceDTO experienceDTO) {
         String uid = getUidFromHeader(authorizationHeader);
         ExperienceDTO saved = profileService.addExperienceBySupabaseUid(uid, experienceDTO);
@@ -95,7 +110,7 @@ public class ProfileController {
     // Education Endpoints
     @PostMapping("/education")
     public ResponseEntity<EducationDTO> addEducation(
-            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
             @RequestBody EducationDTO educationDTO) {
         String uid = getUidFromHeader(authorizationHeader);
         EducationDTO saved = profileService.addEducationBySupabaseUid(uid, educationDTO);
@@ -119,7 +134,7 @@ public class ProfileController {
     // Project Endpoints
     @PostMapping("/project")
     public ResponseEntity<ProjectDTO> addProject(
-            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
             @RequestBody ProjectDTO projectDTO) {
         String uid = getUidFromHeader(authorizationHeader);
         ProjectDTO saved = profileService.addProjectBySupabaseUid(uid, projectDTO);
@@ -143,7 +158,7 @@ public class ProfileController {
     // Skill Endpoints
     @PostMapping("/skill")
     public ResponseEntity<SkillDTO> addSkill(
-            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
             @RequestBody SkillDTO skillDTO) {
         String uid = getUidFromHeader(authorizationHeader);
         SkillDTO saved = profileService.addSkillBySupabaseUid(uid, skillDTO);

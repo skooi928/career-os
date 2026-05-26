@@ -17,7 +17,11 @@
   <div class="profile-header">
     <div class="header-content">
       <div class="profile-avatar">
-        {{ getInitials(personalInfo().firstName, personalInfo().lastName) }}
+        @if (personalInfo().profileImage) {
+          <img [src]="personalInfo().profileImage" alt="Profile" class="avatar-img">
+        } @else {
+          {{ getInitials(personalInfo().firstName, personalInfo().lastName) }}
+        }
       </div>
       <div class="header-info">
         <h1 class="profile-name">{{ personalInfo().firstName }} {{ personalInfo().lastName }}</h1>

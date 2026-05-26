@@ -1,8 +1,11 @@
-import { Component, HostListener, signal, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, HostListener, signal, Inject, PLATFORM_ID, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../services/auth.service';
+import { ProfileService, UserProfileDTO } from '../services/profile.service';
 import { ThemeToggleComponent } from '../components/theme-toggle/theme-toggle.component';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 interface NavItem {
   label: string;
@@ -34,17 +37,21 @@ interface NavItem {
           <div class="user-profile-container">
             <button class="profile-trigger" (click)="toggleProfileMenu($event)">
               <div class="avatar">
-                {{ userInitials() }}
+                @if (profileImageUrl()) {
+                  <img [src]="profileImageUrl()" alt="Avatar" class="avatar-img">
+                } @else {
+                  {{ userInitials() }}
+                }
               </div>
-              <span class="username">{{ authService.getCurrentUser()?.firstName }}</span>
+              <span class="username">{{ (userProfile()?.firstName || authService.getCurrentUser()?.firstName) }}</span>
               <i class="ph-caret-down text-xs"></i>
             </button>
 
             <!-- Dropdown Menu -->
             <div class="dropdown-menu" [class.show]="isProfileMenuOpen()">
               <div class="menu-header">
-                <p class="name">{{ authService.getCurrentUser()?.firstName }} {{ authService.getCurrentUser()?.lastName }}</p>
-                <p class="email">{{ authService.getCurrentUser()?.email }}</p>
+                <p class="name">{{ (userProfile()?.firstName || authService.getCurrentUser()?.firstName) }} {{ (userProfile()?.lastName || authService.getCurrentUser()?.lastName) }}</p>
+                <p class="email">{{ (userProfile()?.email || authService.getCurrentUser()?.email) }}</p>
               </div>
               <hr>
               <a routerLink="/profile" class="menu-item">
@@ -311,6 +318,13 @@ interface NavItem {
       font-size: 0.75rem;
       color: white;
       box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+      overflow: hidden;
+    }
+
+    .avatar-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
 
     .username { font-weight: 500; font-size: 0.875rem; }
@@ -427,9 +441,12 @@ interface NavItem {
     }
   `]
 })
-export class AppShellComponent {
+export class AppShellComponent implements OnInit, OnDestroy {
   isSidebarCollapsed = signal(false);
   isProfileMenuOpen = signal(false);
+  userProfile = signal<UserProfileDTO | null>(null);
+  profileImageUrl = signal<string | null>(null);
+  private destroy$ = new Subject<void>();
   
   navItems = signal<NavItem[]>([
     { label: 'Dashboard', route: '/dashboard', icon: 'ph-house-simple' },
@@ -442,9 +459,42 @@ export class AppShellComponent {
 
   constructor(
     public authService: AuthService,
+    private profileService: ProfileService,
     private router: Router,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {}
+
+  ngOnInit() {
+    if (isPlatformBrowser(this.platformId)) {
+      this.loadUserProfile();
+    }
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  loadUserProfile() {
+    const user = this.authService.getCurrentUser();
+    if (user && user.userId) {
+      this.profileService.getProfile(user.userId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (profile: UserProfileDTO) => {
+            if (profile) {
+              this.userProfile.set(profile);
+              if (profile.profileImageUrl) {
+                this.profileImageUrl.set(profile.profileImageUrl);
+              }
+            }
+          },
+          error: (err: any) => {
+            console.error('Error loading profile in navbar:', err);
+          }
+        });
+    }
+  }
 
   activePageTitle() {
     const activeRoute = this.navItems().find(item => this.router.url.includes(item.route));
@@ -452,11 +502,15 @@ export class AppShellComponent {
   }
 
   userInitials() {
+    const profile = this.userProfile();
     const user = this.authService.getCurrentUser();
-    if (!user) return '?';
-    const firstName = user.firstName?.[0] ?? 'U';
-    const lastName = user.lastName?.[0] ?? '';
-    return `${firstName}${lastName}`.toUpperCase();
+    
+    const firstName = profile?.firstName || user?.firstName || 'U';
+    const lastName = profile?.lastName || user?.lastName || '';
+    
+    const fn = firstName?.[0] ?? '';
+    const ln = lastName?.[0] ?? '';
+    return (fn + ln).toUpperCase() || '?';
   }
 
   toggleSidebar() {
