@@ -57,8 +57,13 @@ export class SignupComponent {
     const { firstName, lastName, email, password } = this.signupForm.value;
 
     this.authService.signup(email, password, firstName, lastName).subscribe({
-      next: () => {
-        this.router.navigate(['/dashboard']);
+      next: (response) => {
+        // Check if email needs verification
+        if (response.emailVerified !== true) {
+          this.router.navigate(['/verify-email']);
+        } else {
+          this.router.navigate(['/dashboard']);
+        }
       },
       error: (err) => {
         this.error.set('Failed to create account. Email may already be in use.');

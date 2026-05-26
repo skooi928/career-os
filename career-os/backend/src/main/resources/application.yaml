@@ -11,6 +11,8 @@ spring:
       ddl-auto: none
     show-sql: false
 supabase:
+  url: https://mgqmcfawkgiwjdhxazmy.supabase.co
+  api-key: sb_publishable_xJP9R0ZzP9SxulF648yeow_1_kuamXo
   jwt:
     secret: ${JWT_SECRET}
     expiration: 86400000

@@ -44,8 +44,13 @@ export class LoginComponent {
     this.loading.set(true);
     this.disableForm(true);
     this.authService.login(this.f['email'].value, this.f['password'].value).subscribe({
-      next: () => {
-        this.router.navigate(['/dashboard']);
+      next: (response) => {
+        // Check if email needs verification
+        if (response.emailVerified !== true) {
+          this.router.navigate(['/verify-email']);
+        } else {
+          this.router.navigate(['/dashboard']);
+        }
       },
       error: (err) => {
         this.error.set('Invalid email or password');

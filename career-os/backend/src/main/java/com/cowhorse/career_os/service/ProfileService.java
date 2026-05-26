@@ -463,7 +463,8 @@ public class ProfileService {
 
     // Experience Methods - Supabase UID based
     public ExperienceDTO addExperienceBySupabaseUid(String supabaseUid, ExperienceDTO experienceDTO) {
-        UserProfile userProfile = userProfileRepository.findBySupabaseUid(supabaseUid)
+        // Validate profile exists
+        userProfileRepository.findBySupabaseUid(supabaseUid)
                 .orElseThrow(() -> new RuntimeException("Profile not found for UID: " + supabaseUid));
 
         Experience experience = Experience.builder()
@@ -482,7 +483,8 @@ public class ProfileService {
 
     // Education Methods - Supabase UID based
     public EducationDTO addEducationBySupabaseUid(String supabaseUid, EducationDTO educationDTO) {
-        UserProfile userProfile = userProfileRepository.findBySupabaseUid(supabaseUid)
+        // Validate profile exists
+        userProfileRepository.findBySupabaseUid(supabaseUid)
                 .orElseThrow(() -> new RuntimeException("Profile not found for UID: " + supabaseUid));
 
         Education education = Education.builder()
@@ -501,7 +503,8 @@ public class ProfileService {
 
     // Project Methods - Supabase UID based
     public ProjectDTO addProjectBySupabaseUid(String supabaseUid, ProjectDTO projectDTO) {
-        UserProfile userProfile = userProfileRepository.findBySupabaseUid(supabaseUid)
+        // Validate profile exists
+        userProfileRepository.findBySupabaseUid(supabaseUid)
                 .orElseThrow(() -> new RuntimeException("Profile not found for UID: " + supabaseUid));
 
         String technologiesStr = projectDTO.getTechnologies() != null 
@@ -524,7 +527,8 @@ public class ProfileService {
 
     // Skill Methods - Supabase UID based
     public SkillDTO addSkillBySupabaseUid(String supabaseUid, SkillDTO skillDTO) {
-        UserProfile userProfile = userProfileRepository.findBySupabaseUid(supabaseUid)
+        // Validate profile exists
+        userProfileRepository.findBySupabaseUid(supabaseUid)
                 .orElseThrow(() -> new RuntimeException("Profile not found for UID: " + supabaseUid));
 
         Skill.ProficiencyLevel proficiency = Skill.ProficiencyLevel.valueOf(

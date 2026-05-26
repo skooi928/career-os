@@ -454,7 +454,9 @@ export class AppShellComponent {
   userInitials() {
     const user = this.authService.getCurrentUser();
     if (!user) return '?';
-    return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
+    const firstName = user.firstName?.[0] ?? 'U';
+    const lastName = user.lastName?.[0] ?? '';
+    return `${firstName}${lastName}`.toUpperCase();
   }
 
   toggleSidebar() {
