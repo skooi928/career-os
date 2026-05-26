@@ -47,7 +47,6 @@ public class AuthService {
             
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 Map<String, Object> responseBody = response.getBody();
-                String userId = (String) responseBody.get("user_id");
                 @SuppressWarnings("unchecked")
                 Map<String, Object> userMap = (Map<String, Object>) responseBody.get("user");
                 
@@ -56,8 +55,22 @@ public class AuthService {
                     throw new RuntimeException("Login failed: user field missing from response");
                 }
                 
+                // Extract userId and email from nested user object
+                String userId = (String) userMap.get("id");
                 String email = (String) userMap.get("email");
-                Boolean emailVerified = (Boolean) userMap.get("email_confirmed");
+                
+                // Check if email is verified by looking at email_confirmed_at timestamp or user_metadata.email_verified
+                Boolean emailVerified = null;
+                String emailConfirmedAt = (String) userMap.get("email_confirmed_at");
+                if (emailConfirmedAt != null && !emailConfirmedAt.isEmpty()) {
+                    emailVerified = true;
+                } else {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> userMetadata = (Map<String, Object>) userMap.get("user_metadata");
+                    if (userMetadata != null) {
+                        emailVerified = (Boolean) userMetadata.get("email_verified");
+                    }
+                }
                 
                 if (userId == null || email == null) {
                     log.error("Supabase login response missing id or email. UserId: {}, Email: {}", userId, email);
@@ -118,7 +131,19 @@ public class AuthService {
                 // For signup, Supabase returns the user object directly (not nested under "user" key)
                 String userId = (String) responseBody.get("id");
                 String email = (String) responseBody.get("email");
-                Boolean emailVerified = (Boolean) responseBody.get("email_confirmed");
+                
+                // Check if email is verified by looking at email_confirmed_at timestamp or user_metadata.email_verified
+                Boolean emailVerified = null;
+                String emailConfirmedAt = (String) responseBody.get("email_confirmed_at");
+                if (emailConfirmedAt != null && !emailConfirmedAt.isEmpty()) {
+                    emailVerified = true;
+                } else {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> responseMetadata = (Map<String, Object>) responseBody.get("user_metadata");
+                    if (responseMetadata != null) {
+                        emailVerified = (Boolean) responseMetadata.get("email_verified");
+                    }
+                } 
                 
                 if (userId == null || email == null) {
                     log.error("Supabase signup response missing id or email. Response: {}", responseBody);
