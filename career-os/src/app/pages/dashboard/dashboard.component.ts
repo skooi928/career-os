@@ -1,6 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
+import { JobService, Job } from '../../services/job.service';
+import { Observable } from 'rxjs';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-dashboard',
@@ -100,6 +103,51 @@ import { AuthService } from '../../services/auth.service';
             </div>
           </div>
         </div>
+      </div>
+
+      <div class="recommended-section">
+        <div class="section-header">
+          <h3>Recommended Jobs</h3>
+          <button class="btn-text" *ngIf="(jobs$ | async)?.length">View All</button>
+        </div>
+        
+        <ng-container *ngIf="(jobs$ | async) as jobs">
+          <div class="empty-state" *ngIf="jobs.length === 0">
+            <i class="ph ph-briefcase empty-icon"></i>
+            <h4>No recommended jobs available yet</h4>
+            <p>Employers haven't posted any jobs that match your profile.</p>
+          </div>
+
+          <div class="carousel-container" *ngIf="jobs.length > 0">
+            <div class="job-card" *ngFor="let job of jobs" (click)="viewJob(job.id)">
+              <div class="job-card-header">
+                <div class="company-logo">{{ job.initials }}</div>
+                <span class="badge new-badge" *ngIf="job.isNew">New</span>
+              </div>
+              
+              <div class="job-card-body">
+                <h4 class="job-title">{{ job.title }}</h4>
+                <p class="company-name">{{ job.company }}</p>
+                
+                <div class="job-meta">
+                  <span class="meta-item"><i class="ph ph-map-pin"></i> {{ job.location }}</span>
+                  <span class="badge employment-badge">{{ job.employmentType }}</span>
+                </div>
+              </div>
+              
+              <div class="job-card-footer">
+                <div class="salary-range">RM{{ job.minSalary }} - RM{{ job.maxSalary }}</div>
+                <div class="skills-row" *ngIf="job.roleRequirements.length > 0">
+                  <span class="skill-tag" *ngFor="let skill of job.roleRequirements[0].skills">{{ skill.skillText }}</span>
+                </div>
+                <div class="job-footer-meta">
+                  <span class="deadline">Apply by {{ job.deadline }}</span>
+                  <span class="vacancies">{{ job.vacancies }} vacancy(s)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-container>
       </div>
     </div>
   `,
@@ -222,12 +270,222 @@ import { AuthService } from '../../services/auth.service';
     .task-item input { accent-color: var(--color-primary); width: 18px; height: 18px; }
     .task-item label { cursor: pointer; font-size: 0.9375rem; color: var(--color-text-secondary); }
     .task-item input:checked + label { text-decoration: line-through; opacity: 0.4; }
+
+    /* Recommended Jobs Styles */
+    .recommended-section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .section-header h3 {
+      margin: 0;
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px;
+      background: var(--color-surface);
+      border: 1px dashed var(--color-border);
+      border-radius: 16px;
+      color: var(--color-text-secondary);
+      text-align: center;
+    }
+
+    .empty-icon {
+      font-size: 3rem;
+      color: var(--color-text-tertiary);
+      margin-bottom: 16px;
+    }
+
+    .empty-state h4 {
+      margin: 0;
+      color: var(--color-text);
+      font-size: 1.125rem;
+    }
+
+    .empty-state p {
+      margin: 8px 0 0 0;
+      font-size: 0.9375rem;
+    }
+
+    .carousel-container {
+      display: flex;
+      overflow-x: auto;
+      gap: 20px;
+      padding-bottom: 12px;
+      scroll-snap-type: x mandatory;
+      scrollbar-width: none;
+    }
+
+    .carousel-container::-webkit-scrollbar {
+      display: none;
+    }
+
+    .job-card {
+      min-width: 320px;
+      flex: 0 0 auto;
+      scroll-snap-align: start;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 16px;
+      padding: 20px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      transition: all 0.2s ease-in-out;
+    }
+
+    .job-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(16, 185, 129, 0.3);
+      box-shadow: 0 10px 25px -10px rgba(16, 185, 129, 0.15);
+    }
+
+    .job-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .company-logo {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: var(--color-surface-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: var(--color-text);
+      font-size: 1.125rem;
+      border: 1px solid var(--color-border);
+    }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .new-badge {
+      background: rgba(59, 130, 246, 0.1);
+      color: var(--color-info);
+    }
+
+    .employment-badge {
+      background: var(--color-surface-secondary);
+      color: var(--color-text-secondary);
+    }
+
+    .job-card-body {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .job-title {
+      margin: 0;
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--color-text);
+    }
+
+    .company-name {
+      margin: 0;
+      font-size: 0.875rem;
+      color: var(--color-text-secondary);
+    }
+
+    .job-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    .meta-item {
+      font-size: 0.875rem;
+      color: var(--color-text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .job-card-footer {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: auto;
+      padding-top: 16px;
+      border-top: 1px dashed var(--color-border);
+    }
+
+    .salary-range {
+      font-weight: 600;
+      color: var(--color-primary);
+      font-size: 0.9375rem;
+    }
+
+    .skills-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .skill-tag {
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: var(--color-surface-secondary);
+      color: var(--color-text-tertiary);
+    }
+
+    .job-footer-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: var(--color-text-tertiary);
+    }
   `]
 })
-export class DashboardComponent {
-  constructor(private authService: AuthService) {}
+export class DashboardComponent implements OnInit {
+  jobs$: Observable<Job[]>;
+
+  constructor(
+    private authService: AuthService, 
+    private jobService: JobService,
+    private router: Router
+  ) {
+    this.jobs$ = this.jobService.jobs$;
+  }
+
+  ngOnInit() {
+    this.jobService.loadJobs();
+  }
 
   firstName() {
     return this.authService.getCurrentUser()?.firstName || 'User';
+  }
+
+  viewJob(id?: string) {
+    if (id) {
+      this.router.navigate(['/jobs', id]);
+    }
   }
 }

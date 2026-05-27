@@ -1,4 +1,16 @@
 {
   "java.compile.nullAnalysis.mode": "automatic",
-  "java.configuration.updateBuildConfiguration": "interactive"
+  "java.configuration.updateBuildConfiguration": "interactive",
+  "sqltools.connections": [
+    {
+      "ssh": "Disabled",
+      "previewLimit": 50,
+      "server": "aws-1-ap-southeast-1.pooler.supabase.com",
+      "port": 6543,
+      "driver": "PostgreSQL",
+      "name": "CareerOS",
+      "database": "postgres",
+      "username": "postgres.mgqmcfawkgiwjdhxazmy"
+    }
+  ]
 }
