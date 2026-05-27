@@ -8,11 +8,13 @@ import { AppShellComponent } from './layout/app-shell.component';
 import { authGuard } from './guards/auth.guard';
 import { emailVerificationGuard } from './guards/email-verification.guard';
 import { PageNotFoundComponent } from './pages/page-not-found/page-not-found.component';
+import { AuthCallbackComponent } from './pages/auth-callback/auth-callback.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
   { path: 'signup', component: SignupComponent },
+  { path: 'auth-callback', component: AuthCallbackComponent },
   { path: 'verify-email', component: VerifyEmailComponent, canActivate: [authGuard] },
   { 
     path: '', 

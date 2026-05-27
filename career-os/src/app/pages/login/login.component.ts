@@ -1,7 +1,7 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, OnInit, Inject, PLATFORM_ID } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
-import { CommonModule } from '@angular/common';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
 import { ThemeToggleComponent } from '../../components/theme-toggle/theme-toggle.component';
 
@@ -12,20 +12,37 @@ import { ThemeToggleComponent } from '../../components/theme-toggle/theme-toggle
   templateUrl: './login.component.html',
   styleUrl: './login.component.css'
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   loginForm: FormGroup;
   loading = signal(false);
   submitted = signal(false);
   error = signal<string | null>(null);
+  microsoftLoading = signal(false);
+  private sessionChecked = false;
 
   constructor(
     private formBuilder: FormBuilder,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute,
+    @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.loginForm = this.formBuilder.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(6)]]
+    });
+  }
+
+  ngOnInit(): void {
+    // Session check is now handled via the normal token retrieval
+    // The auth-callback component will store the token for OAuth
+    
+    this.route.queryParams.subscribe((params: any) => {
+      if (params['error']) {
+        this.error.set('Login Error: ' + params['error']);
+      } else if (params['code']) {
+        this.error.set('Configuration Error: Supabase redirected to the login page instead of the backend. Your Supabase redirect URLs must exactly include: http://localhost:8080/api/auth/callback');
+      }
     });
   }
 
@@ -58,6 +75,11 @@ export class LoginComponent {
         this.disableForm(false);
       }
     });
+  }
+
+  signInWithMicrosoft(): void {
+    this.microsoftLoading.set(true);
+    window.location.href = 'http://localhost:8080/api/auth/azure';
   }
 
   private disableForm(disabled: boolean): void {

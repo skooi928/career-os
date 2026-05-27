@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, throwError } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
 
+
 export interface AuthResponse {
   token: string;
   email: string;
@@ -69,12 +70,51 @@ export class AuthService {
   }
 
   /**
+   * Set authentication session from a JWT token (e.g., after backend OAuth redirect)
+   */
+  setAuthSessionFromToken(token: string): boolean {
+    try {
+      const base64Url = token.split('.')[1];
+      let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      
+      const pad = base64.length % 4;
+      if (pad) {
+        if (pad === 1) throw new Error('Invalid base64 string length');
+        base64 += new Array(5 - pad).join('=');
+      }
+
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      const payload = JSON.parse(jsonPayload);
+      
+      const authResponse: AuthResponse = {
+        token: token,
+        email: payload.email || '',
+        userId: payload.sub || '',
+        firstName: '',
+        lastName: '',
+        emailVerified: true
+      };
+      
+      this.storeAuthData(authResponse);
+      this.currentUserSubject.next(authResponse);
+      return true;
+    } catch (e) {
+      console.error('Failed to parse token', e);
+      return false;
+    }
+  }
+
+  /**
    * Logout and clear auth data
    */
   logout(): Observable<void> {
     return new Observable(observer => {
       if (isPlatformBrowser(this.platformId)) {
         localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_data');
+        
         localStorage.removeItem('user_data');
       }
       this.currentUserSubject.next(null);
