@@ -1,6 +1,6 @@
 import { Component, signal, OnInit, Inject, PLATFORM_ID } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
 import { ThemeToggleComponent } from '../../components/theme-toggle/theme-toggle.component';
@@ -24,6 +24,7 @@ export class LoginComponent implements OnInit {
     private formBuilder: FormBuilder,
     private authService: AuthService,
     private router: Router,
+    private route: ActivatedRoute,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.loginForm = this.formBuilder.group({
@@ -33,24 +34,16 @@ export class LoginComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    if (isPlatformBrowser(this.platformId) && !this.sessionChecked) {
-      this.checkOAuthSession();
-    }
-  }
-
-  private async checkOAuthSession(): Promise<void> {
-    this.sessionChecked = true;
-    try {
-      this.loading.set(true);
-      const user = await this.authService.verifySupabaseSession();
-      if (user) {
-        this.router.navigate(['/dashboard']);
+    // Session check is now handled via the normal token retrieval
+    // The auth-callback component will store the token for OAuth
+    
+    this.route.queryParams.subscribe((params: any) => {
+      if (params['error']) {
+        this.error.set('Login Error: ' + params['error']);
+      } else if (params['code']) {
+        this.error.set('Configuration Error: Supabase redirected to the login page instead of the backend. Your Supabase redirect URLs must exactly include: http://localhost:8080/api/auth/callback');
       }
-    } catch (err) {
-      console.error('OAuth session check failed:', err);
-    } finally {
-      this.loading.set(false);
-    }
+    });
   }
 
   get f() {
@@ -84,15 +77,9 @@ export class LoginComponent implements OnInit {
     });
   }
 
-  async signInWithMicrosoft(): Promise<void> {
-    try {
-      this.microsoftLoading.set(true);
-      this.error.set(null);
-      await this.authService.signInWithMicrosoft();
-    } catch (err) {
-      this.error.set('Microsoft login failed. Please try again.');
-      this.microsoftLoading.set(false);
-    }
+  signInWithMicrosoft(): void {
+    this.microsoftLoading.set(true);
+    window.location.href = 'http://localhost:8080/api/auth/azure';
   }
 
   private disableForm(disabled: boolean): void {

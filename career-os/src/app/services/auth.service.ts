@@ -3,7 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, throwError } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
-import { getSupabaseClient } from './supabase';
+
 
 export interface AuthResponse {
   token: string;
@@ -70,52 +70,39 @@ export class AuthService {
   }
 
   /**
-   * Sign in with Microsoft via Supabase
+   * Set authentication session from a JWT token (e.g., after backend OAuth redirect)
    */
-  async signInWithMicrosoft(): Promise<void> {
-    const supabaseClient = getSupabaseClient();
-    if (!supabaseClient) throw new Error('Supabase client not available');
-
-    const { error } = await supabaseClient.auth.signInWithOAuth({
-      provider: 'azure',
-      options: {
-        redirectTo: `${window.location.origin}/login`,
-        scopes: 'email offline_access'
-      }
-    });
-
-    if (error) throw error;
-  }
-
-  /**
-   * Check and verify Supabase OAuth session
-   */
-  async verifySupabaseSession(): Promise<AuthResponse | null> {
+  setAuthSessionFromToken(token: string): boolean {
     try {
-      if (!isPlatformBrowser(this.platformId)) return null;
+      const base64Url = token.split('.')[1];
+      let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      
+      const pad = base64.length % 4;
+      if (pad) {
+        if (pad === 1) throw new Error('Invalid base64 string length');
+        base64 += new Array(5 - pad).join('=');
+      }
 
-      const supabaseClient = getSupabaseClient();
-      if (!supabaseClient) return null;
-
-      const { data, error } = await supabaseClient.auth.getSession();
-      if (error || !data.session) return null;
-
-      const session = data.session;
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      const payload = JSON.parse(jsonPayload);
+      
       const authResponse: AuthResponse = {
-        token: session.access_token,
-        email: session.user.email || '',
-        userId: session.user.id,
-        firstName: session.user.user_metadata?.first_name || '',
-        lastName: session.user.user_metadata?.last_name || '',
-        emailVerified: session.user.email_confirmed_at !== null
+        token: token,
+        email: payload.email || '',
+        userId: payload.sub || '',
+        firstName: '',
+        lastName: '',
+        emailVerified: true
       };
-
+      
       this.storeAuthData(authResponse);
       this.currentUserSubject.next(authResponse);
-      return authResponse;
-    } catch (err) {
-      console.error('Session verification error:', err);
-      return null;
+      return true;
+    } catch (e) {
+      console.error('Failed to parse token', e);
+      return false;
     }
   }
 
@@ -128,11 +115,7 @@ export class AuthService {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user_data');
         
-        // Also sign out from Supabase to clear OAuth sessions
-        const supabaseClient = getSupabaseClient();
-        if (supabaseClient) {
-          supabaseClient.auth.signOut().catch((err: any) => console.error('Supabase logout error:', err));
-        }
+        localStorage.removeItem('user_data');
       }
       this.currentUserSubject.next(null);
       observer.next();
