@@ -82,6 +82,18 @@ public class OnboardingService {
                         "VALUES (?::uuid, ?, ?, ?, ?, ?, ?)";
                 jdbcTemplate.update(skillSql, supabaseUid, supabaseUid, "", "BEGINNER", 0, timestamp, timestamp);
                 log.debug("Created placeholder skill record for Supabase UID: {}", supabaseUid);
+            } else if ("employer".equalsIgnoreCase(role)) {
+                // Create employer record
+                String employerSql = "INSERT INTO dbo.employers (user_id, created_at, updated_at) " +
+                        "VALUES (?::uuid, ?, ?)";
+                jdbcTemplate.update(employerSql, supabaseUid, timestamp, timestamp);
+                log.debug("Created employer record for Supabase UID: {}", supabaseUid);
+            } else if ("mentor".equalsIgnoreCase(role)) {
+                // Create mentor record
+                String mentorSql = "INSERT INTO dbo.mentors (user_id, created_at, updated_at) " +
+                        "VALUES (?::uuid, ?, ?)";
+                jdbcTemplate.update(mentorSql, supabaseUid, timestamp, timestamp);
+                log.debug("Created mentor record for Supabase UID: {}", supabaseUid);
             }
 
             log.info("Successfully initialized profile for Supabase UID: {}", supabaseUid);

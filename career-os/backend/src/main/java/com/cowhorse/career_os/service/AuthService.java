@@ -81,10 +81,14 @@ public class AuthService {
                     throw new RuntimeException("Login failed: id or email missing from user data");
                 }
                 
-                // Fetch role from profile
-                String role = userProfileRepository.findByUserId(java.util.UUID.fromString(userId))
-                        .map(UserProfile::getRole)
-                        .orElse("candidate");
+                // Fetch user profile to get role, firstName, and lastName
+                java.util.UUID userUuid = java.util.UUID.fromString(userId);
+                UserProfile userProfile = userProfileRepository.findByUserId(userUuid)
+                        .orElse(null);
+                
+                String role = userProfile != null ? userProfile.getRole() : "candidate";
+                String firstName = userProfile != null ? userProfile.getFirstName() : "";
+                String lastName = userProfile != null ? userProfile.getLastName() : "";
 
                 // Generate backend JWT token with Supabase UID and role
                 String token = jwtTokenProvider.generateTokenWithSupabaseUid(email, userId, role);
@@ -93,6 +97,8 @@ public class AuthService {
                         .token(token)
                         .email(email)
                         .userId(userId)
+                        .firstName(firstName)
+                        .lastName(lastName)
                         .role(role)
                         .emailVerified(emailVerified)
                         .build();
@@ -181,6 +187,8 @@ public class AuthService {
                         .token(token)
                         .email(email)
                         .userId(userId)
+                        .firstName(request.getFirstName())
+                        .lastName(request.getLastName())
                         .role("candidate")
                         .emailVerified(emailVerified)
                         .build();
