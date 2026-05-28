@@ -4,6 +4,8 @@ import com.cowhorse.career_os.config.SupabaseClient;
 import com.cowhorse.career_os.dto.AuthResponse;
 import com.cowhorse.career_os.dto.LoginRequest;
 import com.cowhorse.career_os.dto.SignupRequest;
+import com.cowhorse.career_os.entity.UserProfile;
+import com.cowhorse.career_os.repository.UserProfileRepository;
 import com.cowhorse.career_os.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +29,7 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final RestTemplate restTemplate;
     private final OnboardingService onboardingService;
+    private final UserProfileRepository userProfileRepository;
 
     public AuthResponse login(LoginRequest request) {
         try {
@@ -78,13 +81,19 @@ public class AuthService {
                     throw new RuntimeException("Login failed: id or email missing from user data");
                 }
                 
-                // Generate backend JWT token with Supabase UID
-                String token = jwtTokenProvider.generateTokenWithSupabaseUid(email, userId);
+                // Fetch role from profile
+                String role = userProfileRepository.findByUserId(java.util.UUID.fromString(userId))
+                        .map(UserProfile::getRole)
+                        .orElse("candidate");
+
+                // Generate backend JWT token with Supabase UID and role
+                String token = jwtTokenProvider.generateTokenWithSupabaseUid(email, userId, role);
                 
                 return AuthResponse.builder()
                         .token(token)
                         .email(email)
                         .userId(userId)
+                        .role(role)
                         .emailVerified(emailVerified)
                         .build();
             } else {
@@ -94,6 +103,12 @@ public class AuthService {
             
         } catch (RestClientException e) {
             log.error("Supabase login error: {}", e.getMessage());
+            String errorMsg = e.getMessage();
+            if (errorMsg.contains("email_not_confirmed")) {
+                throw new RuntimeException("Email not confirmed. Please check your email and confirm your account before logging in.");
+            } else if (errorMsg.contains("Invalid login credentials")) {
+                throw new RuntimeException("Login failed: Invalid credentials");
+            }
             throw new RuntimeException("Login failed: Invalid credentials");
         } catch (Exception e) {
             log.error("Unexpected error during login: {}", e.getMessage(), e);
@@ -155,16 +170,18 @@ public class AuthService {
                 onboardingService.initializeNewUserProfile(
                         request.getFirstName(),
                         request.getLastName(),
-                        userId
+                        userId,
+                        "candidate" // Normal signups are always candidates
                 );
                 
                 // Generate backend JWT token with Supabase UID
-                String token = jwtTokenProvider.generateTokenWithSupabaseUid(email, userId);
+                String token = jwtTokenProvider.generateTokenWithSupabaseUid(email, userId, "candidate");
                 
                 return AuthResponse.builder()
                         .token(token)
                         .email(email)
                         .userId(userId)
+                        .role("candidate")
                         .emailVerified(emailVerified)
                         .build();
             } else {

@@ -235,6 +235,36 @@ input[type=number] {
   flex-shrink: 0;
 }
 
+.oauth-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.oauth-sub-btn {
+  padding: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background-color: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.oauth-sub-btn:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background-color: rgba(16, 185, 129, 0.05);
+}
+
+.oauth-sub-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Divider */
 .divider {
   position: relative;

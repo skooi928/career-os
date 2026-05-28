@@ -15,5 +15,6 @@ public class CreateProfileResponse {
     private String firstName;
     private String lastName;
     private String userId;
+    private String role;
     private UserProfileDTO profile;
 }

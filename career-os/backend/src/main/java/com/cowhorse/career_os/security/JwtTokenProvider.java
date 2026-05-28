@@ -31,10 +31,11 @@ public class JwtTokenProvider {
         return createToken(claims, email);
     }
 
-    public String generateTokenWithSupabaseUid(String email, String supabaseUid) {
+    public String generateTokenWithSupabaseUid(String email, String supabaseUid, String role) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("sub", supabaseUid);
         claims.put("email", email);
+        claims.put("role", role);
         return createToken(claims, supabaseUid);
     }
 

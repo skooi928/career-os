@@ -43,14 +43,15 @@ public class ProfileController {
         onboardingService.initializeNewUserProfile(
             request.getFirstName(),
             request.getLastName(),
-            request.getUserId()
+            request.getUserId(),
+            request.getRole()
         );
 
         // Fetch the newly created profile
         UserProfileDTO profile = profileService.getUserProfileBySupabaseUid(request.getUserId());
         
         // Generate JWT token with Supabase UID for future API calls
-        String token = jwtTokenProvider.generateTokenWithSupabaseUid(request.getEmail(), request.getUserId());
+        String token = jwtTokenProvider.generateTokenWithSupabaseUid(request.getEmail(), request.getUserId(), request.getRole());
         
         CreateProfileResponse response = CreateProfileResponse.builder()
             .token(token)
@@ -58,6 +59,7 @@ public class ProfileController {
             .firstName(request.getFirstName())
             .lastName(request.getLastName())
             .userId(request.getUserId())
+            .role(request.getRole())
             .profile(profile)
             .build();
             

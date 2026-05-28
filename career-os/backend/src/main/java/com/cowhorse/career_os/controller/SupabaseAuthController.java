@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 import com.cowhorse.career_os.service.OnboardingService;
+import com.cowhorse.career_os.security.JwtTokenProvider;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,38 +32,56 @@ public class SupabaseAuthController {
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final OnboardingService onboardingService;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @Autowired
-    public SupabaseAuthController(OnboardingService onboardingService) {
+    public SupabaseAuthController(OnboardingService onboardingService, JwtTokenProvider jwtTokenProvider) {
         this.onboardingService = onboardingService;
+        this.jwtTokenProvider = jwtTokenProvider;
     }
 
     @GetMapping("/azure")
     public void authorizeAzure(HttpServletResponse response) throws IOException {
+        authorizeAzureWithRole(response, "employer");
+    }
+
+    @GetMapping("/azure/employer")
+    public void authorizeAzureEmployer(HttpServletResponse response) throws IOException {
+        authorizeAzureWithRole(response, "employer");
+    }
+
+    @GetMapping("/azure/mentor")
+    public void authorizeAzureMentor(HttpServletResponse response) throws IOException {
+        authorizeAzureWithRole(response, "mentor");
+    }
+
+    private void authorizeAzureWithRole(HttpServletResponse response, String role) throws IOException {
         try {
-            // Generate PKCE Code Verifier
             SecureRandom sr = new SecureRandom();
             byte[] code = new byte[32];
             sr.nextBytes(code);
             String codeVerifier = Base64.getUrlEncoder().withoutPadding().encodeToString(code);
 
-            // Generate PKCE Code Challenge
             byte[] bytes = codeVerifier.getBytes(StandardCharsets.US_ASCII);
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             md.update(bytes, 0, bytes.length);
             byte[] digest = md.digest();
             String codeChallenge = Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
 
-            // Store code verifier in a secure HTTP-only cookie
-            Cookie cookie = new Cookie("pkce_verifier", codeVerifier);
-            cookie.setHttpOnly(true);
-            cookie.setPath("/api/auth/callback");
-            cookie.setMaxAge(300); // 5 minutes
-            response.addCookie(cookie);
+            Cookie verifierCookie = new Cookie("pkce_verifier", codeVerifier);
+            verifierCookie.setHttpOnly(true);
+            verifierCookie.setPath("/api/auth/callback");
+            verifierCookie.setMaxAge(300);
+            response.addCookie(verifierCookie);
+
+            // Store the requested role in a cookie as well
+            Cookie roleCookie = new Cookie("pending_role", role);
+            roleCookie.setHttpOnly(true);
+            roleCookie.setPath("/api/auth/callback");
+            roleCookie.setMaxAge(300);
+            response.addCookie(roleCookie);
 
             String redirectUri = "http://localhost:8080/api/auth/callback";
-            
-            // Supabase Authorize URL
             String authUrl = supabaseUrl + "/auth/v1/authorize?provider=azure" +
                              "&redirect_to=" + URLEncoder.encode(redirectUri, StandardCharsets.UTF_8) +
                              "&code_challenge=" + codeChallenge +
@@ -98,11 +117,13 @@ public class SupabaseAuthController {
 
         // Retrieve code verifier from cookie
         String codeVerifier = null;
+        String pendingRole = "employer"; // Default for Microsoft login is now employer
         if (request.getCookies() != null) {
             for (Cookie cookie : request.getCookies()) {
                 if ("pkce_verifier".equals(cookie.getName())) {
                     codeVerifier = cookie.getValue();
-                    break;
+                } else if ("pending_role".equals(cookie.getName())) {
+                    pendingRole = cookie.getValue();
                 }
             }
         }
@@ -128,12 +149,14 @@ public class SupabaseAuthController {
 
             if (tokenResponse.getStatusCode() == HttpStatus.OK && body != null && body.containsKey("access_token")) {
                 String accessToken = (String) body.get("access_token");
+                String finalToken = accessToken; // Default to Supabase token
                 
                 // Extract user details to initialize profile if it's their first time logging in
                 try {
                     Map<String, Object> userObj = (Map<String, Object>) body.get("user");
                     if (userObj != null && userObj.containsKey("id")) {
                         String uid = (String) userObj.get("id");
+                        String email = (String) userObj.get("email");
                         Map<String, Object> metadata = (Map<String, Object>) userObj.get("user_metadata");
                         String firstName = "User";
                         String lastName = "";
@@ -147,20 +170,28 @@ public class SupabaseAuthController {
                                 if (parts.length > 1) lastName = parts[1];
                             }
                         }
-                        onboardingService.initializeNewUserProfile(firstName, lastName, uid);
+                        onboardingService.initializeNewUserProfile(firstName, lastName, uid, pendingRole);
+
+                        // Generate a backend token that includes the role
+                        finalToken = jwtTokenProvider.generateTokenWithSupabaseUid(email, uid, pendingRole);
                     }
                 } catch (Exception ex) {
                     System.err.println("Error extracting user data for onboarding: " + ex.getMessage());
                 }
                 
-                // Clear the cookie
-                Cookie clearCookie = new Cookie("pkce_verifier", null);
-                clearCookie.setMaxAge(0);
-                clearCookie.setPath("/api/auth/callback");
-                response.addCookie(clearCookie);
+                // Clear the cookies
+                Cookie clearVerifier = new Cookie("pkce_verifier", null);
+                clearVerifier.setMaxAge(0);
+                clearVerifier.setPath("/api/auth/callback");
+                response.addCookie(clearVerifier);
 
-                // Redirect back to frontend with the token
-                response.sendRedirect(frontendCallbackUrl + "?token=" + URLEncoder.encode(accessToken, StandardCharsets.UTF_8));
+                Cookie clearRole = new Cookie("pending_role", null);
+                clearRole.setMaxAge(0);
+                clearRole.setPath("/api/auth/callback");
+                response.addCookie(clearRole);
+
+                // Redirect back to frontend with our backend token
+                response.sendRedirect(frontendCallbackUrl + "?token=" + URLEncoder.encode(finalToken, StandardCharsets.UTF_8));
             } else {
                 response.sendRedirect(frontendLoginUrl + "?error=" + URLEncoder.encode("Failed to obtain access token", StandardCharsets.UTF_8));
             }

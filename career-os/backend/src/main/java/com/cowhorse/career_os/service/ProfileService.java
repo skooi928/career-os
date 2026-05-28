@@ -65,6 +65,7 @@ public class ProfileService {
                 .firstName(userProfile.getFirstName())
                 .lastName(userProfile.getLastName())
                 .email("")     // Typically provided by client or auth service
+                .role(userProfile.getRole())
                 .phone(userProfile.getPhone())
                 .location(userProfile.getLocation())
                 .bio(userProfile.getBio())

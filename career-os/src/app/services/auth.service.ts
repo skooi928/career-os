@@ -9,6 +9,7 @@ export interface AuthResponse {
   token: string;
   email: string;
   userId: string;
+  role?: string;
   firstName?: string;
   lastName?: string;
   emailVerified?: boolean;
@@ -92,6 +93,7 @@ export class AuthService {
         token: token,
         email: payload.email || '',
         userId: payload.sub || '',
+        role: payload.role || '',
         firstName: '',
         lastName: '',
         emailVerified: true
