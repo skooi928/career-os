@@ -57,6 +57,10 @@ public class Job {
     @JsonManagedReference
     private List<RoleRequirement> roleRequirements;
 
+    @OneToMany(mappedBy = "job", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<JobQuestion> questions;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

@@ -479,7 +479,8 @@ export class JobDetailComponent implements OnInit {
   }
 
   applyForJob() {
-    // In the future, this will link to the application submission flow
-    alert('Application started! This feature will be implemented in the next phase.');
+    if (this.job && this.job.id) {
+      this.router.navigate(['/jobs', this.job.id, 'apply']);
+    }
   }
 }

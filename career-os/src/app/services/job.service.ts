@@ -17,6 +17,13 @@ export interface RoleRequirement {
   skills: RoleSkillRequirement[];
 }
 
+export interface JobQuestion {
+  id?: string;
+  questionText: string;
+  questionType: 'TEXT' | 'MULTIPLE_CHOICE';
+  options?: string[];
+}
+
 export interface Job {
   id?: string;
   title: string;
@@ -32,6 +39,7 @@ export interface Job {
   isNew?: boolean;
   createdAt?: string;
   roleRequirements: RoleRequirement[];
+  questions?: JobQuestion[];
 }
 
 @Injectable({

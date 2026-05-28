@@ -207,6 +207,71 @@ import { JobService } from '../../services/job.service';
           </div>
         </div>
 
+        <!-- Section 5: Custom Questions -->
+        <div class="form-section card">
+          <div class="section-header">
+            <div class="icon-box"><i class="ph ph-chat-circle-text"></i></div>
+            <div>
+              <h3>Custom Questions</h3>
+              <p class="section-subtitle">Ask candidates specific questions to filter the best fit.</p>
+            </div>
+          </div>
+
+          <div formArrayName="questions" class="questions-container">
+            <div class="question-row" *ngFor="let qCtrl of questionsFormArray.controls; let qIndex = index" [formGroupName]="qIndex">
+              
+              <div class="question-header">
+                <h4>Question {{ qIndex + 1 }}</h4>
+                <button type="button" class="btn-text-danger" (click)="removeQuestion(qIndex)">
+                  <i class="ph ph-trash"></i> Remove
+                </button>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group full-width">
+                  <label>Question Text <span class="required">*</span></label>
+                  <div class="input-wrapper">
+                    <input type="text" formControlName="questionText" placeholder="e.g. Why do you want to work here?" class="form-input">
+                  </div>
+                </div>
+
+                <div class="form-group full-width">
+                  <label>Question Type <span class="required">*</span></label>
+                  <div class="input-wrapper">
+                    <select formControlName="questionType" class="form-input" (change)="onQuestionTypeChange(qIndex)">
+                      <option value="TEXT">Short Answer (Text)</option>
+                      <option value="MULTIPLE_CHOICE">Multiple Choice</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Options for Multiple Choice -->
+              <div class="options-container" *ngIf="qCtrl.get('questionType')?.value === 'MULTIPLE_CHOICE'" formArrayName="options">
+                <label>Options <span class="required">*</span></label>
+                
+                <div class="option-row" *ngFor="let optCtrl of getOptionsFormArray(qIndex).controls; let oIndex = index">
+                  <div class="input-wrapper">
+                    <i class="ph ph-list-dashes input-icon"></i>
+                    <input type="text" [formControlName]="oIndex" placeholder="e.g. Yes" class="form-input with-icon">
+                  </div>
+                  <button type="button" class="btn-icon-danger small-btn" (click)="removeOption(qIndex, oIndex)" [disabled]="getOptionsFormArray(qIndex).length <= 1">
+                    <i class="ph ph-x"></i>
+                  </button>
+                </div>
+
+                <button type="button" class="btn-text add-btn mt-2" (click)="addOption(qIndex)">
+                  <i class="ph-bold ph-plus"></i> Add Option
+                </button>
+              </div>
+            </div>
+
+            <button type="button" class="btn-text add-btn mt-4" (click)="addQuestion()">
+              <i class="ph-bold ph-plus"></i> Add Question
+            </button>
+          </div>
+        </div>
+
         <!-- Form Actions -->
         <div class="form-actions-simple">
           <div *ngIf="successMessage" class="success-message">
@@ -421,8 +486,8 @@ import { JobService } from '../../services/job.service';
       padding: 16px;
     }
 
-    /* Skills Dynamic Array */
-    .skills-container {
+    /* Skills & Questions */
+    .skills-container, .questions-container {
       margin-top: 32px;
       padding-top: 24px;
       border-top: 1px solid var(--color-border);
@@ -430,6 +495,63 @@ import { JobService } from '../../services/job.service';
       flex-direction: column;
       gap: 16px;
     }
+
+    .question-row {
+      background: rgba(16, 185, 129, 0.03);
+      border: 1px solid var(--color-border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+
+    .question-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .question-header h4 {
+      margin: 0;
+      color: var(--color-text);
+    }
+
+    .btn-text-danger {
+      background: none;
+      border: none;
+      color: #ef4444;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-text-danger:hover {
+      text-decoration: underline;
+    }
+
+    .options-container {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px dashed var(--color-border);
+    }
+
+    .option-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .small-btn {
+      width: 36px;
+      height: 36px;
+      font-size: 1rem;
+    }
+
+    .mt-2 { margin-top: 8px; }
+    .mt-4 { margin-top: 16px; }
 
     .skills-header {
       display: flex;
@@ -598,7 +720,8 @@ export class JobPostingComponent {
         skills: this.fb.array([
           this.createSkillForm()
         ])
-      })
+      }),
+      questions: this.fb.array([])
     });
   }
 
@@ -619,6 +742,56 @@ export class JobPostingComponent {
   removeSkill(index: number) {
     if (this.skillsFormArray.length > 1) {
       this.skillsFormArray.removeAt(index);
+    }
+  }
+
+  get questionsFormArray(): FormArray {
+    return this.jobForm.get('questions') as FormArray;
+  }
+
+  createQuestionForm(): FormGroup {
+    return this.fb.group({
+      questionText: ['', Validators.required],
+      questionType: ['TEXT', Validators.required],
+      options: this.fb.array([])
+    });
+  }
+
+  addQuestion() {
+    this.questionsFormArray.push(this.createQuestionForm());
+  }
+
+  removeQuestion(index: number) {
+    this.questionsFormArray.removeAt(index);
+  }
+
+  getOptionsFormArray(questionIndex: number): FormArray {
+    return this.questionsFormArray.at(questionIndex).get('options') as FormArray;
+  }
+
+  addOption(questionIndex: number) {
+    this.getOptionsFormArray(questionIndex).push(this.fb.control('', Validators.required));
+  }
+
+  removeOption(questionIndex: number, optionIndex: number) {
+    if (this.getOptionsFormArray(questionIndex).length > 1) {
+      this.getOptionsFormArray(questionIndex).removeAt(optionIndex);
+    }
+  }
+
+  onQuestionTypeChange(questionIndex: number) {
+    const qGroup = this.questionsFormArray.at(questionIndex) as FormGroup;
+    const type = qGroup.get('questionType')?.value;
+    const optionsArray = qGroup.get('options') as FormArray;
+    
+    if (type === 'MULTIPLE_CHOICE') {
+      if (optionsArray.length === 0) {
+        optionsArray.push(this.fb.control('', Validators.required));
+      }
+    } else {
+      while(optionsArray.length !== 0) {
+        optionsArray.removeAt(0);
+      }
     }
   }
 
@@ -645,7 +818,8 @@ export class JobPostingComponent {
         maxSalary: formValue.maxSalary,
         deadline: formValue.deadline,
         vacancies: formValue.vacancies,
-        roleRequirements: [formValue.roleRequirement]
+        roleRequirements: [formValue.roleRequirement],
+        questions: formValue.questions
       }).subscribe({
         next: () => {
           this.successMessage = 'Job successfully published! Your job posting is now live and ready to attract top talent.';
@@ -668,6 +842,10 @@ export class JobPostingComponent {
             this.skillsFormArray.removeAt(0);
           }
           this.addSkill();
+          
+          while (this.questionsFormArray.length !== 0) {
+            this.questionsFormArray.removeAt(0);
+          }
 
           this.availableCities = [];
 

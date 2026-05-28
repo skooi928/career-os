@@ -27,6 +27,11 @@ public class JobService {
                 }
             }
         }
+        if (job.getQuestions() != null) {
+            for (com.cowhorse.career_os.entity.JobQuestion question : job.getQuestions()) {
+                question.setJob(job);
+            }
+        }
         return jobRepository.save(job);
     }
 
