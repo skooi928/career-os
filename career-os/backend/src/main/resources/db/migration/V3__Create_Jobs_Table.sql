@@ -1,6 +1,6 @@
 -- Create Jobs Table
 
-CREATE TABLE IF NOT EXISTS public.jobs (
+CREATE TABLE IF NOT EXISTS dbo.jobs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title VARCHAR(255) NOT NULL,
   company VARCHAR(255) NOT NULL,

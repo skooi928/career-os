@@ -39,5 +39,9 @@ public class RoleRequirement {
 
     @OneToMany(mappedBy = "roleRequirement", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
-    private List<RoleSkillRequirement> skills;
+    private List<RoleTechnicalSkillRequirement> technicalSkills;
+
+    @OneToMany(mappedBy = "roleRequirement", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<RoleMustHaveRequirement> mustHaveRequirements;
 }

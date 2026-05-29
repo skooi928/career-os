@@ -10,22 +10,23 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import java.util.UUID;
 
 @Entity
-@Table(name = "role_skill_requirements")
+@Table(name = "role_technical_skill_requirements")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class RoleSkillRequirement {
+public class RoleTechnicalSkillRequirement {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID roleSkillId;
+    @Column(name = "role_technical_skill_id")
+    private UUID roleTechnicalSkillId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "requirement_id", nullable = false)
     @JsonBackReference
     private RoleRequirement roleRequirement;
 
-    @Column(name = "skill_text", nullable = false)
-    private String skillText;
+    @Column(name = "technical_skill_text", nullable = false)
+    private String technicalSkillText;
 }

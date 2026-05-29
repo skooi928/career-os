@@ -138,7 +138,7 @@ import { Router } from '@angular/router';
               <div class="job-card-footer">
                 <div class="salary-range">RM{{ job.minSalary }} - RM{{ job.maxSalary }}</div>
                 <div class="skills-row" *ngIf="job.roleRequirements.length > 0">
-                  <span class="skill-tag" *ngFor="let skill of job.roleRequirements[0].skills">{{ skill.skillText }}</span>
+                  <span class="skill-tag" *ngFor="let skill of job.roleRequirements[0].technicalSkills">{{ skill.technicalSkillText }}</span>
                 </div>
                 <div class="job-footer-meta">
                   <span class="deadline">Apply by {{ job.deadline }}</span>

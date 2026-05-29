@@ -187,20 +187,39 @@ import { JobService } from '../../services/job.service';
             </div>
           </div>
 
-          <div class="skills-container" formArrayName="skills">
+          <div class="skills-container" formArrayName="technicalSkills">
             <div class="skills-header">
-              <label>Required Skills</label>
-              <button type="button" class="btn-text add-btn" (click)="addSkill()">
-                <i class="ph-bold ph-plus"></i> Add Skill
+              <label>Required Technical Skills</label>
+              <button type="button" class="btn-text add-btn" (click)="addTechnicalSkill()">
+                <i class="ph-bold ph-plus"></i> Add Technical Skill
               </button>
             </div>
             
-            <div class="skill-row" *ngFor="let skillCtrl of skillsFormArray.controls; let i = index" [formGroupName]="i">
+            <div class="skill-row" *ngFor="let skillCtrl of technicalSkillsFormArray.controls; let i = index" [formGroupName]="i">
               <div class="input-wrapper skill-input">
                 <i class="ph ph-code input-icon"></i>
-                <input type="text" formControlName="skillText" placeholder="e.g. Angular" class="form-input with-icon">
+                <input type="text" formControlName="technicalSkillText" placeholder="e.g. Angular" class="form-input with-icon">
               </div>
-              <button type="button" class="btn-icon-danger" (click)="removeSkill(i)" [disabled]="skillsFormArray.length === 1">
+              <button type="button" class="btn-icon-danger" (click)="removeTechnicalSkill(i)" [disabled]="technicalSkillsFormArray.length === 1">
+                <i class="ph ph-trash"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="skills-container" formArrayName="mustHaveRequirements">
+            <div class="skills-header">
+              <label>Must Have Requirements</label>
+              <button type="button" class="btn-text add-btn" (click)="addMustHaveRequirement()">
+                <i class="ph-bold ph-plus"></i> Add Requirement
+              </button>
+            </div>
+            
+            <div class="skill-row" *ngFor="let reqCtrl of mustHaveRequirementsFormArray.controls; let i = index" [formGroupName]="i">
+              <div class="input-wrapper skill-input">
+                <i class="ph ph-check-circle input-icon"></i>
+                <input type="text" formControlName="requirementText" placeholder="e.g. Excellent communication skills" class="form-input with-icon">
+              </div>
+              <button type="button" class="btn-icon-danger" (click)="removeMustHaveRequirement(i)" [disabled]="mustHaveRequirementsFormArray.length === 1">
                 <i class="ph ph-trash"></i>
               </button>
             </div>
@@ -715,33 +734,56 @@ export class JobPostingComponent {
       vacancies: [1, Validators.required],
       roleRequirement: this.fb.group({
         seniorityLevel: ['Mid', Validators.required],
-        requiredExperienceYears: [1, Validators.required],
+        requiredExperienceYears: [3, [Validators.required, Validators.min(0)]],
         jobDescription: ['', Validators.required],
-        skills: this.fb.array([
-          this.createSkillForm()
+        technicalSkills: this.fb.array([
+          this.createTechnicalSkill()
+        ]),
+        mustHaveRequirements: this.fb.array([
+          this.createMustHaveRequirement()
         ])
       }),
       questions: this.fb.array([])
     });
   }
 
-  get skillsFormArray(): FormArray {
-    return (this.jobForm.get('roleRequirement') as FormGroup).get('skills') as FormArray;
+  get technicalSkillsFormArray() {
+    return (this.jobForm.get('roleRequirement') as FormGroup).get('technicalSkills') as FormArray;
   }
 
-  createSkillForm(): FormGroup {
+  get mustHaveRequirementsFormArray() {
+    return (this.jobForm.get('roleRequirement') as FormGroup).get('mustHaveRequirements') as FormArray;
+  }
+
+  createTechnicalSkill(): FormGroup {
     return this.fb.group({
-      skillText: ['', Validators.required]
+      technicalSkillText: ['', Validators.required]
     });
   }
 
-  addSkill() {
-    this.skillsFormArray.push(this.createSkillForm());
+  addTechnicalSkill() {
+    this.technicalSkillsFormArray.push(this.createTechnicalSkill());
   }
 
-  removeSkill(index: number) {
-    if (this.skillsFormArray.length > 1) {
-      this.skillsFormArray.removeAt(index);
+  removeTechnicalSkill(index: number) {
+    if (this.technicalSkillsFormArray.length > 1) {
+      this.technicalSkillsFormArray.removeAt(index);
+    }
+  }
+
+  createMustHaveRequirement(): FormGroup {
+    return this.fb.group({
+      requirementText: ['', Validators.required]
+    });
+  }
+
+  addMustHaveRequirement() {
+    this.mustHaveRequirementsFormArray.push(this.createMustHaveRequirement());
+  }
+
+  removeMustHaveRequirement(index: number) {
+    if (this.mustHaveRequirementsFormArray.length > 1) {
+      this.mustHaveRequirementsFormArray.removeAt(index);
     }
   }
 
@@ -837,11 +879,17 @@ export class JobPostingComponent {
             }
           });
           
-          // Reset skills array to 1 empty skill
-          while (this.skillsFormArray.length !== 0) {
-            this.skillsFormArray.removeAt(0);
+          // Reset technical skills array
+          while (this.technicalSkillsFormArray.length !== 0) {
+            this.technicalSkillsFormArray.removeAt(0);
           }
-          this.addSkill();
+          this.addTechnicalSkill();
+
+          // Reset must have requirements array
+          while (this.mustHaveRequirementsFormArray.length !== 0) {
+            this.mustHaveRequirementsFormArray.removeAt(0);
+          }
+          this.addMustHaveRequirement();
           
           while (this.questionsFormArray.length !== 0) {
             this.questionsFormArray.removeAt(0);

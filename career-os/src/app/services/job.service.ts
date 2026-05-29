@@ -4,9 +4,14 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { AuthService } from './auth.service';
 
-export interface RoleSkillRequirement {
-  roleSkillId?: string;
-  skillText: string;
+export interface RoleTechnicalSkillRequirement {
+  roleTechnicalSkillId?: string;
+  technicalSkillText: string;
+}
+
+export interface RoleMustHaveRequirement {
+  mustHaveId?: string;
+  requirementText: string;
 }
 
 export interface RoleRequirement {
@@ -14,7 +19,8 @@ export interface RoleRequirement {
   seniorityLevel: string;
   requiredExperienceYears: number;
   jobDescription: string;
-  skills: RoleSkillRequirement[];
+  technicalSkills: RoleTechnicalSkillRequirement[];
+  mustHaveRequirements: RoleMustHaveRequirement[];
 }
 
 export interface JobQuestion {

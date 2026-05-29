@@ -2,7 +2,8 @@ package com.cowhorse.career_os.service;
 
 import com.cowhorse.career_os.entity.Job;
 import com.cowhorse.career_os.entity.RoleRequirement;
-import com.cowhorse.career_os.entity.RoleSkillRequirement;
+import com.cowhorse.career_os.entity.RoleTechnicalSkillRequirement;
+import com.cowhorse.career_os.entity.RoleMustHaveRequirement;
 import com.cowhorse.career_os.repository.JobRepository;
 import org.springframework.stereotype.Service;
 
@@ -20,9 +21,14 @@ public class JobService {
         if (job.getRoleRequirements() != null) {
             for (RoleRequirement req : job.getRoleRequirements()) {
                 req.setJob(job);
-                if (req.getSkills() != null) {
-                    for (RoleSkillRequirement skill : req.getSkills()) {
+                if (req.getTechnicalSkills() != null) {
+                    for (RoleTechnicalSkillRequirement skill : req.getTechnicalSkills()) {
                         skill.setRoleRequirement(req);
+                    }
+                }
+                if (req.getMustHaveRequirements() != null) {
+                    for (RoleMustHaveRequirement mustHave : req.getMustHaveRequirements()) {
+                        mustHave.setRoleRequirement(req);
                     }
                 }
             }

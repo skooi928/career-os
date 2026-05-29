@@ -77,6 +77,7 @@ import { JobService, Job } from '../../services/job.service';
 
         <div class="content-section card">
           <h2><i class="ph-fill ph-star text-primary"></i> Role Requirements</h2>
+          
           <div class="requirement-list">
             <div class="req-item">
               <span class="req-label">Seniority Level:</span>
@@ -87,13 +88,16 @@ import { JobService, Job } from '../../services/job.service';
               <span class="req-value badge">{{ req.requiredExperienceYears }} Years</span>
             </div>
           </div>
-        </div>
 
-        <div class="content-section card">
-          <h2><i class="ph-fill ph-lightning text-primary"></i> Required Skills</h2>
-          <div class="skills-container">
-            <span class="skill-tag" *ngFor="let skill of req.skills">
-              {{ skill.skillText }}
+          <h3 class="mt-4"><i class="ph-fill ph-check-circle text-primary"></i> Must Have Requirements</h3>
+          <ul class="must-have-list" *ngIf="req.mustHaveRequirements && req.mustHaveRequirements.length > 0">
+            <li *ngFor="let mustHave of req.mustHaveRequirements">{{ mustHave.requirementText }}</li>
+          </ul>
+
+          <h3 class="mt-4"><i class="ph-fill ph-code text-primary"></i> Technical Skills</h3>
+          <div class="skills-grid" *ngIf="req.technicalSkills && req.technicalSkills.length > 0">
+            <span class="skill-tag" *ngFor="let skill of req.technicalSkills">
+              <i class="ph ph-check"></i> {{ skill.technicalSkillText }}
             </span>
           </div>
         </div>
