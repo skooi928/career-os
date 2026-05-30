@@ -30,6 +30,11 @@ export interface JobQuestion {
   options?: string[];
 }
 
+export interface JobBenefit {
+  id?: string;
+  benefitText: string;
+}
+
 export interface Job {
   id?: string;
   title: string;
@@ -46,6 +51,7 @@ export interface Job {
   createdAt?: string;
   roleRequirements: RoleRequirement[];
   questions?: JobQuestion[];
+  benefits?: JobBenefit[];
 }
 
 @Injectable({

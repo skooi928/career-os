@@ -336,6 +336,7 @@ import { Router } from '@angular/router';
 
     .job-card {
       min-width: 320px;
+      max-width: 320px;
       flex: 0 0 auto;
       scroll-snap-align: start;
       background: var(--color-surface);
@@ -403,12 +404,18 @@ import { Router } from '@angular/router';
       font-size: 1.125rem;
       font-weight: 700;
       color: var(--color-text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .company-name {
       margin: 0;
       font-size: 0.875rem;
       color: var(--color-text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .job-meta {
@@ -443,8 +450,9 @@ import { Router } from '@angular/router';
 
     .skills-row {
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       gap: 8px;
+      overflow: hidden;
     }
 
     .skill-tag {
@@ -453,6 +461,8 @@ import { Router } from '@angular/router';
       border-radius: 6px;
       background: var(--color-surface-secondary);
       color: var(--color-text-tertiary);
+      white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .job-footer-meta {

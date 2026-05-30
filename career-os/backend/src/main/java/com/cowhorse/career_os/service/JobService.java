@@ -38,6 +38,11 @@ public class JobService {
                 question.setJob(job);
             }
         }
+        if (job.getBenefits() != null) {
+            for (com.cowhorse.career_os.entity.JobBenefit benefit : job.getBenefits()) {
+                benefit.setJob(job);
+            }
+        }
         return jobRepository.save(job);
     }
 

@@ -8,7 +8,7 @@ import { JobService } from '../../services/job.service';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   template: `
-    <div class="job-posting-container">
+    <div class="job-posting-wrapper">
       <div class="page-header">
         <div class="header-content">
           <h1>Create a Job Posting</h1>
@@ -19,7 +19,9 @@ import { JobService } from '../../services/job.service';
         </div>
       </div>
 
-      <form [formGroup]="jobForm" (ngSubmit)="onSubmit()" class="form-layout">
+      <div class="job-posting-layout">
+        <div class="main-column">
+          <form [formGroup]="jobForm" (ngSubmit)="onSubmit()" class="form-layout">
         
         <!-- Section 1: Basic Information -->
         <div class="form-section card">
@@ -73,8 +75,8 @@ import { JobService } from '../../services/job.service';
               <label>State <span class="required">*</span></label>
               <div class="input-wrapper">
                 <i class="ph ph-map-trifold input-icon"></i>
-                <select formControlName="state" class="form-input with-icon" (change)="onStateChange()">
-                  <option value="" disabled selected>Select a State</option>
+                <select formControlName="state" class="form-input with-icon" (change)="onStateChange()" required>
+                  <option [ngValue]="null" disabled selected>Select a State</option>
                   <option *ngFor="let state of states" [value]="state">{{ state }}</option>
                 </select>
               </div>
@@ -84,8 +86,8 @@ import { JobService } from '../../services/job.service';
               <label>City <span class="required">*</span></label>
               <div class="input-wrapper">
                 <i class="ph ph-city input-icon"></i>
-                <select formControlName="city" class="form-input with-icon">
-                  <option value="" disabled selected>Select a City</option>
+                <select formControlName="city" class="form-input with-icon" required>
+                  <option [ngValue]="null" disabled selected>Select a City</option>
                   <option *ngFor="let city of availableCities" [value]="city">{{ city }}</option>
                 </select>
               </div>
@@ -95,7 +97,8 @@ import { JobService } from '../../services/job.service';
               <label>Employment Type <span class="required">*</span></label>
               <div class="input-wrapper">
                 <i class="ph ph-clock input-icon"></i>
-                <select formControlName="employmentType" class="form-input with-icon">
+                <select formControlName="employmentType" class="form-input with-icon" required>
+                  <option [ngValue]="null" disabled selected>Select employment type</option>
                   <option value="Full-time">Full-time</option>
                   <option value="Part-time">Part-time</option>
                   <option value="Contract">Contract</option>
@@ -162,10 +165,12 @@ import { JobService } from '../../services/job.service';
           </div>
           
           <div class="form-grid">
-            <div class="form-group">
+            <div class="form-group full-width">
               <label>Seniority Level <span class="required">*</span></label>
               <div class="input-wrapper">
-                <select formControlName="seniorityLevel" class="form-input">
+                <i class="ph ph-star input-icon"></i>
+                <select formControlName="seniorityLevel" class="form-input with-icon" required>
+                  <option [ngValue]="null" disabled selected>Select a seniority level</option>
                   <option value="Entry">Entry Level</option>
                   <option value="Mid">Mid Level</option>
                   <option value="Senior">Senior Level</option>
@@ -226,7 +231,37 @@ import { JobService } from '../../services/job.service';
           </div>
         </div>
 
-        <!-- Section 5: Custom Questions -->
+        <!-- Section 5: Benefits & Perks -->
+        <div class="form-section card" formArrayName="benefits">
+          <div class="section-header">
+            <div class="icon-box"><i class="ph ph-gift"></i></div>
+            <div>
+              <h3>Benefits & Perks <span class="required">*</span></h3>
+              <p class="section-subtitle">What makes your company great? Highlight the perks of getting hired.</p>
+            </div>
+          </div>
+          
+          <div class="skills-container">
+            <div class="skills-header">
+              <label>Company Benefits</label>
+              <button type="button" class="btn-text add-btn" (click)="addBenefit()">
+                <i class="ph-bold ph-plus"></i> Add Benefit
+              </button>
+            </div>
+            
+            <div class="skill-row" *ngFor="let benefitCtrl of benefitsFormArray.controls; let i = index" [formGroupName]="i">
+              <div class="input-wrapper skill-input">
+                <i class="ph ph-star input-icon"></i>
+                <input type="text" formControlName="benefitText" placeholder="e.g. Health Insurance, Remote Work..." class="form-input with-icon">
+              </div>
+              <button type="button" class="btn-icon-danger" (click)="removeBenefit(i)">
+                <i class="ph ph-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 6: Custom Questions -->
         <div class="form-section card">
           <div class="section-header">
             <div class="icon-box"><i class="ph ph-chat-circle-text"></i></div>
@@ -301,14 +336,196 @@ import { JobService } from '../../services/job.service';
           </button>
         </div>
 
-      </form>
+          </form>
+        </div>
+
+        <div class="sidebar-column">
+          <div class="progress-card card sticky-top">
+            <h3>Completion Score</h3>
+            <div class="progress-container">
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" [style.width.%]="completionPercentage" [ngClass]="{'complete': completionPercentage === 100}"></div>
+              </div>
+              <div class="progress-text">{{ completionPercentage }}%</div>
+            </div>
+            
+            <div class="motivational-message mt-4">
+              <i class="ph-fill ph-lightbulb text-primary"></i>
+              <p *ngIf="completionPercentage < 100">Make your job posting more detailed! Clear and comprehensive descriptions attract the top talent.</p>
+              <p *ngIf="completionPercentage === 100">Perfect! Your job posting is extremely detailed and ready to attract top talent.</p>
+            </div>
+
+            <div class="section-breakdown mt-4">
+              <div class="breakdown-item">
+                <div class="breakdown-header">
+                  <span>Basic Info</span>
+                  <span>{{ sectionScores.basic }}%</span>
+                </div>
+                <div class="progress-bar-bg-mini">
+                  <div class="progress-bar-fill-mini" [style.width.%]="sectionScores.basic" [ngClass]="{'complete': sectionScores.basic === 100}"></div>
+                </div>
+              </div>
+              
+              <div class="breakdown-item">
+                <div class="breakdown-header">
+                  <span>Location</span>
+                  <span>{{ sectionScores.location }}%</span>
+                </div>
+                <div class="progress-bar-bg-mini">
+                  <div class="progress-bar-fill-mini" [style.width.%]="sectionScores.location" [ngClass]="{'complete': sectionScores.location === 100}"></div>
+                </div>
+              </div>
+
+              <div class="breakdown-item">
+                <div class="breakdown-header">
+                  <span>Compensation</span>
+                  <span>{{ sectionScores.compensation }}%</span>
+                </div>
+                <div class="progress-bar-bg-mini">
+                  <div class="progress-bar-fill-mini" [style.width.%]="sectionScores.compensation" [ngClass]="{'complete': sectionScores.compensation === 100}"></div>
+                </div>
+              </div>
+
+              <div class="breakdown-item">
+                <div class="breakdown-header">
+                  <span>Requirements</span>
+                  <span>{{ sectionScores.requirements }}%</span>
+                </div>
+                <div class="progress-bar-bg-mini">
+                  <div class="progress-bar-fill-mini" [style.width.%]="sectionScores.requirements" [ngClass]="{'complete': sectionScores.requirements === 100}"></div>
+                </div>
+              </div>
+
+              <div class="breakdown-item">
+                <div class="breakdown-header">
+                  <span>Benefits</span>
+                  <span>{{ sectionScores.benefits }}%</span>
+                </div>
+                <div class="progress-bar-bg-mini">
+                  <div class="progress-bar-fill-mini" [style.width.%]="sectionScores.benefits" [ngClass]="{'complete': sectionScores.benefits === 100}"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `,
   styles: [`
-    .job-posting-container {
-      max-width: 860px;
-      margin: 0 auto;
-      padding-bottom: 60px;
+    .job-posting-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .job-posting-layout {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 32px;
+      align-items: start;
+    }
+
+    .sidebar-column {
+      position: sticky;
+      top: 24px;
+    }
+
+    .progress-card {
+      padding: 24px;
+      background: var(--color-surface);
+      border-radius: 20px;
+      border: 1px solid var(--color-border);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+    }
+
+    .progress-card h3 {
+      margin: 0 0 16px 0;
+      font-size: 1.125rem;
+      color: var(--color-text);
+    }
+
+    .progress-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .progress-bar-bg {
+      flex: 1;
+      height: 8px;
+      background: rgba(16, 185, 129, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--color-primary);
+      border-radius: 4px;
+      transition: width 0.4s ease, background-color 0.4s ease;
+    }
+
+    .progress-bar-fill.complete, .progress-bar-fill-mini.complete {
+      background: #059669;
+    }
+
+    .section-breakdown {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding-top: 24px;
+      border-top: 1px solid var(--color-border);
+    }
+    
+    .breakdown-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      margin-bottom: 6px;
+    }
+    
+    .progress-bar-bg-mini {
+      height: 4px;
+      background: rgba(16, 185, 129, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    
+    .progress-bar-fill-mini {
+      height: 100%;
+      background: var(--color-primary);
+      border-radius: 2px;
+      transition: width 0.4s ease, background-color 0.4s ease;
+    }
+
+    .progress-text {
+      font-weight: 700;
+      font-size: 0.9375rem;
+      color: var(--color-text);
+      min-width: 40px;
+    }
+
+    .motivational-message {
+      display: flex;
+      gap: 12px;
+      background: rgba(16, 185, 129, 0.05);
+      padding: 16px;
+      border-radius: 12px;
+    }
+
+    .motivational-message i {
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .motivational-message p {
+      margin: 0;
+      font-size: 0.875rem;
+      color: var(--color-text-secondary);
+      line-height: 1.5;
     }
 
     /* Page Header */
@@ -316,9 +533,8 @@ import { JobService } from '../../services/job.service';
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 32px;
-      padding: 32px;
-      background: linear-gradient(135deg, var(--color-primary) 0%, #047857 100%);
+      padding: 40px;
+      background: linear-gradient(135deg, var(--color-primary) 0%, #059669 100%);
       border-radius: 24px;
       color: white;
       box-shadow: 0 10px 30px -10px rgba(16, 185, 129, 0.4);
@@ -418,6 +634,17 @@ import { JobService } from '../../services/job.service';
       grid-column: 1 / -1;
     }
 
+    @media (max-width: 992px) {
+      .job-posting-layout {
+        grid-template-columns: 1fr;
+      }
+      .sidebar-column {
+        position: static;
+        order: -1; /* Puts progress bar above the form on mobile */
+        margin-bottom: 24px;
+      }
+    }
+
     @media (max-width: 768px) {
       .form-grid {
         grid-template-columns: 1fr;
@@ -470,6 +697,18 @@ import { JobService } from '../../services/job.service';
       font-size: 0.9375rem;
       transition: all 0.2s;
       box-sizing: border-box;
+    }
+
+    .form-input::placeholder {
+      color: #9ca3af;
+    }
+
+    select.form-input:invalid {
+      color: #9ca3af;
+    }
+
+    select.form-input option {
+      color: var(--color-text);
     }
 
     .form-input.with-icon {
@@ -722,20 +961,20 @@ export class JobPostingComponent {
 
   constructor(private fb: FormBuilder, private jobService: JobService) {
     this.jobForm = this.fb.group({
-      title: ['', Validators.required],
-      company: ['', Validators.required],
-      website: ['https://', [Validators.required, Validators.pattern('https?://.+')]],
-      state: ['', Validators.required],
-      city: ['', Validators.required],
-      employmentType: ['Full-time', Validators.required],
-      minSalary: [null, Validators.required],
-      maxSalary: [null, Validators.required],
-      deadline: ['', Validators.required],
-      vacancies: [1, Validators.required],
+      title: [null, Validators.required],
+      company: [null, Validators.required],
+      website: [null, [Validators.required, Validators.pattern('https?://.+')]],
+      state: [null, Validators.required],
+      city: [{ value: null, disabled: true }, Validators.required],
+      employmentType: [null, Validators.required],
+      minSalary: [null, [Validators.required, Validators.min(0)]],
+      maxSalary: [null, [Validators.required, Validators.min(0)]],
+      deadline: [null, Validators.required],
+      vacancies: [null, [Validators.required, Validators.min(1)]],
       roleRequirement: this.fb.group({
-        seniorityLevel: ['Mid', Validators.required],
-        requiredExperienceYears: [3, [Validators.required, Validators.min(0)]],
-        jobDescription: ['', Validators.required],
+        seniorityLevel: [null, Validators.required],
+        requiredExperienceYears: [null, [Validators.required, Validators.min(0)]],
+        jobDescription: [null, Validators.required],
         technicalSkills: this.fb.array([
           this.createTechnicalSkill()
         ]),
@@ -743,8 +982,71 @@ export class JobPostingComponent {
           this.createMustHaveRequirement()
         ])
       }),
+      benefits: this.fb.array([]),
       questions: this.fb.array([])
     });
+    this.calculateCompletion();
+    this.jobForm.valueChanges.subscribe(() => {
+      this.calculateCompletion();
+    });
+  }
+
+  get sectionScores() {
+    const v = this.jobForm.value;
+    
+    let basicFilled = 0;
+    if (v.title) basicFilled++;
+    if (v.company) basicFilled++;
+    if (v.website) basicFilled++;
+    
+    let locFilled = 0;
+    if (v.state) locFilled++;
+    if (v.city) locFilled++;
+    if (v.employmentType) locFilled++;
+    
+    let compFilled = 0;
+    if (v.minSalary !== null && v.minSalary !== '') compFilled++;
+    if (v.maxSalary !== null && v.maxSalary !== '') compFilled++;
+    if (v.vacancies !== null && v.vacancies !== '') compFilled++;
+    if (v.deadline) compFilled++;
+    
+    let reqFilled = 0;
+    if (v.roleRequirement) {
+      if (v.roleRequirement.seniorityLevel) reqFilled++;
+      if (v.roleRequirement.requiredExperienceYears !== null && v.roleRequirement.requiredExperienceYears !== '') reqFilled++;
+      if (v.roleRequirement.jobDescription) reqFilled++;
+      
+      const techSkills = v.roleRequirement.technicalSkills;
+      if (techSkills && techSkills.length > 0 && techSkills[0].technicalSkillText) reqFilled++;
+      
+      const mustHaves = v.roleRequirement.mustHaveRequirements;
+      if (mustHaves && mustHaves.length > 0 && mustHaves[0].requirementText) reqFilled++;
+    }
+
+    let benFilled = 0;
+    const benefitsArr = v.benefits;
+    if (benefitsArr && benefitsArr.length > 0 && benefitsArr[0].benefitText) benFilled++;
+
+    return {
+      basic: Math.round((basicFilled / 3) * 100),
+      location: Math.round((locFilled / 3) * 100),
+      compensation: Math.round((compFilled / 4) * 100),
+      requirements: Math.round((reqFilled / 5) * 100),
+      benefits: Math.round((benFilled / 1) * 100),
+      totalFilled: basicFilled + locFilled + compFilled + reqFilled + benFilled
+    };
+  }
+
+  get completionPercentage(): number {
+    const totalFilled = this.sectionScores.totalFilled;
+    if (totalFilled === 16) {
+      return 100;
+    }
+    return Math.min(99, Math.round((totalFilled / 16) * 100));
+  }
+
+  calculateCompletion() {
+    // Just to trigger change detection if needed, though getter handles it
   }
 
   get technicalSkillsFormArray() {
@@ -785,6 +1087,23 @@ export class JobPostingComponent {
     if (this.mustHaveRequirementsFormArray.length > 1) {
       this.mustHaveRequirementsFormArray.removeAt(index);
     }
+  }
+  get benefitsFormArray(): FormArray {
+    return this.jobForm.get('benefits') as FormArray;
+  }
+
+  createBenefit(): FormGroup {
+    return this.fb.group({
+      benefitText: ['', Validators.required]
+    });
+  }
+
+  addBenefit() {
+    this.benefitsFormArray.push(this.createBenefit());
+  }
+
+  removeBenefit(index: number) {
+    this.benefitsFormArray.removeAt(index);
   }
 
   get questionsFormArray(): FormArray {
@@ -840,7 +1159,8 @@ export class JobPostingComponent {
   onStateChange() {
     const selectedState = this.jobForm.get('state')?.value;
     this.availableCities = this.malaysiaData[selectedState] || [];
-    this.jobForm.patchValue({ city: '' });
+    this.jobForm.get('city')?.enable();
+    this.jobForm.patchValue({ city: null });
   }
 
   onSubmit() {
@@ -861,6 +1181,7 @@ export class JobPostingComponent {
         deadline: formValue.deadline,
         vacancies: formValue.vacancies,
         roleRequirements: [formValue.roleRequirement],
+        benefits: formValue.benefits,
         questions: formValue.questions
       }).subscribe({
         next: () => {
@@ -868,14 +1189,14 @@ export class JobPostingComponent {
           
           // Reset form but keep defaults
           this.jobForm.reset({
-            website: 'https://',
-            employmentType: 'Full-time',
-            vacancies: 1,
-            state: '',
-            city: '',
+            website: null,
+            employmentType: null,
+            vacancies: null,
+            state: null,
+            city: null,
             roleRequirement: {
-              seniorityLevel: 'Mid',
-              requiredExperienceYears: 1
+              seniorityLevel: null,
+              requiredExperienceYears: null
             }
           });
           
@@ -890,6 +1211,11 @@ export class JobPostingComponent {
             this.mustHaveRequirementsFormArray.removeAt(0);
           }
           this.addMustHaveRequirement();
+
+          // Reset benefits array
+          while (this.benefitsFormArray.length !== 0) {
+            this.benefitsFormArray.removeAt(0);
+          }
           
           while (this.questionsFormArray.length !== 0) {
             this.questionsFormArray.removeAt(0);
