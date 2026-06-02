@@ -11,7 +11,7 @@ import { JobService, Job } from '../../services/job.service';
     <div class="job-detail-content" *ngIf="job; else loading">
       <!-- Back Navigation (Outside Banner) -->
       <div class="back-nav-container">
-        <button class="btn-back-outside" (click)="goBack()">
+        <button class="btn-back" (click)="goBack()">
           <i class="ph ph-arrow-left"></i> Back to Jobs
         </button>
       </div>
@@ -235,7 +235,7 @@ import { JobService, Job } from '../../services/job.service';
     .btn-back {
       background: none;
       border: none;
-      color: rgba(255,255,255,0.8);
+      color: var(--color-text-secondary);
       font-weight: 500;
       font-size: 0.9375rem;
       display: flex;
@@ -245,7 +245,7 @@ import { JobService, Job } from '../../services/job.service';
       transition: color 0.2s;
     }
     .btn-back:hover {
-      color: #FFF;
+      color: var(--color-text);
     }
 
     .banner-actions {
@@ -376,8 +376,8 @@ import { JobService, Job } from '../../services/job.service';
       background: rgba(255,255,255,0.1);
     }
     .job-tabs li.active {
-      background: #F8FAFC;
-      color: var(--color-banner-bg);
+      background: var(--color-background);
+      color: var(--color-text);
     }
 
     /* Main Layout */
@@ -398,7 +398,7 @@ import { JobService, Job } from '../../services/job.service';
     }
     
     .fact-item {
-      background: #FFF;
+      background: var(--color-surface);
       border: 1px solid var(--color-border);
       border-radius: 12px;
       padding: 16px;
@@ -442,7 +442,7 @@ import { JobService, Job } from '../../services/job.service';
 
     /* Card Utilities */
     .card {
-      background: #FFF;
+      background: var(--color-surface);
       border-radius: 16px;
       border: 1px solid var(--color-border);
       padding: 32px;

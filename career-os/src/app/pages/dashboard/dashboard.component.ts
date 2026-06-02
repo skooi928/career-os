@@ -1,59 +1,72 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { JobService, Job } from '../../services/job.service';
+import { ProfileService, QuickTask } from '../../services/profile.service';
 import { Observable } from 'rxjs';
 import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="dashboard-content">
+      <!-- Welcome Banner -->
       <div class="welcome-banner">
-        <div class="banner-text">
+        <!-- Decorative circles -->
+        <div class="circle circle-large"></div>
+        <div class="circle circle-small"></div>
+        
+        <div class="banner-left">
+          <div class="career-summary-tag">
+            <i class="ph-fill ph-sparkle"></i> CAREER SUMMARY
+          </div>
           <h1>Welcome back, {{ firstName() }}! 👋</h1>
           <p>Here's what's happening with your career journey today.</p>
         </div>
       </div>
 
+      <!-- Stats Cards -->
       <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-icon applications">
-            <i class="ph ph-briefcase"></i>
+        <div class="stat-card emerald">
+          <div class="stat-icon">
+            <i class="ph ph-file-text"></i>
           </div>
           <div class="stat-info">
-            <span class="stat-label">Applications</span>
             <span class="stat-value">24</span>
-            <span class="stat-change positive">+3 this week</span>
+            <span class="stat-label">Applications</span>
+            <span class="stat-change">+3 this week</span>
           </div>
         </div>
 
-        <div class="stat-card">
-          <div class="stat-icon interviews">
-            <i class="ph ph-calendar"></i>
+        <div class="stat-card blue">
+          <div class="stat-icon">
+            <i class="ph ph-calendar-check"></i>
           </div>
           <div class="stat-info">
-            <span class="stat-label">Interviews</span>
             <span class="stat-value">5</span>
-            <span class="stat-change positive">+1 scheduled</span>
+            <span class="stat-label">Interviews</span>
+            <span class="stat-change">+1 scheduled</span>
           </div>
         </div>
 
-        <div class="stat-card">
-          <div class="stat-icon offers">
-            <i class="ph ph-medal"></i>
+        <div class="stat-card amber">
+          <div class="stat-icon">
+            <i class="ph ph-lightbulb"></i>
           </div>
           <div class="stat-info">
-            <span class="stat-label">Offers</span>
             <span class="stat-value">2</span>
+            <span class="stat-label">Offers</span>
             <span class="stat-change">Maintain momentum</span>
           </div>
         </div>
       </div>
 
+      <!-- Content Sections -->
       <div class="content-sections">
+        <!-- Recent Activity -->
         <div class="main-section card">
           <div class="card-header">
             <h3>Recent Activity</h3>
@@ -61,50 +74,80 @@ import { Router } from '@angular/router';
           </div>
           <div class="activity-list">
             <div class="activity-item">
-              <div class="dot active"></div>
+              <div class="activity-avatar bg-emerald">
+                <i class="ph ph-calendar-check"></i>
+              </div>
               <div class="activity-details">
                 <p class="activity-title">Interview scheduled with <strong>Google</strong></p>
-                <p class="activity-time">2 hours ago</p>
+                <div class="activity-time">
+                  <i class="ph ph-clock"></i> 2 hours ago
+                </div>
               </div>
+              <div class="hover-dot"></div>
             </div>
             <div class="activity-item">
-              <div class="dot"></div>
+              <div class="activity-avatar bg-green">
+                <i class="ph ph-paper-plane-tilt"></i>
+              </div>
               <div class="activity-details">
                 <p class="activity-title">Application sent to <strong>Stripe</strong></p>
-                <p class="activity-time">Yesterday</p>
+                <div class="activity-time">
+                  <i class="ph ph-clock"></i> Yesterday
+                </div>
               </div>
+              <div class="hover-dot"></div>
             </div>
             <div class="activity-item">
-              <div class="dot"></div>
+              <div class="activity-avatar bg-amber">
+                <i class="ph ph-pencil-simple"></i>
+              </div>
               <div class="activity-details">
                 <p class="activity-title">Resume updated: <strong>Frontend Dev v2</strong></p>
-                <p class="activity-time">Oct 24, 2025</p>
+                <div class="activity-time">
+                  <i class="ph ph-clock"></i> Oct 24, 2025
+                </div>
               </div>
+              <div class="hover-dot"></div>
             </div>
           </div>
         </div>
 
+        <!-- Quick Tasks -->
         <div class="side-section card">
           <div class="card-header">
             <h3>Quick Tasks</h3>
+            <span class="task-count">{{ tasks.length }} items</span>
           </div>
           <div class="tasks-list">
-            <div class="task-item">
-              <input type="checkbox" id="t1" checked>
-              <label for="t1">Apply to 5 jobs</label>
+            <button *ngFor="let task of tasks" class="task-btn" [ngClass]="task.status === 'closed' ? 'done' : 'undone'" (click)="toggleTask(task)">
+              <i class="check-icon" [ngClass]="task.status === 'closed' ? 'ph-fill ph-check-circle' : 'ph ph-circle'"></i>
+              <span class="task-label">{{ task.description }}</span>
+              <span class="priority-badge" [ngClass]="task.priority">{{ task.priority | uppercase }}</span>
+            </button>
+            
+            <div *ngIf="isAddingTask" class="add-task-form">
+              <input type="text" [(ngModel)]="newTaskDescription" placeholder="Task description..." class="task-input" (keyup.enter)="saveTask()">
+              <div class="task-form-actions">
+                <select [(ngModel)]="newTaskPriority" class="priority-select">
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+                <div class="action-btns">
+                  <button class="btn-cancel-task" (click)="isAddingTask = false"><i class="ph ph-x"></i></button>
+                  <button class="btn-save-task" (click)="saveTask()"><i class="ph ph-check"></i></button>
+                </div>
+              </div>
             </div>
-            <div class="task-item">
-              <input type="checkbox" id="t2">
-              <label for="t2">Follow up with recruiter</label>
-            </div>
-            <div class="task-item">
-              <input type="checkbox" id="t3">
-              <label for="t3">Update portfolio</label>
-            </div>
+
+            <button *ngIf="!isAddingTask" class="add-task-btn" (click)="isAddingTask = true">
+              <i class="ph ph-plus"></i> Add task
+            </button>
           </div>
         </div>
       </div>
 
+      <!-- Recommended Jobs -->
       <div class="recommended-section">
         <div class="section-header">
           <h3>Recommended Jobs</h3>
@@ -121,29 +164,38 @@ import { Router } from '@angular/router';
           <div class="carousel-container" *ngIf="jobs.length > 0">
             <div class="job-card" *ngFor="let job of jobs" (click)="viewJob(job.id)">
               <div class="job-card-header">
-                <div class="company-logo">{{ job.initials }}</div>
-                <span class="badge new-badge" *ngIf="job.isNew">New</span>
+                <div class="logo-group">
+                  <div class="company-logo bg-red-600">{{ job.initials }}</div>
+                  <div class="company-title-wrap">
+                    <p class="company-name">{{ job.company }}</p>
+                    <h4 class="job-title">{{ job.title }}</h4>
+                  </div>
+                </div>
+                <div class="header-actions">
+                  <span class="new-badge" *ngIf="job.isNew">NEW</span>
+                  <button class="btn-bookmark" (click)="toggleBookmark($event, job)">
+                    <i [class]="$any(job).isSaved ? 'ph-fill ph-bookmark active-icon' : 'ph ph-bookmark inactive-icon'"></i>
+                  </button>
+                </div>
               </div>
               
-              <div class="job-card-body">
-                <h4 class="job-title">{{ job.title }}</h4>
-                <p class="company-name">{{ job.company }}</p>
-                
-                <div class="job-meta">
-                  <span class="meta-item"><i class="ph ph-map-pin"></i> {{ job.location }}</span>
-                  <span class="badge employment-badge">{{ job.employmentType }}</span>
-                </div>
+              <div class="job-meta">
+                <span class="meta-item"><i class="ph ph-map-pin"></i> {{ job.location }}</span>
+                <span class="meta-item"><i class="ph ph-clock"></i> {{ job.employmentType }}</span>
+              </div>
+              
+              <div class="tags-row" *ngIf="job.roleRequirements.length > 0">
+                <span class="skill-tag" *ngFor="let skill of job.roleRequirements[0].technicalSkills.slice(0,4)">
+                  {{ skill.technicalSkillText }}
+                </span>
+                <span class="skill-tag" *ngIf="job.roleRequirements[0].technicalSkills.length > 4">
+                  +{{ job.roleRequirements[0].technicalSkills.length - 4 }}
+                </span>
               </div>
               
               <div class="job-card-footer">
-                <div class="salary-range">RM{{ job.minSalary }} - RM{{ job.maxSalary }}</div>
-                <div class="skills-row" *ngIf="job.roleRequirements.length > 0">
-                  <span class="skill-tag" *ngFor="let skill of job.roleRequirements[0].technicalSkills">{{ skill.technicalSkillText }}</span>
-                </div>
-                <div class="job-footer-meta">
-                  <span class="deadline">Apply by {{ job.deadline }}</span>
-                  <span class="vacancies">{{ job.vacancies }} vacancy(s)</span>
-                </div>
+                <span class="salary-range">RM{{ formatNumber(job.minSalary) }} - RM{{ formatNumber(job.maxSalary) }}</span>
+                <button class="btn-apply-now" (click)="$event.stopPropagation(); viewJob(job.id)">Apply Now</button>
               </div>
             </div>
           </div>
@@ -156,73 +208,164 @@ import { Router } from '@angular/router';
       display: flex;
       flex-direction: column;
       gap: 32px;
+      padding-bottom: 32px;
     }
 
+    /* Typography Defaults for Dashboard */
+    h3 { font-size: 18px; font-weight: 500; color: var(--color-text); margin: 0; }
+    p { margin: 0; }
+
+    /* 3. Welcome Banner */
     .welcome-banner {
-      background: linear-gradient(135deg, var(--color-primary) 0%, #059669 100%);
-      padding: 40px;
       border-radius: 24px;
+      padding: 40px;
+      background: linear-gradient(135deg, #059669 0%, #047857 50%, #065f46 100%);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
       color: white;
-      box-shadow: 0 10px 30px -10px rgba(16, 185, 129, 0.4);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
 
-    .welcome-banner h1 {
-      margin: 0;
-      font-size: 2rem;
-      font-weight: 700;
+    .circle {
+      position: absolute;
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
     }
 
-    .welcome-banner p {
-      margin: 8px 0 0 0;
-      opacity: 0.9;
-      font-size: 1.1rem;
+    .circle-large {
+      width: 256px;
+      height: 256px;
+      top: -128px;
+      right: -64px;
     }
 
+    .circle-small {
+      width: 160px;
+      height: 160px;
+      bottom: -80px;
+      left: 33%;
+    }
+
+    .banner-left {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .career-summary-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #a7f3d0;
+      margin-bottom: 8px;
+    }
+
+    .career-summary-tag i { color: #fde047; font-size: 14px; }
+
+    .banner-left h1 { margin: 0; font-size: 2.25rem; font-weight: 800; letter-spacing: -0.02em; color: white; }
+    .banner-left p { font-size: 1.0625rem; color: #d1fae5; opacity: 0.9; margin: 8px 0 0 0; }
+
+    .banner-right {
+      position: relative;
+      z-index: 10;
+    }
+
+    .interview-card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .interview-icon-wrapper i { font-size: 24px; color: #a7f3d0; }
+    .interview-details { display: flex; flex-direction: column; }
+    .interview-label { font-size: 10px; color: #a7f3d0; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+    .interview-time { font-size: 14px; font-weight: 600; color: white; }
+
+    @media (max-width: 768px) {
+      .banner-right { display: none; }
+    }
+
+    /* 4. Stats Cards */
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      grid-template-columns: repeat(3, 1fr);
       gap: 24px;
+    }
+
+    @media (max-width: 1024px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 640px) {
+      .stats-grid { grid-template-columns: 1fr; }
     }
 
     .stat-card {
       background: var(--color-surface);
-      padding: 24px;
-      border-radius: 20px;
+      border-radius: 12px;
+      padding: 20px;
       display: flex;
-      align-items: center;
-      gap: 20px;
-      border: 1px solid var(--color-border);
-      transition: transform 0.2s;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      transition: all 0.2s ease-in-out;
     }
 
-    .stat-card:hover {
-      transform: translateY(-4px);
-      border-color: rgba(16, 185, 129, 0.2);
-    }
+    .stat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); transform: translateY(-2px); }
 
     .stat-icon {
-      width: 56px;
-      height: 56px;
-      border-radius: 16px;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.5rem;
+      font-size: 20px;
     }
 
-    .stat-icon.applications { background: rgba(16, 185, 129, 0.1); color: var(--color-primary); }
-    .stat-icon.interviews { background: rgba(59, 130, 246, 0.1); color: var(--color-info); }
-    .stat-icon.offers { background: rgba(168, 85, 247, 0.1); color: #a855f7; }
+    .stat-info { display: flex; flex-direction: column; gap: 4px; }
+    .stat-value { font-size: 30px; font-weight: 600; color: var(--color-text); line-height: 1; }
+    .stat-label { font-size: 14px; color: var(--color-text-secondary); }
+    .stat-change { 
+      font-size: 10px; 
+      font-weight: 500; 
+      padding: 4px 8px; 
+      border-radius: 6px; 
+      width: fit-content; 
+      margin-top: 8px; 
+    }
 
-    .stat-info { display: flex; flex-direction: column; }
-    .stat-label { font-size: 0.875rem; color: var(--color-text-secondary); font-weight: 500; }
-    .stat-value { font-size: 1.75rem; font-weight: 700; color: var(--color-text); margin: 4px 0; }
-    .stat-change { font-size: 0.75rem; color: var(--color-text-tertiary); }
-    .stat-change.positive { color: var(--color-success); }
+    /* Color Themes */
+    .emerald { border: 1px solid #d1fae5; }
+    .emerald .stat-icon { background: #d1fae5; color: #059669; }
+    .emerald .stat-change { background: #d1fae5; color: #059669; }
 
+    .blue { border: 1px solid #dbeafe; }
+    .blue .stat-icon { background: #dbeafe; color: #2563eb; }
+    .blue .stat-change { background: #dbeafe; color: #2563eb; }
+
+    .amber { border: 1px solid #fef3c7; }
+    .amber .stat-icon { background: #fef3c7; color: #f59e0b; }
+    .amber .stat-change { background: #fef3c7; color: #d97706; }
+
+    /* Content Sections Layout */
     .content-sections {
       display: grid;
-      grid-template-columns: 2fr 1fr;
+      grid-template-columns: 1.5fr 1fr;
       gap: 24px;
     }
 
@@ -232,107 +375,207 @@ import { Router } from '@angular/router';
 
     .card {
       background: var(--color-surface);
-      border-radius: 20px;
-      padding: 24px;
+      border-radius: 12px;
       border: 1px solid var(--color-border);
+      padding: 20px;
     }
 
     .card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
 
-    .card-header h3 { margin: 0; font-size: 1.125rem; font-weight: 600; color: var(--color-text); }
-    .btn-text { background: none; border: none; color: var(--color-primary); font-weight: 600; cursor: pointer; }
-
-    .activity-list, .tasks-list { display: flex; flex-direction: column; gap: 16px; }
-
-    .activity-item { display: flex; gap: 16px; align-items: flex-start; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-text-tertiary); margin-top: 6px; flex-shrink: 0; }
-    .dot.active { background: var(--color-primary); box-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
-    
-    .activity-title { margin: 0; font-size: 0.9375rem; color: var(--color-text); }
-    .activity-time { margin: 4px 0 0 0; font-size: 0.8125rem; color: var(--color-text-tertiary); }
-
-    .task-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 16px;
-      background: var(--color-surface-secondary);
-      border-radius: 12px;
-      border: 1px solid var(--color-border);
+    .btn-text {
+      background: none;
+      border: none;
+      color: #059669;
+      font-size: 12px;
+      font-weight: 500;
       cursor: pointer;
     }
 
-    .task-item input { accent-color: var(--color-primary); width: 18px; height: 18px; }
-    .task-item label { cursor: pointer; font-size: 0.9375rem; color: var(--color-text-secondary); }
-    .task-item input:checked + label { text-decoration: line-through; opacity: 0.4; }
-
-    /* Recommended Jobs Styles */
-    .recommended-section {
+    /* 5. Recent Activity */
+    .activity-list { display: flex; flex-direction: column; gap: 4px; }
+    
+    .activity-item {
       display: flex;
-      flex-direction: column;
-      gap: 16px;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      transition: background-color 0.2s;
+      position: relative;
+    }
+    .activity-item:hover { background: var(--color-surface-secondary); }
+    .activity-item:hover .hover-dot { opacity: 1; }
+
+    .activity-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .bg-emerald { background: #059669; }
+    .bg-green { background: #22c55e; }
+    .bg-amber { background: #f59e0b; }
+
+    .activity-details { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    .activity-title { font-size: 14px; color: var(--color-text); }
+    .activity-title strong { color: var(--color-text); font-weight: 600; }
+    .activity-time { font-size: 11px; color: var(--color-text-secondary); display: flex; align-items: center; gap: 4px; }
+
+    .hover-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #059669;
+      opacity: 0;
+      transition: opacity 0.2s;
+      margin-left: auto;
     }
 
-    .section-header {
+    /* 6. Quick Tasks */
+    .task-count {
+      background: var(--color-surface-secondary);
+      color: var(--color-text-secondary);
+      font-size: 10px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 9999px;
+    }
+
+    .tasks-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .task-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s;
+    }
+
+    .task-btn.done {
+      background: var(--color-surface-secondary);
+      border: 1px solid var(--color-border);
+    }
+    .task-btn.done .check-icon { color: #059669; font-size: 20px; }
+    .task-btn.done .task-label { text-decoration: line-through; color: var(--color-text-secondary); font-size: 14px; flex: 1; opacity: 0.7; }
+
+    .task-btn.undone {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+    }
+    .task-btn.undone:hover {
+      border-color: rgba(5, 150, 105, 0.3);
+      background-color: rgba(5, 150, 105, 0.05);
+    }
+    .task-btn.undone .check-icon { color: var(--color-text-secondary); font-size: 20px; }
+    .task-btn.undone .task-label { color: var(--color-text); font-size: 14px; flex: 1; }
+
+    .priority-badge {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+    .priority-badge.high { background: #ffe4e6; color: #e11d48; }
+    .priority-badge.medium { background: #fef3c7; color: #d97706; }
+    .priority-badge.low { background: #d1fae5; color: #059669; }
+
+    .add-task-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      border: 1px dashed var(--color-border);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--color-text-secondary);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .add-task-btn:hover {
+      border-color: rgba(5, 150, 105, 0.4);
+      color: #059669;
+    }
+
+    .add-task-form {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px;
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      background: var(--color-surface);
+    }
+    .task-input {
+      width: 100%;
+      border: none;
+      background: transparent;
+      color: var(--color-text);
+      font-size: 14px;
+      outline: none;
+    }
+    .task-form-actions {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      margin-top: 4px;
     }
-
-    .section-header h3 {
-      margin: 0;
-      font-size: 1.125rem;
-      font-weight: 600;
-      color: var(--color-text);
+    .priority-select {
+      background: var(--color-surface-secondary);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-secondary);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 11px;
+      outline: none;
     }
-
-    .empty-state {
+    .action-btns {
       display: flex;
-      flex-direction: column;
+      gap: 8px;
+    }
+    .btn-cancel-task, .btn-save-task {
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
       align-items: center;
       justify-content: center;
-      padding: 48px;
-      background: var(--color-surface);
-      border: 1px dashed var(--color-border);
-      border-radius: 16px;
-      color: var(--color-text-secondary);
-      text-align: center;
+      width: 24px;
+      height: 24px;
     }
+    .btn-cancel-task { color: var(--color-text-tertiary); }
+    .btn-save-task { color: #059669; background: #ecfdf5; }
 
-    .empty-icon {
-      font-size: 3rem;
-      color: var(--color-text-tertiary);
-      margin-bottom: 16px;
-    }
-
-    .empty-state h4 {
-      margin: 0;
-      color: var(--color-text);
-      font-size: 1.125rem;
-    }
-
-    .empty-state p {
-      margin: 8px 0 0 0;
-      font-size: 0.9375rem;
-    }
+    /* 7. Recommended Jobs */
+    .recommended-section { display: flex; flex-direction: column; gap: 16px; }
+    .section-header { display: flex; justify-content: space-between; align-items: center; }
 
     .carousel-container {
       display: flex;
       overflow-x: auto;
       gap: 20px;
-      padding-bottom: 12px;
+      padding-bottom: 16px;
       scroll-snap-type: x mandatory;
       scrollbar-width: none;
     }
-
-    .carousel-container::-webkit-scrollbar {
-      display: none;
-    }
+    .carousel-container::-webkit-scrollbar { display: none; }
 
     .job-card {
       min-width: 320px;
@@ -340,146 +583,172 @@ import { Router } from '@angular/router';
       flex: 0 0 auto;
       scroll-snap-align: start;
       background: var(--color-surface);
+      border-radius: 12px;
       border: 1px solid var(--color-border);
-      border-radius: 16px;
       padding: 20px;
-      cursor: pointer;
       display: flex;
       flex-direction: column;
       gap: 16px;
+      cursor: pointer;
       transition: all 0.2s ease-in-out;
     }
-
     .job-card:hover {
-      transform: translateY(-4px);
-      border-color: rgba(16, 185, 129, 0.3);
-      box-shadow: 0 10px 25px -10px rgba(16, 185, 129, 0.15);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      border-color: rgba(5, 150, 105, 0.3);
     }
 
     .job-card-header {
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    
+    .logo-group {
+      display: flex;
+      gap: 12px;
+      overflow: hidden;
     }
 
     .company-logo {
-      width: 48px;
-      height: 48px;
+      width: 40px;
+      height: 40px;
       border-radius: 12px;
-      background: var(--color-surface-secondary);
       display: flex;
       align-items: center;
       justify-content: center;
+      color: white;
+      font-size: 14px;
       font-weight: 700;
-      color: var(--color-text);
-      font-size: 1.125rem;
-      border: 1px solid var(--color-border);
+      flex-shrink: 0;
     }
+    .bg-red-600 { background: #dc2626; }
 
-    .badge {
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
-
-    .new-badge {
-      background: rgba(59, 130, 246, 0.1);
-      color: var(--color-info);
-    }
-
-    .employment-badge {
-      background: var(--color-surface-secondary);
-      color: var(--color-text-secondary);
-    }
-
-    .job-card-body {
+    .company-title-wrap {
       display: flex;
       flex-direction: column;
-      gap: 8px;
-    }
-
-    .job-title {
-      margin: 0;
-      font-size: 1.125rem;
-      font-weight: 700;
-      color: var(--color-text);
-      white-space: nowrap;
       overflow: hidden;
-      text-overflow: ellipsis;
     }
 
     .company-name {
-      margin: 0;
-      font-size: 0.875rem;
+      font-size: 14px;
       color: var(--color-text-secondary);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
-    .job-meta {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-top: 4px;
+    .job-title {
+      margin: 2px 0 0 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--color-text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .new-badge {
+      background: #d1fae5;
+      color: #059669;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 9999px;
+    }
+
+    .btn-bookmark {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 18px;
+      color: var(--color-text-tertiary);
+      transition: all 0.2s;
+    }
+    .btn-bookmark:hover { background: var(--color-surface-secondary); }
+    .active-icon { color: #059669; }
+
+    .job-meta {
+      display: flex;
+      gap: 12px;
+    }
     .meta-item {
-      font-size: 0.875rem;
-      color: var(--color-text-secondary);
       display: flex;
       align-items: center;
       gap: 4px;
+      font-size: 11px;
+      color: var(--color-text-secondary);
     }
 
-    .job-card-footer {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-top: auto;
-      padding-top: 16px;
-      border-top: 1px dashed var(--color-border);
-    }
-
-    .salary-range {
-      font-weight: 600;
-      color: var(--color-primary);
-      font-size: 0.9375rem;
-    }
-
-    .skills-row {
+    .tags-row {
       display: flex;
       flex-wrap: nowrap;
       gap: 8px;
       overflow: hidden;
     }
-
     .skill-tag {
-      font-size: 0.75rem;
-      padding: 4px 8px;
-      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 500;
       background: var(--color-surface-secondary);
-      color: var(--color-text-tertiary);
+      color: var(--color-text-secondary);
+      padding: 2px 8px;
+      border-radius: 6px;
       white-space: nowrap;
       flex-shrink: 0;
     }
 
-    .job-footer-meta {
+    .job-card-footer {
+      border-top: 1px solid var(--color-border);
+      padding-top: 16px;
+      margin-top: auto;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.75rem;
-      color: var(--color-text-tertiary);
     }
+
+    .salary-range {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .btn-apply-now {
+      background: #ecfdf5;
+      color: #059669;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .btn-apply-now:hover { background: #d1fae5; }
   `]
 })
 export class DashboardComponent implements OnInit {
   jobs$: Observable<Job[]>;
+  tasks: QuickTask[] = [];
+  isAddingTask = false;
+  newTaskDescription = '';
+  newTaskPriority = 'medium';
 
   constructor(
     private authService: AuthService, 
     private jobService: JobService,
+    private profileService: ProfileService,
     private router: Router
   ) {
     this.jobs$ = this.jobService.jobs$;
@@ -487,6 +756,18 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit() {
     this.jobService.loadJobs();
+    this.loadTasks();
+  }
+
+  loadTasks() {
+    this.profileService.getUserProfile().subscribe({
+      next: (profile) => {
+        if (profile.quickTasks) {
+          this.tasks = profile.quickTasks;
+        }
+      },
+      error: (err) => console.error('Failed to load tasks', err)
+    });
   }
 
   firstName() {
@@ -497,5 +778,50 @@ export class DashboardComponent implements OnInit {
     if (id) {
       this.router.navigate(['/jobs', id]);
     }
+  }
+
+  formatNumber(num: number): string {
+    return num.toLocaleString();
+  }
+
+  toggleBookmark(event: Event, job: any) {
+    event.stopPropagation();
+    job.isSaved = !job.isSaved; // Mock toggle for UI purposes
+  }
+
+  saveTask() {
+    if (!this.newTaskDescription.trim()) return;
+    
+    const task: QuickTask = {
+      description: this.newTaskDescription,
+      status: 'added',
+      priority: this.newTaskPriority
+    };
+
+    this.profileService.addQuickTask(task).subscribe({
+      next: (savedTask) => {
+        this.tasks.push(savedTask);
+        this.isAddingTask = false;
+        this.newTaskDescription = '';
+        this.newTaskPriority = 'medium';
+      },
+      error: (err) => console.error('Failed to add task', err)
+    });
+  }
+
+  toggleTask(task: QuickTask) {
+    if (!task.id) return;
+    const newStatus = task.status === 'closed' ? 'added' : 'closed';
+    
+    // Optimistic UI update
+    const originalStatus = task.status;
+    task.status = newStatus;
+
+    this.profileService.updateQuickTask(task.id, { ...task, status: newStatus }).subscribe({
+      error: (err) => {
+        console.error('Failed to update task', err);
+        task.status = originalStatus; // Revert on failure
+      }
+    });
   }
 }
