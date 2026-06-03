@@ -31,6 +31,14 @@ public class JwtTokenProvider {
         return createToken(claims, email);
     }
 
+    public String generateTokenWithSupabaseUid(String email, String supabaseUid, String role) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("sub", supabaseUid);
+        claims.put("email", email);
+        claims.put("role", role);
+        return createToken(claims, supabaseUid);
+    }
+
     private String createToken(Map<String, Object> claims, String subject) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expirationTime);
@@ -45,6 +53,11 @@ public class JwtTokenProvider {
     }
 
     public String getEmailFromToken(String token) {
+        return getClaimFromToken(token, Claims::getSubject);
+    }
+
+    public String getUidFromToken(String token) {
+        // Supabase JWT tokens use "sub" claim for the UID
         return getClaimFromToken(token, Claims::getSubject);
     }
 
@@ -78,3 +91,4 @@ public class JwtTokenProvider {
                 .getBody();
     }
 }
+

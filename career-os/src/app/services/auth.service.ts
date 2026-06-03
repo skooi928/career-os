@@ -1,21 +1,25 @@
 import { Injectable, PLATFORM_ID, Inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, Observable, throwError } from 'rxjs';
+import { tap, catchError } from 'rxjs/operators';
+
 
 export interface AuthResponse {
   token: string;
   email: string;
-  firstName: string;
-  lastName: string;
-  userId: number;
+  userId: string;
+  role?: string;
+  firstName?: string;
+  lastName?: string;
+  emailVerified?: boolean;
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly API_URL = 'http://localhost:8080/api/auth';
+  private readonly BACKEND_API_URL = 'http://localhost:8080/api';
   private currentUserSubject = new BehaviorSubject<AuthResponse | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
 
@@ -27,34 +31,103 @@ export class AuthService {
     }
   }
 
-
-
+  /**
+   * Login with email and password via backend
+   */
   login(email: string, password: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.API_URL}/login`, { email, password }).pipe(
+    return this.http.post<AuthResponse>(`${this.BACKEND_API_URL}/auth/login`, { email, password }).pipe(
       tap(response => {
+        console.log('✓ Login successful');
         this.storeAuthData(response);
         this.currentUserSubject.next(response);
+      }),
+      catchError(error => {
+        console.error('Login failed:', error);
+        return throwError(() => new Error(error.error?.error || 'Login failed'));
       })
     );
   }
 
+  /**
+   * Sign up with email, password, and profile information via backend
+   */
   signup(email: string, password: string, firstName: string, lastName: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.API_URL}/signup`, { email, password, firstName, lastName }).pipe(
+    return this.http.post<AuthResponse>(`${this.BACKEND_API_URL}/auth/signup`, {
+      email,
+      password,
+      firstName,
+      lastName
+    }).pipe(
       tap(response => {
+        console.log('✓ Signup successful');
         this.storeAuthData(response);
         this.currentUserSubject.next(response);
+      }),
+      catchError(error => {
+        console.error('Signup failed:', error);
+        return throwError(() => new Error(error.error?.error || 'Signup failed'));
       })
     );
   }
 
-  logout(): void {
-    if (isPlatformBrowser(this.platformId)) {
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user_data');
+  /**
+   * Set authentication session from a JWT token (e.g., after backend OAuth redirect)
+   */
+  setAuthSessionFromToken(token: string): boolean {
+    try {
+      const base64Url = token.split('.')[1];
+      let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      
+      const pad = base64.length % 4;
+      if (pad) {
+        if (pad === 1) throw new Error('Invalid base64 string length');
+        base64 += new Array(5 - pad).join('=');
+      }
+
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      const payload = JSON.parse(jsonPayload);
+      
+      const authResponse: AuthResponse = {
+        token: token,
+        email: payload.email || '',
+        userId: payload.sub || '',
+        role: payload.role || '',
+        firstName: '',
+        lastName: '',
+        emailVerified: true
+      };
+      
+      this.storeAuthData(authResponse);
+      this.currentUserSubject.next(authResponse);
+      return true;
+    } catch (e) {
+      console.error('Failed to parse token', e);
+      return false;
     }
-    this.currentUserSubject.next(null);
   }
 
+  /**
+   * Logout and clear auth data
+   */
+  logout(): Observable<void> {
+    return new Observable(observer => {
+      if (isPlatformBrowser(this.platformId)) {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_data');
+        
+        localStorage.removeItem('user_data');
+      }
+      this.currentUserSubject.next(null);
+      observer.next();
+      observer.complete();
+    });
+  }
+
+  /**
+   * Get the current auth token
+   */
   getToken(): string | null {
     if (isPlatformBrowser(this.platformId)) {
       return localStorage.getItem('auth_token');
@@ -62,14 +135,23 @@ export class AuthService {
     return null;
   }
 
+  /**
+   * Check if user is logged in
+   */
   isLoggedIn(): boolean {
     return !!this.getToken();
   }
 
+  /**
+   * Get current user from subject
+   */
   getCurrentUser(): AuthResponse | null {
     return this.currentUserSubject.value;
   }
 
+  /**
+   * Store auth data in localStorage
+   */
   private storeAuthData(response: AuthResponse): void {
     if (isPlatformBrowser(this.platformId)) {
       localStorage.setItem('auth_token', response.token);
@@ -77,6 +159,9 @@ export class AuthService {
     }
   }
 
+  /**
+   * Get user from localStorage
+   */
   private getUserFromStorage(): AuthResponse | null {
     if (isPlatformBrowser(this.platformId)) {
       const userString = localStorage.getItem('user_data');

@@ -1,0 +1,296 @@
+<div class="profile-container">
+  <!-- Error Message -->
+  <div *ngIf="errorMessage()" class="error-banner">
+    <i class="ph-warning-circle"></i>
+    {{ errorMessage() }}
+    <button (click)="errorMessage.set(null)" class="close-btn">
+      <i class="ph-x"></i>
+    </button>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div *ngIf="isLoading()" class="loading-overlay">
+    <div class="loading-spinner"></div>
+    <p>Saving your changes...</p>
+  </div>
+  <!-- Header Section -->
+  <div class="profile-header">
+    <div class="header-content">
+      <div class="profile-avatar">
+        @if (personalInfo().profileImage) {
+          <img [src]="personalInfo().profileImage" alt="Profile" class="avatar-img">
+        } @else {
+          {{ getInitials(personalInfo().firstName, personalInfo().lastName) }}
+        }
+      </div>
+      <div class="header-info">
+        <h1 class="profile-name">{{ personalInfo().firstName }} {{ personalInfo().lastName }}</h1>
+        <p class="profile-email">{{ personalInfo().email }}</p>
+        <p class="profile-location" *ngIf="personalInfo().location">
+          <i class="ph-map-pin"></i> {{ personalInfo().location }}
+        </p>
+      </div>
+      <button class="edit-btn" (click)="toggleEditPersonal()">
+        <i class="ph-pencil"></i> {{ isEditingPersonal() ? 'Cancel' : 'Edit' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Personal Information Section (Editable) -->
+  <div class="section personal-info-section">
+    <div class="section-header" (click)="toggleSection('personal')">
+      <h2><i class="ph-user-circle"></i> Personal Information</h2>
+      <i [class]="expandedSection() === 'personal' ? 'ph-caret-down' : 'ph-caret-right'"></i>
+    </div>
+
+    <div *ngIf="expandedSection() === 'personal'" class="section-content">
+      <div *ngIf="!isEditingPersonal()" class="info-grid">
+        <div class="info-item">
+          <label>Phone</label>
+          <p>{{ personalInfo().phone || 'Not provided' }}</p>
+        </div>
+        <div class="info-item">
+          <label>Location</label>
+          <p>{{ personalInfo().location || 'Not provided' }}</p>
+        </div>
+        <div class="info-item full-width">
+          <label>Bio</label>
+          <p>{{ personalInfo().bio || 'Not provided' }}</p>
+        </div>
+      </div>
+
+      <div *ngIf="isEditingPersonal()" class="edit-form">
+        <div class="form-group">
+          <label for="phone">Phone</label>
+          <input 
+            type="tel" 
+            id="phone" 
+            [(ngModel)]="personalInfo().phone"
+            class="form-input"
+          >
+        </div>
+        <div class="form-group">
+          <label for="location">Location</label>
+          <input 
+            type="text" 
+            id="location" 
+            [(ngModel)]="personalInfo().location"
+            class="form-input"
+          >
+        </div>
+        <div class="form-group full-width">
+          <label for="bio">Bio</label>
+          <textarea 
+            id="bio" 
+            [(ngModel)]="personalInfo().bio"
+            class="form-textarea"
+            rows="4"
+          ></textarea>
+        </div>
+        <button class="save-btn" (click)="savePersonalInfo()">
+          <i class="ph-check"></i> Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Experience Section -->
+  <div class="section experience-section">
+    <div class="section-header" (click)="toggleSection('experience')">
+      <h2><i class="ph-briefcase"></i> Experience</h2>
+      <i [class]="expandedSection() === 'experience' ? 'ph-caret-down' : 'ph-caret-right'"></i>
+    </div>
+
+    <div *ngIf="expandedSection() === 'experience'" class="section-content">
+      <div class="items-list">
+        <div *ngFor="let exp of experiences()" class="item-card">
+          <div class="item-header">
+            <div class="item-title">
+              <h3>{{ exp.jobTitle }}</h3>
+              <p class="company">{{ exp.company }}</p>
+            </div>
+            <button class="delete-btn" (click)="deleteExperience(exp.id)">
+              <i class="ph-trash"></i>
+            </button>
+          </div>
+          <div class="item-details">
+            <span class="date-badge">
+              <i class="ph-calendar"></i> {{ exp.startDate }} 
+              {{ exp.endDate ? ' - ' + exp.endDate : '' }}
+              <span *ngIf="exp.current" class="current-badge">Current</span>
+            </span>
+            <p class="description">{{ exp.description }}</p>
+          </div>
+        </div>
+      </div>
+
+      <button class="add-btn" (click)="showAddExperience.set(!showAddExperience())">
+        <i class="ph-plus"></i> {{ showAddExperience() ? 'Cancel' : 'Add Experience' }}
+      </button>
+
+      <form *ngIf="showAddExperience()" class="add-form" 
+            (ngSubmit)="addExperience(form.value)" 
+            #form="ngForm">
+        <input type="text" placeholder="Job Title" name="jobTitle" ngModel required>
+        <input type="text" placeholder="Company" name="company" ngModel required>
+        <textarea placeholder="Description" name="description" ngModel rows="3"></textarea>
+        <input type="date" name="startDate" ngModel required>
+        <input type="date" name="endDate" ngModel>
+        <label class="checkbox-label">
+          <input type="checkbox" name="current" ngModel> Currently working here
+        </label>
+        <button type="submit" class="form-submit-btn">Add Experience</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Education Section -->
+  <div class="section education-section">
+    <div class="section-header" (click)="toggleSection('education')">
+      <h2><i class="ph-graduation-cap"></i> Education</h2>
+      <i [class]="expandedSection() === 'education' ? 'ph-caret-down' : 'ph-caret-right'"></i>
+    </div>
+
+    <div *ngIf="expandedSection() === 'education'" class="section-content">
+      <div class="items-list">
+        <div *ngFor="let edu of education()" class="item-card">
+          <div class="item-header">
+            <div class="item-title">
+              <h3>{{ edu.degree }}</h3>
+              <p class="company">{{ edu.institution }} • {{ edu.field }}</p>
+            </div>
+            <button class="delete-btn" (click)="deleteEducation(edu.id)">
+              <i class="ph-trash"></i>
+            </button>
+          </div>
+          <div class="item-details">
+            <span class="date-badge">
+              <i class="ph-calendar"></i> {{ edu.startDate }} 
+              {{ edu.endDate ? ' - ' + edu.endDate : '' }}
+              <span *ngIf="edu.current" class="current-badge">Current</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <button class="add-btn" (click)="showAddEducation.set(!showAddEducation())">
+        <i class="ph-plus"></i> {{ showAddEducation() ? 'Cancel' : 'Add Education' }}
+      </button>
+
+      <form *ngIf="showAddEducation()" class="add-form"
+            (ngSubmit)="addEducation(form.value)"
+            #form="ngForm">
+        <input type="text" placeholder="Degree" name="degree" ngModel required>
+        <input type="text" placeholder="Institution" name="institution" ngModel required>
+        <input type="text" placeholder="Field of Study" name="field" ngModel required>
+        <input type="date" name="startDate" ngModel required>
+        <input type="date" name="endDate" ngModel>
+        <label class="checkbox-label">
+          <input type="checkbox" name="current" ngModel> Currently studying
+        </label>
+        <button type="submit" class="form-submit-btn">Add Education</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Projects Section -->
+  <div class="section projects-section">
+    <div class="section-header" (click)="toggleSection('projects')">
+      <h2><i class="ph-code"></i> Projects</h2>
+      <i [class]="expandedSection() === 'projects' ? 'ph-caret-down' : 'ph-caret-right'"></i>
+    </div>
+
+    <div *ngIf="expandedSection() === 'projects'" class="section-content">
+      <div class="items-list">
+        <div *ngFor="let proj of projects()" class="item-card project-card">
+          <div class="item-header">
+            <div class="item-title">
+              <h3>{{ proj.title }}</h3>
+              <a *ngIf="proj.link" [href]="proj.link" target="_blank" class="project-link">
+                <i class="ph-link"></i> View Project
+              </a>
+            </div>
+            <button class="delete-btn" (click)="deleteProject(proj.id)">
+              <i class="ph-trash"></i>
+            </button>
+          </div>
+          <p class="description">{{ proj.description }}</p>
+          <div class="tech-stack">
+            <span *ngFor="let tech of proj.technologies" class="tech-badge">{{ tech }}</span>
+          </div>
+          <span class="date-badge">
+            <i class="ph-calendar"></i> {{ proj.startDate }} {{ proj.endDate ? ' - ' + proj.endDate : '' }}
+          </span>
+        </div>
+      </div>
+
+      <button class="add-btn" (click)="showAddProject.set(!showAddProject())">
+        <i class="ph-plus"></i> {{ showAddProject() ? 'Cancel' : 'Add Project' }}
+      </button>
+
+      <form *ngIf="showAddProject()" class="add-form"
+            (ngSubmit)="addProject(form.value)"
+            #form="ngForm">
+        <input type="text" placeholder="Project Title" name="title" ngModel required>
+        <textarea placeholder="Project Description" name="description" ngModel rows="3" required></textarea>
+        <input type="text" placeholder="Technologies (comma-separated)" name="technologies" ngModel required>
+        <input type="url" placeholder="Project Link (optional)" name="link" ngModel>
+        <input type="date" name="startDate" ngModel required>
+        <input type="date" name="endDate" ngModel>
+        <button type="submit" class="form-submit-btn">Add Project</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Skills Section -->
+  <div class="section skills-section">
+    <div class="section-header" (click)="toggleSection('skills')">
+      <h2><i class="ph-lightning"></i> Skills</h2>
+      <i [class]="expandedSection() === 'skills' ? 'ph-caret-down' : 'ph-caret-right'"></i>
+    </div>
+
+    <div *ngIf="expandedSection() === 'skills'" class="section-content">
+      <div class="skills-grid">
+        <div *ngFor="let skill of skills()" class="skill-card">
+          <div class="skill-header">
+            <h4>{{ skill.name }}</h4>
+            <button class="delete-btn" (click)="deleteSkill(skill.id)">
+              <i class="ph-trash"></i>
+            </button>
+          </div>
+          <div class="proficiency-bar">
+            <div 
+              class="proficiency-fill" 
+              [style.width]="getProficiencyLevel(skill.proficiency)"
+              [style.background-color]="getProficiencyColor(skill.proficiency)">
+            </div>
+          </div>
+          <div class="skill-footer">
+            <span class="proficiency-level">{{ skill.proficiency }}</span>
+            <span class="endorsed-count">
+              <i class="ph-thumbs-up"></i> {{ skill.endorsed }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <button class="add-btn" (click)="showAddSkill.set(!showAddSkill())">
+        <i class="ph-plus"></i> {{ showAddSkill() ? 'Cancel' : 'Add Skill' }}
+      </button>
+
+      <form *ngIf="showAddSkill()" class="add-form"
+            (ngSubmit)="addSkill(form.value)"
+            #form="ngForm">
+        <input type="text" placeholder="Skill Name" name="name" ngModel required>
+        <select name="proficiency" ngModel required>
+          <option value="">Select Proficiency Level</option>
+          <option value="Beginner">Beginner</option>
+          <option value="Intermediate">Intermediate</option>
+          <option value="Advanced">Advanced</option>
+          <option value="Expert">Expert</option>
+        </select>
+        <button type="submit" class="form-submit-btn">Add Skill</button>
+      </form>
+    </div>
+  </div>
+</div>
