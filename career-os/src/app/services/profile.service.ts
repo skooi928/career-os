@@ -49,6 +49,13 @@ export interface Skill {
   endorsed: number;
 }
 
+export interface QuickTask {
+  id?: number;
+  description: string;
+  status: string; // 'added' or 'closed'
+  priority: string; // 'high', 'medium', 'low'
+}
+
 export interface UserProfileDTO {
   id?: number;
   firstName: string;
@@ -62,6 +69,7 @@ export interface UserProfileDTO {
   education?: Education[];
   projects?: Project[];
   skills?: Skill[];
+  quickTasks?: QuickTask[];
 }
 
 @Injectable({
@@ -135,5 +143,18 @@ export class ProfileService {
 
   deleteSkill(id: number): Observable<void> {
     return this.http.delete<void>(`${this.API_URL}/skill/${id}`);
+  }
+
+  // Quick Task Methods
+  addQuickTask(task: QuickTask): Observable<QuickTask> {
+    return this.http.post<QuickTask>(`${this.API_URL}/tasks`, task);
+  }
+
+  updateQuickTask(id: number, task: QuickTask): Observable<QuickTask> {
+    return this.http.put<QuickTask>(`${this.API_URL}/tasks/${id}`, task);
+  }
+
+  deleteQuickTask(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.API_URL}/tasks/${id}`);
   }
 }

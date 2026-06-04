@@ -25,4 +25,5 @@ public class UserProfileDTO {
     private List<EducationDTO> education;
     private List<ProjectDTO> projects;
     private List<SkillDTO> skills;
+    private List<QuickTaskDTO> quickTasks;
 }

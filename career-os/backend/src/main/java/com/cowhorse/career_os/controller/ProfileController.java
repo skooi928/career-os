@@ -180,4 +180,28 @@ public class ProfileController {
         profileService.deleteSkill(id);
         return ResponseEntity.noContent().build();
     }
+
+    // Quick Task Endpoints
+    @PostMapping("/tasks")
+    public ResponseEntity<QuickTaskDTO> addQuickTask(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestBody QuickTaskDTO taskDTO) {
+        String uid = getUidFromHeader(authorizationHeader);
+        QuickTaskDTO saved = profileService.addQuickTaskBySupabaseUid(uid, taskDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+    }
+
+    @PutMapping("/tasks/{id}")
+    public ResponseEntity<QuickTaskDTO> updateQuickTask(
+            @PathVariable Long id,
+            @RequestBody QuickTaskDTO taskDTO) {
+        QuickTaskDTO updated = profileService.updateQuickTask(id, taskDTO);
+        return ResponseEntity.ok(updated);
+    }
+
+    @DeleteMapping("/tasks/{id}")
+    public ResponseEntity<Void> deleteQuickTask(@PathVariable Long id) {
+        profileService.deleteQuickTask(id);
+        return ResponseEntity.noContent().build();
+    }
 }

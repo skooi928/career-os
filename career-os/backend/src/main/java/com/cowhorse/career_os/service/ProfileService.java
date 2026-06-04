@@ -23,6 +23,7 @@ public class ProfileService {
     private final EducationRepository educationRepository;
     private final ProjectRepository projectRepository;
     private final SkillRepository skillRepository;
+    private final QuickTaskRepository quickTaskRepository;
 
     // ==================== User Profile Methods ====================
 
@@ -60,6 +61,10 @@ public class ProfileService {
                 .stream().map(this::convertToSkillDTO).collect(Collectors.toList());
         log.debug("Loaded {} skills", skills.size());
 
+        List<QuickTaskDTO> quickTasks = quickTaskRepository.findByUserProfileId(userProfile.getId())
+                .stream().map(this::convertToQuickTaskDTO).collect(Collectors.toList());
+        log.debug("Loaded {} quick tasks", quickTasks.size());
+
         return UserProfileDTO.builder()
                 .id(userProfile.getId())
                 .firstName(userProfile.getFirstName())
@@ -74,6 +79,7 @@ public class ProfileService {
                 .education(education)
                 .projects(projects)
                 .skills(skills)
+                .quickTasks(quickTasks)
                 .userId(supabaseUid)
                 .build();
     }
@@ -250,6 +256,39 @@ public class ProfileService {
         skillRepository.deleteById(skillId);
     }
 
+    // Quick Task Methods
+    public QuickTaskDTO addQuickTaskBySupabaseUid(String supabaseUid, QuickTaskDTO taskDTO) {
+        UUID userUuid = UUID.fromString(supabaseUid);
+        UserProfile userProfile = userProfileRepository.findByUserId(userUuid)
+                .orElseThrow(() -> new RuntimeException("Profile not found for UUID: " + supabaseUid));
+
+        QuickTask task = QuickTask.builder()
+                .userProfile(userProfile)
+                .description(taskDTO.getDescription())
+                .status("added")
+                .priority(taskDTO.getPriority() != null ? taskDTO.getPriority().toLowerCase() : "medium")
+                .build();
+
+        QuickTask saved = quickTaskRepository.save(task);
+        return convertToQuickTaskDTO(saved);
+    }
+
+    public QuickTaskDTO updateQuickTask(Long taskId, QuickTaskDTO taskDTO) {
+        QuickTask task = quickTaskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Task not found"));
+
+        if (taskDTO.getStatus() != null) task.setStatus(taskDTO.getStatus());
+        if (taskDTO.getDescription() != null) task.setDescription(taskDTO.getDescription());
+        if (taskDTO.getPriority() != null) task.setPriority(taskDTO.getPriority());
+
+        QuickTask saved = quickTaskRepository.save(task);
+        return convertToQuickTaskDTO(saved);
+    }
+
+    public void deleteQuickTask(Long taskId) {
+        quickTaskRepository.deleteById(taskId);
+    }
+
     // Helper conversion methods
     private ExperienceDTO convertToExperienceDTO(Experience experience) {
         return ExperienceDTO.builder()
@@ -297,6 +336,15 @@ public class ProfileService {
                 .name(skill.getName())
                 .proficiency(skill.getProficiency().toString())
                 .endorsed(skill.getEndorsed())
+                .build();
+    }
+
+    private QuickTaskDTO convertToQuickTaskDTO(QuickTask task) {
+        return QuickTaskDTO.builder()
+                .id(task.getId())
+                .description(task.getDescription())
+                .status(task.getStatus())
+                .priority(task.getPriority())
                 .build();
     }
 }

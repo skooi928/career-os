@@ -1,0 +1,1237 @@
+import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { JobService } from '../../services/job.service';
+
+@Component({
+  selector: 'app-job-posting',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule],
+  template: `
+    <div class="job-posting-wrapper">
+      <div class="page-header">
+        <div class="header-content">
+          <h1>Create a Job Posting</h1>
+          <p>Attract the best talent with a detailed and compelling job listing.</p>
+        </div>
+        <div class="header-icon">
+          <i class="ph-fill ph-rocket-launch"></i>
+        </div>
+      </div>
+
+      <div class="job-posting-layout">
+        <div class="main-column">
+          <form [formGroup]="jobForm" (ngSubmit)="onSubmit()" class="form-layout">
+        
+        <!-- Section 1: Basic Information -->
+        <div class="form-section card">
+          <div class="section-header">
+            <div class="icon-box"><i class="ph ph-info"></i></div>
+            <div>
+              <h3>Basic Information</h3>
+              <p class="section-subtitle">The core details of the position and your company.</p>
+            </div>
+          </div>
+          
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label>Job Title <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <i class="ph ph-briefcase input-icon"></i>
+                <input type="text" formControlName="title" placeholder="e.g. Senior Frontend Engineer" class="form-input with-icon">
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label>Organization Name <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <i class="ph ph-buildings input-icon"></i>
+                <input type="text" formControlName="company" placeholder="e.g. Acme Corp" class="form-input with-icon">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Organization Website <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <i class="ph ph-globe input-icon"></i>
+                <input type="url" formControlName="website" placeholder="https://www.acmecorp.com" class="form-input with-icon">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Location & Role Details -->
+        <div class="form-section card">
+          <div class="section-header">
+            <div class="icon-box"><i class="ph ph-map-pin-line"></i></div>
+            <div>
+              <h3>Location & Role Type</h3>
+              <p class="section-subtitle">Where and how the candidate will work.</p>
+            </div>
+          </div>
+          
+          <div class="form-grid">
+            <div class="form-group">
+              <label>State <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <i class="ph ph-map-trifold input-icon"></i>
+                <select formControlName="state" class="form-input with-icon" (change)="onStateChange()" required>
+                  <option [ngValue]="null" disabled selected>Select a State</option>
+                  <option *ngFor="let state of states" [value]="state">{{ state }}</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>City <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <i class="ph ph-city input-icon"></i>
+                <select formControlName="city" class="form-input with-icon" required>
+                  <option [ngValue]="null" disabled selected>Select a City</option>
+                  <option *ngFor="let city of availableCities" [value]="city">{{ city }}</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group full-width">
+              <label>Employment Type <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <i class="ph ph-clock input-icon"></i>
+                <select formControlName="employmentType" class="form-input with-icon" required>
+                  <option [ngValue]="null" disabled selected>Select employment type</option>
+                  <option value="Full-time">Full-time</option>
+                  <option value="Part-time">Part-time</option>
+                  <option value="Contract">Contract</option>
+                  <option value="Freelance">Freelance</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Compensation & Timeline -->
+        <div class="form-section card">
+          <div class="section-header">
+            <div class="icon-box"><i class="ph ph-wallet"></i></div>
+            <div>
+              <h3>Compensation & Timeline</h3>
+              <p class="section-subtitle">Salary range, timeline, and availability.</p>
+            </div>
+          </div>
+          
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Minimum Salary (RM) <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <i class="ph ph-currency-circle-dollar input-icon"></i>
+                <input type="number" formControlName="minSalary" placeholder="e.g. 5000" class="form-input with-icon">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Maximum Salary (RM) <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <i class="ph ph-currency-circle-dollar input-icon"></i>
+                <input type="number" formControlName="maxSalary" placeholder="e.g. 8000" class="form-input with-icon">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Number of Vacancies <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <i class="ph ph-users input-icon"></i>
+                <input type="number" formControlName="vacancies" placeholder="e.g. 1" class="form-input with-icon">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Application Deadline <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <i class="ph ph-calendar-blank input-icon"></i>
+                <input type="date" formControlName="deadline" class="form-input with-icon">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 4: Role Requirements -->
+        <div class="form-section card" formGroupName="roleRequirement">
+          <div class="section-header">
+            <div class="icon-box"><i class="ph ph-file-text"></i></div>
+            <div>
+              <h3>Role Requirements <span class="required">*</span></h3>
+              <p class="section-subtitle">Define the specifics of the role and the skills needed.</p>
+            </div>
+          </div>
+          
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label>Seniority Level <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <i class="ph ph-star input-icon"></i>
+                <select formControlName="seniorityLevel" class="form-input with-icon" required>
+                  <option [ngValue]="null" disabled selected>Select a seniority level</option>
+                  <option value="Entry">Entry Level</option>
+                  <option value="Mid">Mid Level</option>
+                  <option value="Senior">Senior Level</option>
+                  <option value="Lead">Lead / Manager</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="form-group full-width">
+              <label>Required Experience (Years) <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <input type="number" formControlName="requiredExperienceYears" placeholder="e.g. 3" class="form-input">
+              </div>
+            </div>
+            
+            <div class="form-group full-width">
+              <label>Job Description <span class="required">*</span></label>
+              <textarea formControlName="jobDescription" placeholder="Describe the role and responsibilities..." class="form-input textarea-large"></textarea>
+            </div>
+          </div>
+
+          <div class="skills-container" formArrayName="technicalSkills">
+            <div class="skills-header">
+              <label>Required Technical Skills</label>
+              <button type="button" class="btn-text add-btn" (click)="addTechnicalSkill()">
+                <i class="ph-bold ph-plus"></i> Add Technical Skill
+              </button>
+            </div>
+            
+            <div class="skill-row" *ngFor="let skillCtrl of technicalSkillsFormArray.controls; let i = index" [formGroupName]="i">
+              <div class="input-wrapper skill-input">
+                <i class="ph ph-code input-icon"></i>
+                <input type="text" formControlName="technicalSkillText" placeholder="e.g. Angular" class="form-input with-icon">
+              </div>
+              <button type="button" class="btn-icon-danger" (click)="removeTechnicalSkill(i)" [disabled]="technicalSkillsFormArray.length === 1">
+                <i class="ph ph-trash"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="skills-container" formArrayName="mustHaveRequirements">
+            <div class="skills-header">
+              <label>Must Have Requirements</label>
+              <button type="button" class="btn-text add-btn" (click)="addMustHaveRequirement()">
+                <i class="ph-bold ph-plus"></i> Add Requirement
+              </button>
+            </div>
+            
+            <div class="skill-row" *ngFor="let reqCtrl of mustHaveRequirementsFormArray.controls; let i = index" [formGroupName]="i">
+              <div class="input-wrapper skill-input">
+                <i class="ph ph-check-circle input-icon"></i>
+                <input type="text" formControlName="requirementText" placeholder="e.g. Excellent communication skills" class="form-input with-icon">
+              </div>
+              <button type="button" class="btn-icon-danger" (click)="removeMustHaveRequirement(i)" [disabled]="mustHaveRequirementsFormArray.length === 1">
+                <i class="ph ph-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 5: Benefits & Perks -->
+        <div class="form-section card" formArrayName="benefits">
+          <div class="section-header">
+            <div class="icon-box"><i class="ph ph-gift"></i></div>
+            <div>
+              <h3>Benefits & Perks <span class="required">*</span></h3>
+              <p class="section-subtitle">What makes your company great? Highlight the perks of getting hired.</p>
+            </div>
+          </div>
+          
+          <div class="skills-container">
+            <div class="skills-header">
+              <label>Company Benefits</label>
+              <button type="button" class="btn-text add-btn" (click)="addBenefit()">
+                <i class="ph-bold ph-plus"></i> Add Benefit
+              </button>
+            </div>
+            
+            <div class="skill-row" *ngFor="let benefitCtrl of benefitsFormArray.controls; let i = index" [formGroupName]="i">
+              <div class="input-wrapper skill-input">
+                <i class="ph ph-star input-icon"></i>
+                <input type="text" formControlName="benefitText" placeholder="e.g. Health Insurance, Remote Work..." class="form-input with-icon">
+              </div>
+              <button type="button" class="btn-icon-danger" (click)="removeBenefit(i)">
+                <i class="ph ph-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 6: Custom Questions -->
+        <div class="form-section card">
+          <div class="section-header">
+            <div class="icon-box"><i class="ph ph-chat-circle-text"></i></div>
+            <div>
+              <h3>Custom Questions</h3>
+              <p class="section-subtitle">Ask candidates specific questions to filter the best fit.</p>
+            </div>
+          </div>
+
+          <div formArrayName="questions" class="questions-container">
+            <div class="question-row" *ngFor="let qCtrl of questionsFormArray.controls; let qIndex = index" [formGroupName]="qIndex">
+              
+              <div class="question-header">
+                <h4>Question {{ qIndex + 1 }}</h4>
+                <button type="button" class="btn-text-danger" (click)="removeQuestion(qIndex)">
+                  <i class="ph ph-trash"></i> Remove
+                </button>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group full-width">
+                  <label>Question Text <span class="required">*</span></label>
+                  <div class="input-wrapper">
+                    <input type="text" formControlName="questionText" placeholder="e.g. Why do you want to work here?" class="form-input">
+                  </div>
+                </div>
+
+                <div class="form-group full-width">
+                  <label>Question Type <span class="required">*</span></label>
+                  <div class="input-wrapper">
+                    <select formControlName="questionType" class="form-input" (change)="onQuestionTypeChange(qIndex)">
+                      <option value="TEXT">Short Answer (Text)</option>
+                      <option value="MULTIPLE_CHOICE">Multiple Choice</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Options for Multiple Choice -->
+              <div class="options-container" *ngIf="qCtrl.get('questionType')?.value === 'MULTIPLE_CHOICE'" formArrayName="options">
+                <label>Options <span class="required">*</span></label>
+                
+                <div class="option-row" *ngFor="let optCtrl of getOptionsFormArray(qIndex).controls; let oIndex = index">
+                  <div class="input-wrapper">
+                    <i class="ph ph-list-dashes input-icon"></i>
+                    <input type="text" [formControlName]="oIndex" placeholder="e.g. Yes" class="form-input with-icon">
+                  </div>
+                  <button type="button" class="btn-icon-danger small-btn" (click)="removeOption(qIndex, oIndex)" [disabled]="getOptionsFormArray(qIndex).length <= 1">
+                    <i class="ph ph-x"></i>
+                  </button>
+                </div>
+
+                <button type="button" class="btn-text add-btn mt-2" (click)="addOption(qIndex)">
+                  <i class="ph-bold ph-plus"></i> Add Option
+                </button>
+              </div>
+            </div>
+
+            <button type="button" class="btn-text add-btn mt-4" (click)="addQuestion()">
+              <i class="ph-bold ph-plus"></i> Add Question
+            </button>
+          </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions-simple">
+          <div *ngIf="successMessage" class="success-message">
+            <i class="ph-fill ph-check-circle"></i> {{ successMessage }}
+          </div>
+          <button type="submit" class="btn-primary btn-large" [disabled]="jobForm.invalid">
+            <i class="ph-bold ph-paper-plane-right"></i> Publish Job
+          </button>
+        </div>
+
+          </form>
+        </div>
+
+        <div class="sidebar-column">
+          <div class="progress-card card sticky-top">
+            <h3>Completion Score</h3>
+            <div class="progress-container">
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" [style.width.%]="completionPercentage" [ngClass]="{'complete': completionPercentage === 100}"></div>
+              </div>
+              <div class="progress-text">{{ completionPercentage }}%</div>
+            </div>
+            
+            <div class="motivational-message mt-4">
+              <i class="ph-fill ph-lightbulb text-primary"></i>
+              <p *ngIf="completionPercentage < 100">Make your job posting more detailed! Clear and comprehensive descriptions attract the top talent.</p>
+              <p *ngIf="completionPercentage === 100">Perfect! Your job posting is extremely detailed and ready to attract top talent.</p>
+            </div>
+
+            <div class="section-breakdown mt-4">
+              <div class="breakdown-item">
+                <div class="breakdown-header">
+                  <span>Basic Info</span>
+                  <span>{{ sectionScores.basic }}%</span>
+                </div>
+                <div class="progress-bar-bg-mini">
+                  <div class="progress-bar-fill-mini" [style.width.%]="sectionScores.basic" [ngClass]="{'complete': sectionScores.basic === 100}"></div>
+                </div>
+              </div>
+              
+              <div class="breakdown-item">
+                <div class="breakdown-header">
+                  <span>Location</span>
+                  <span>{{ sectionScores.location }}%</span>
+                </div>
+                <div class="progress-bar-bg-mini">
+                  <div class="progress-bar-fill-mini" [style.width.%]="sectionScores.location" [ngClass]="{'complete': sectionScores.location === 100}"></div>
+                </div>
+              </div>
+
+              <div class="breakdown-item">
+                <div class="breakdown-header">
+                  <span>Compensation</span>
+                  <span>{{ sectionScores.compensation }}%</span>
+                </div>
+                <div class="progress-bar-bg-mini">
+                  <div class="progress-bar-fill-mini" [style.width.%]="sectionScores.compensation" [ngClass]="{'complete': sectionScores.compensation === 100}"></div>
+                </div>
+              </div>
+
+              <div class="breakdown-item">
+                <div class="breakdown-header">
+                  <span>Requirements</span>
+                  <span>{{ sectionScores.requirements }}%</span>
+                </div>
+                <div class="progress-bar-bg-mini">
+                  <div class="progress-bar-fill-mini" [style.width.%]="sectionScores.requirements" [ngClass]="{'complete': sectionScores.requirements === 100}"></div>
+                </div>
+              </div>
+
+              <div class="breakdown-item">
+                <div class="breakdown-header">
+                  <span>Benefits</span>
+                  <span>{{ sectionScores.benefits }}%</span>
+                </div>
+                <div class="progress-bar-bg-mini">
+                  <div class="progress-bar-fill-mini" [style.width.%]="sectionScores.benefits" [ngClass]="{'complete': sectionScores.benefits === 100}"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `,
+  styles: [`
+    .job-posting-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .job-posting-layout {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 32px;
+      align-items: start;
+    }
+
+    .sidebar-column {
+      position: sticky;
+      top: 24px;
+    }
+
+    .progress-card {
+      padding: 24px;
+      background: var(--color-surface);
+      border-radius: 20px;
+      border: 1px solid var(--color-border);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+    }
+
+    .progress-card h3 {
+      margin: 0 0 16px 0;
+      font-size: 1.125rem;
+      color: var(--color-text);
+    }
+
+    .progress-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .progress-bar-bg {
+      flex: 1;
+      height: 8px;
+      background: rgba(16, 185, 129, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--color-primary);
+      border-radius: 4px;
+      transition: width 0.4s ease, background-color 0.4s ease;
+    }
+
+    .progress-bar-fill.complete, .progress-bar-fill-mini.complete {
+      background: #059669;
+    }
+
+    .section-breakdown {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding-top: 24px;
+      border-top: 1px solid var(--color-border);
+    }
+    
+    .breakdown-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      margin-bottom: 6px;
+    }
+    
+    .progress-bar-bg-mini {
+      height: 4px;
+      background: rgba(16, 185, 129, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    
+    .progress-bar-fill-mini {
+      height: 100%;
+      background: var(--color-primary);
+      border-radius: 2px;
+      transition: width 0.4s ease, background-color 0.4s ease;
+    }
+
+    .progress-text {
+      font-weight: 700;
+      font-size: 0.9375rem;
+      color: var(--color-text);
+      min-width: 40px;
+    }
+
+    .motivational-message {
+      display: flex;
+      gap: 12px;
+      background: rgba(16, 185, 129, 0.05);
+      padding: 16px;
+      border-radius: 12px;
+    }
+
+    .motivational-message i {
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .motivational-message p {
+      margin: 0;
+      font-size: 0.875rem;
+      color: var(--color-text-secondary);
+      line-height: 1.5;
+    }
+
+    /* Page Header */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 40px;
+      background: linear-gradient(135deg, var(--color-primary) 0%, #059669 100%);
+      border-radius: 24px;
+      color: white;
+      box-shadow: 0 10px 30px -10px rgba(16, 185, 129, 0.4);
+    }
+
+    .header-content h1 {
+      margin: 0;
+      font-size: 2.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .header-content p {
+      margin: 8px 0 0 0;
+      font-size: 1.0625rem;
+      opacity: 0.9;
+    }
+
+    .header-icon {
+      font-size: 5rem;
+      opacity: 0.2;
+      transform: rotate(15deg);
+    }
+
+    @media (max-width: 600px) {
+      .page-header {
+        flex-direction: column;
+        text-align: center;
+        padding: 24px;
+      }
+      .header-icon {
+        display: none;
+      }
+    }
+
+    .form-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .form-section {
+      background: var(--color-surface);
+      border-radius: 20px;
+      padding: 32px;
+      border: 1px solid var(--color-border);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      transition: box-shadow 0.3s ease, border-color 0.3s ease;
+    }
+    
+    .form-section:focus-within {
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+      border-color: rgba(16, 185, 129, 0.4);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding-bottom: 24px;
+      border-bottom: 1px dashed var(--color-border);
+    }
+
+    .icon-box {
+      width: 48px;
+      height: 48px;
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--color-primary);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+
+    .section-header h3 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--color-text);
+    }
+
+    .section-subtitle {
+      margin: 4px 0 0 0;
+      font-size: 0.875rem;
+      color: var(--color-text-secondary);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .full-width {
+      grid-column: 1 / -1;
+    }
+
+    @media (max-width: 992px) {
+      .job-posting-layout {
+        grid-template-columns: 1fr;
+      }
+      .sidebar-column {
+        position: static;
+        order: -1; /* Puts progress bar above the form on mobile */
+        margin-bottom: 24px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+      .full-width {
+        grid-column: 1;
+      }
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .form-group label, .skills-header label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+    
+    .required {
+      color: #ef4444;
+      margin-left: 2px;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 14px;
+      font-size: 1.25rem;
+      color: var(--color-text-tertiary);
+      pointer-events: none;
+      transition: color 0.2s;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--color-border);
+      background: var(--color-input-bg, var(--color-background));
+      color: var(--color-text);
+      font-family: inherit;
+      font-size: 0.9375rem;
+      transition: all 0.2s;
+      box-sizing: border-box;
+    }
+
+    .form-input::placeholder {
+      color: #9ca3af;
+    }
+
+    select.form-input:invalid {
+      color: #9ca3af;
+    }
+
+    select.form-input option {
+      color: var(--color-text);
+    }
+
+    .form-input.with-icon {
+      padding-left: 44px;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+      background: var(--color-surface);
+    }
+
+    .form-input:focus + .input-icon,
+    .input-wrapper:focus-within .input-icon {
+      color: var(--color-primary);
+    }
+    
+    /* Styling select specifically for dropdown arrows */
+    select.form-input {
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      background-size: 16px;
+      padding-right: 40px;
+    }
+
+    .textarea-large {
+      min-height: 180px;
+      resize: vertical;
+      line-height: 1.6;
+      padding: 16px;
+    }
+
+    /* Skills & Questions */
+    .skills-container, .questions-container {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--color-border);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .question-row {
+      background: rgba(16, 185, 129, 0.03);
+      border: 1px solid var(--color-border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+
+    .question-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .question-header h4 {
+      margin: 0;
+      color: var(--color-text);
+    }
+
+    .btn-text-danger {
+      background: none;
+      border: none;
+      color: #ef4444;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-text-danger:hover {
+      text-decoration: underline;
+    }
+
+    .options-container {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px dashed var(--color-border);
+    }
+
+    .option-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .small-btn {
+      width: 36px;
+      height: 36px;
+      font-size: 1rem;
+    }
+
+    .mt-2 { margin-top: 8px; }
+    .mt-4 { margin-top: 16px; }
+
+    .skills-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .btn-text {
+      background: none;
+      border: none;
+      color: var(--color-primary);
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .add-btn {
+      padding: 6px 12px;
+      border-radius: 8px;
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .add-btn:hover {
+      background: rgba(16, 185, 129, 0.2);
+    }
+
+    .skill-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    .skill-input {
+      flex: 1;
+    }
+
+    .btn-icon-danger {
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      color: #ef4444;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-icon-danger:hover:not(:disabled) {
+      background: #fef2f2;
+      border-color: #fca5a5;
+    }
+
+    .btn-icon-danger:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      color: var(--color-text-tertiary);
+    }
+
+    /* Actions */
+    .form-actions-simple {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 16px;
+      margin-top: 8px;
+    }
+
+    .btn-large {
+      padding: 14px 28px;
+      font-size: 1.0625rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: var(--color-primary);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--color-primary-hover, #059669);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px -6px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-primary:disabled {
+      background: var(--color-surface-secondary);
+      color: var(--color-text-tertiary);
+      cursor: not-allowed;
+      border: 1px solid var(--color-border);
+    }
+
+    .success-message {
+      padding: 12px 20px;
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--color-success);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  `]
+})
+export class JobPostingComponent {
+  jobForm: FormGroup;
+  successMessage = '';
+  
+  malaysiaData: Record<string, string[]> = {
+    'Johor': ['Johor Bahru', 'Batu Pahat', 'Kluang', 'Kulai', 'Muar', 'Segamat'],
+    'Kedah': ['Alor Setar', 'Sungai Petani', 'Kulim', 'Langkawi'],
+    'Kelantan': ['Kota Bharu', 'Pasir Mas', 'Tumpat'],
+    'Melaka': ['Melaka City', 'Ayer Keroh', 'Alor Gajah'],
+    'Negeri Sembilan': ['Seremban', 'Port Dickson', 'Nilai'],
+    'Pahang': ['Kuantan', 'Temerloh', 'Bentong', 'Cameron Highlands'],
+    'Perak': ['Ipoh', 'Taiping', 'Teluk Intan', 'Lumut'],
+    'Perlis': ['Kangar', 'Arau'],
+    'Penang': ['George Town', 'Butterworth', 'Bukit Mertajam', 'Bayan Lepas'],
+    'Sabah': ['Kota Kinabalu', 'Sandakan', 'Tawau', 'Lahad Datu'],
+    'Sarawak': ['Kuching', 'Miri', 'Sibu', 'Bintulu'],
+    'Selangor': ['Shah Alam', 'Petaling Jaya', 'Subang Jaya', 'Klang', 'Cyberjaya'],
+    'Terengganu': ['Kuala Terengganu', 'Kemaman', 'Dungun'],
+    'Kuala Lumpur': ['Kuala Lumpur'],
+    'Labuan': ['Labuan'],
+    'Putrajaya': ['Putrajaya']
+  };
+
+  states = Object.keys(this.malaysiaData).sort();
+  availableCities: string[] = [];
+
+  constructor(private fb: FormBuilder, private jobService: JobService) {
+    this.jobForm = this.fb.group({
+      title: [null, Validators.required],
+      company: [null, Validators.required],
+      website: [null, [Validators.required, Validators.pattern('https?://.+')]],
+      state: [null, Validators.required],
+      city: [{ value: null, disabled: true }, Validators.required],
+      employmentType: [null, Validators.required],
+      minSalary: [null, [Validators.required, Validators.min(0)]],
+      maxSalary: [null, [Validators.required, Validators.min(0)]],
+      deadline: [null, Validators.required],
+      vacancies: [null, [Validators.required, Validators.min(1)]],
+      roleRequirement: this.fb.group({
+        seniorityLevel: [null, Validators.required],
+        requiredExperienceYears: [null, [Validators.required, Validators.min(0)]],
+        jobDescription: [null, Validators.required],
+        technicalSkills: this.fb.array([
+          this.createTechnicalSkill()
+        ]),
+        mustHaveRequirements: this.fb.array([
+          this.createMustHaveRequirement()
+        ])
+      }),
+      benefits: this.fb.array([]),
+      questions: this.fb.array([])
+    });
+    this.calculateCompletion();
+    this.jobForm.valueChanges.subscribe(() => {
+      this.calculateCompletion();
+    });
+  }
+
+  get sectionScores() {
+    const v = this.jobForm.value;
+    
+    let basicFilled = 0;
+    if (v.title) basicFilled++;
+    if (v.company) basicFilled++;
+    if (v.website) basicFilled++;
+    
+    let locFilled = 0;
+    if (v.state) locFilled++;
+    if (v.city) locFilled++;
+    if (v.employmentType) locFilled++;
+    
+    let compFilled = 0;
+    if (v.minSalary !== null && v.minSalary !== '') compFilled++;
+    if (v.maxSalary !== null && v.maxSalary !== '') compFilled++;
+    if (v.vacancies !== null && v.vacancies !== '') compFilled++;
+    if (v.deadline) compFilled++;
+    
+    let reqFilled = 0;
+    if (v.roleRequirement) {
+      if (v.roleRequirement.seniorityLevel) reqFilled++;
+      if (v.roleRequirement.requiredExperienceYears !== null && v.roleRequirement.requiredExperienceYears !== '') reqFilled++;
+      if (v.roleRequirement.jobDescription) reqFilled++;
+      
+      const techSkills = v.roleRequirement.technicalSkills;
+      if (techSkills && techSkills.length > 0 && techSkills[0].technicalSkillText) reqFilled++;
+      
+      const mustHaves = v.roleRequirement.mustHaveRequirements;
+      if (mustHaves && mustHaves.length > 0 && mustHaves[0].requirementText) reqFilled++;
+    }
+
+    let benFilled = 0;
+    const benefitsArr = v.benefits;
+    if (benefitsArr && benefitsArr.length > 0 && benefitsArr[0].benefitText) benFilled++;
+
+    return {
+      basic: Math.round((basicFilled / 3) * 100),
+      location: Math.round((locFilled / 3) * 100),
+      compensation: Math.round((compFilled / 4) * 100),
+      requirements: Math.round((reqFilled / 5) * 100),
+      benefits: Math.round((benFilled / 1) * 100),
+      totalFilled: basicFilled + locFilled + compFilled + reqFilled + benFilled
+    };
+  }
+
+  get completionPercentage(): number {
+    const totalFilled = this.sectionScores.totalFilled;
+    if (totalFilled === 16) {
+      return 100;
+    }
+    return Math.min(99, Math.round((totalFilled / 16) * 100));
+  }
+
+  calculateCompletion() {
+    // Just to trigger change detection if needed, though getter handles it
+  }
+
+  get technicalSkillsFormArray() {
+    return (this.jobForm.get('roleRequirement') as FormGroup).get('technicalSkills') as FormArray;
+  }
+
+  get mustHaveRequirementsFormArray() {
+    return (this.jobForm.get('roleRequirement') as FormGroup).get('mustHaveRequirements') as FormArray;
+  }
+
+  createTechnicalSkill(): FormGroup {
+    return this.fb.group({
+      technicalSkillText: ['', Validators.required]
+    });
+  }
+
+  addTechnicalSkill() {
+    this.technicalSkillsFormArray.push(this.createTechnicalSkill());
+  }
+
+  removeTechnicalSkill(index: number) {
+    if (this.technicalSkillsFormArray.length > 1) {
+      this.technicalSkillsFormArray.removeAt(index);
+    }
+  }
+
+  createMustHaveRequirement(): FormGroup {
+    return this.fb.group({
+      requirementText: ['', Validators.required]
+    });
+  }
+
+  addMustHaveRequirement() {
+    this.mustHaveRequirementsFormArray.push(this.createMustHaveRequirement());
+  }
+
+  removeMustHaveRequirement(index: number) {
+    if (this.mustHaveRequirementsFormArray.length > 1) {
+      this.mustHaveRequirementsFormArray.removeAt(index);
+    }
+  }
+  get benefitsFormArray(): FormArray {
+    return this.jobForm.get('benefits') as FormArray;
+  }
+
+  createBenefit(): FormGroup {
+    return this.fb.group({
+      benefitText: ['', Validators.required]
+    });
+  }
+
+  addBenefit() {
+    this.benefitsFormArray.push(this.createBenefit());
+  }
+
+  removeBenefit(index: number) {
+    this.benefitsFormArray.removeAt(index);
+  }
+
+  get questionsFormArray(): FormArray {
+    return this.jobForm.get('questions') as FormArray;
+  }
+
+  createQuestionForm(): FormGroup {
+    return this.fb.group({
+      questionText: ['', Validators.required],
+      questionType: ['TEXT', Validators.required],
+      options: this.fb.array([])
+    });
+  }
+
+  addQuestion() {
+    this.questionsFormArray.push(this.createQuestionForm());
+  }
+
+  removeQuestion(index: number) {
+    this.questionsFormArray.removeAt(index);
+  }
+
+  getOptionsFormArray(questionIndex: number): FormArray {
+    return this.questionsFormArray.at(questionIndex).get('options') as FormArray;
+  }
+
+  addOption(questionIndex: number) {
+    this.getOptionsFormArray(questionIndex).push(this.fb.control('', Validators.required));
+  }
+
+  removeOption(questionIndex: number, optionIndex: number) {
+    if (this.getOptionsFormArray(questionIndex).length > 1) {
+      this.getOptionsFormArray(questionIndex).removeAt(optionIndex);
+    }
+  }
+
+  onQuestionTypeChange(questionIndex: number) {
+    const qGroup = this.questionsFormArray.at(questionIndex) as FormGroup;
+    const type = qGroup.get('questionType')?.value;
+    const optionsArray = qGroup.get('options') as FormArray;
+    
+    if (type === 'MULTIPLE_CHOICE') {
+      if (optionsArray.length === 0) {
+        optionsArray.push(this.fb.control('', Validators.required));
+      }
+    } else {
+      while(optionsArray.length !== 0) {
+        optionsArray.removeAt(0);
+      }
+    }
+  }
+
+  onStateChange() {
+    const selectedState = this.jobForm.get('state')?.value;
+    this.availableCities = this.malaysiaData[selectedState] || [];
+    this.jobForm.get('city')?.enable();
+    this.jobForm.patchValue({ city: null });
+  }
+
+  onSubmit() {
+    if (this.jobForm.valid) {
+      const formValue = this.jobForm.value;
+      const initials = formValue.company.substring(0, 2).toUpperCase();
+      const fullLocation = `${formValue.city}, ${formValue.state}`;
+
+      this.jobService.addJob({
+        title: formValue.title,
+        company: formValue.company,
+        website: formValue.website,
+        initials: initials,
+        location: fullLocation,
+        employmentType: formValue.employmentType,
+        minSalary: formValue.minSalary,
+        maxSalary: formValue.maxSalary,
+        deadline: formValue.deadline,
+        vacancies: formValue.vacancies,
+        roleRequirements: [formValue.roleRequirement],
+        benefits: formValue.benefits,
+        questions: formValue.questions
+      }).subscribe({
+        next: () => {
+          this.successMessage = 'Job successfully published! Your job posting is now live and ready to attract top talent.';
+          
+          // Reset form but keep defaults
+          this.jobForm.reset({
+            website: null,
+            employmentType: null,
+            vacancies: null,
+            state: null,
+            city: null,
+            roleRequirement: {
+              seniorityLevel: null,
+              requiredExperienceYears: null
+            }
+          });
+          
+          // Reset technical skills array
+          while (this.technicalSkillsFormArray.length !== 0) {
+            this.technicalSkillsFormArray.removeAt(0);
+          }
+          this.addTechnicalSkill();
+
+          // Reset must have requirements array
+          while (this.mustHaveRequirementsFormArray.length !== 0) {
+            this.mustHaveRequirementsFormArray.removeAt(0);
+          }
+          this.addMustHaveRequirement();
+
+          // Reset benefits array
+          while (this.benefitsFormArray.length !== 0) {
+            this.benefitsFormArray.removeAt(0);
+          }
+          
+          while (this.questionsFormArray.length !== 0) {
+            this.questionsFormArray.removeAt(0);
+          }
+
+          this.availableCities = [];
+
+          setTimeout(() => {
+            this.successMessage = '';
+          }, 5000);
+        },
+        error: (err) => {
+          console.error('Failed to publish job', err);
+          alert('Failed to publish job. Please check your connection or try again later.');
+        }
+      });
+    }
+  }
+}
