@@ -1,5 +1,5 @@
-import { Component, OnInit, signal, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, signal, OnDestroy, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { ProfileService, Experience, Education, Project, Skill, UserProfileDTO } from '../../services/profile.service';
@@ -56,11 +56,14 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   constructor(
     public authService: AuthService,
-    private profileService: ProfileService
+    private profileService: ProfileService,
+    @Inject(PLATFORM_ID) private platformId: Object
   ) {}
 
   ngOnInit() {
-    this.loadProfileData();
+    if (isPlatformBrowser(this.platformId)) {
+      this.loadProfileData();
+    }
   }
 
   loadProfileData() {
@@ -108,10 +111,14 @@ export class ProfileComponent implements OnInit, OnDestroy {
             profileImage: profile.profileImageUrl || ''
           }));
 
-          this.experiences.set(profile.experiences || []);
-          this.education.set(profile.education || []);
-          this.projects.set(profile.projects || []);
-          this.skills.set(profile.skills || []);
+          if (profile.experiences)
+            this.experiences.set(profile.experiences);
+          if (profile.education)
+            this.education.set(profile.education);
+          if (profile.projects)  
+            this.projects.set(profile.projects);
+          if (profile.skills)  
+            this.skills.set(profile.skills);
 
           this.isLoading.set(false);
         },

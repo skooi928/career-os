@@ -1,5 +1,5 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
-import { CommonModule, Location } from '@angular/common';
+import { Component, OnInit, ViewChild, ElementRef, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, Location, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { JobService, Job } from '../../services/job.service';
@@ -629,30 +629,33 @@ export class JobApplicationComponent implements OnInit {
     private applicationService: ApplicationService,
     private authService: AuthService,
     private location: Location,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.answersForm = this.fb.group({});
   }
 
   ngOnInit() {
-    const id = this.route.snapshot.paramMap.get('id');
-    if (id) {
-      this.jobService.getJobById(id).subscribe({
-        next: (data) => {
-          this.job = data;
-          if (this.job.questions && this.job.questions.length > 0) {
-            this.job.questions.forEach((q, index) => {
-              const controlName = q.id || 'q' + index;
-              this.answersForm.addControl(controlName, this.fb.control('', Validators.required));
-            });
+    if (isPlatformBrowser(this.platformId)) {
+      const id = this.route.snapshot.paramMap.get('id');
+      if (id) {
+        this.jobService.getJobById(id).subscribe({
+          next: (data) => {
+            this.job = data;
+            if (this.job.questions && this.job.questions.length > 0) {
+              this.job.questions.forEach((q, index) => {
+                const controlName = q.id || 'q' + index;
+                this.answersForm.addControl(controlName, this.fb.control('', Validators.required));
+              });
+            }
+          },
+          error: (err: any) => {
+            console.error('Failed to load job', err);
+            alert('Failed to load job details.');
+            this.goBack();
           }
-        },
-        error: (err: any) => {
-          console.error('Failed to load job', err);
-          alert('Failed to load job details.');
-          this.goBack();
-        }
-      });
+        });
+      }
     }
   }
 

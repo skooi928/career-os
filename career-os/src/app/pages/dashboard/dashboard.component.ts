@@ -1,9 +1,10 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { JobService, Job } from '../../services/job.service';
 import { ProfileService, QuickTask } from '../../services/profile.service';
+import { CareerAnalysisService } from '../../services/career-analysis.service';
 import { Observable } from 'rxjs';
 import { Router } from '@angular/router';
 
@@ -26,6 +27,11 @@ import { Router } from '@angular/router';
           <h1>Welcome back, {{ firstName() }}! 👋</h1>
           <p>Here's what's happening with your career journey today.</p>
         </div>
+
+        <button class="btn-analyze-career" (click)="analyzeCareer()">
+          <i class="ph ph-lightning-charge"></i>
+          Analyze Career Path
+        </button>
       </div>
 
       <!-- Stats Cards -->
@@ -225,7 +231,7 @@ import { Router } from '@angular/router';
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 16px;
+      gap: 32px;
       color: white;
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
@@ -275,6 +281,34 @@ import { Router } from '@angular/router';
     .banner-left h1 { margin: 0; font-size: 2.25rem; font-weight: 800; letter-spacing: -0.02em; color: white; }
     .banner-left p { font-size: 1.0625rem; color: #d1fae5; opacity: 0.9; margin: 8px 0 0 0; }
 
+    .btn-analyze-career {
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      padding: 12px 20px;
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease-in-out;
+      white-space: nowrap;
+    }
+
+    .btn-analyze-career:hover {
+      background: rgba(255, 255, 255, 0.3);
+      border-color: rgba(255, 255, 255, 0.5);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-analyze-career i {
+      font-size: 18px;
+    }
+
     .banner-right {
       position: relative;
       z-index: 10;
@@ -297,7 +331,16 @@ import { Router } from '@angular/router';
     .interview-time { font-size: 14px; font-weight: 600; color: white; }
 
     @media (max-width: 768px) {
+      .welcome-banner {
+        flex-direction: column;
+        gap: 16px;
+        align-items: flex-start;
+      }
       .banner-right { display: none; }
+      .btn-analyze-career {
+        width: 100%;
+        justify-content: center;
+      }
     }
 
     /* 4. Stats Cards */
@@ -744,19 +787,24 @@ export class DashboardComponent implements OnInit {
   isAddingTask = false;
   newTaskDescription = '';
   newTaskPriority = 'medium';
+  isAnalyzing = false;
 
   constructor(
     private authService: AuthService, 
     private jobService: JobService,
     private profileService: ProfileService,
-    private router: Router
+    private careerAnalysisService: CareerAnalysisService,
+    private router: Router,
+    @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.jobs$ = this.jobService.jobs$;
   }
 
   ngOnInit() {
-    this.jobService.loadJobs();
-    this.loadTasks();
+    if (isPlatformBrowser(this.platformId)) {
+      this.jobService.loadJobs();
+      this.loadTasks();
+    }
   }
 
   loadTasks() {
@@ -821,6 +869,25 @@ export class DashboardComponent implements OnInit {
       error: (err) => {
         console.error('Failed to update task', err);
         task.status = originalStatus; // Revert on failure
+      }
+    });
+  }
+
+  analyzeCareer() {
+    if (this.isAnalyzing) return;
+    
+    this.isAnalyzing = true;
+    this.careerAnalysisService.analyzeCareer().subscribe({
+      next: (prediction) => {
+        // Navigate to insights page with the prediction data
+        this.router.navigate(['/insights'], { state: { prediction } });
+        this.isAnalyzing = false;
+      },
+      error: (err) => {
+        console.error('Failed to analyze career', err);
+        // Fallback navigation in case of error
+        this.router.navigate(['/insights']);
+        this.isAnalyzing = false;
       }
     });
   }

@@ -1,5 +1,5 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule, Location } from '@angular/common';
+import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, Location, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { JobService, Job } from '../../services/job.service';
 
@@ -756,7 +756,8 @@ export class JobDetailComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private jobService: JobService,
-    private location: Location
+    private location: Location,
+    @Inject(PLATFORM_ID) private platformId: Object
   ) {}
 
   getBenefitIcon(text: string): string {
@@ -797,18 +798,20 @@ export class JobDetailComponent implements OnInit {
   }
 
   ngOnInit() {
-    const id = this.route.snapshot.paramMap.get('id');
-    if (id) {
-      this.jobService.getJobById(id).subscribe({
-        next: (data) => {
-          this.job = data;
-        },
-        error: (err) => {
-          console.error('Failed to load job', err);
-          alert('Failed to load job details.');
-          this.goBack();
-        }
-      });
+    if (isPlatformBrowser(this.platformId)) {
+      const id = this.route.snapshot.paramMap.get('id');
+      if (id) {
+        this.jobService.getJobById(id).subscribe({
+          next: (data) => {
+            this.job = data;
+          },
+          error: (err) => {
+            console.error('Failed to load job', err);
+            alert('Failed to load job details.');
+            this.goBack();
+          }
+        });
+      }
     }
   }
 
