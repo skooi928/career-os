@@ -11,6 +11,7 @@ interface NavItem {
   label: string;
   route: string;
   icon: string;
+  count?: number;
 }
 
 @Component({
@@ -18,88 +19,96 @@ interface NavItem {
   standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive, RouterOutlet, ThemeToggleComponent],
   template: `
-    <div class="app-shell">
-      <!-- Top Navbar (Full Width) -->
-      <header class="navbar">
-        <div class="navbar-left">
-          <div class="logo-brand">
-            <div class="logo-img">
-              <i class="ph ph-lightning"></i>
-            </div>
-            <span class="logo-name">Career<span class="accent">OS</span></span>
+    <div class="app-layout">
+      <!-- Left: Fixed-width sidebar -->
+      <aside class="sidebar" [class.collapsed]="isSidebarCollapsed()">
+        <!-- Logo row -->
+        <div class="sidebar-header">
+          <div class="logo-box">
+            <i class="ph-fill ph-briefcase"></i>
           </div>
-          <div class="divider"></div>
-          <h2 class="page-title">{{ activePageTitle() }}</h2>
+          <span class="brand-text" *ngIf="!isSidebarCollapsed()">CareerOS</span>
         </div>
-
-        <div class="navbar-right">
-          <app-theme-toggle></app-theme-toggle>
-          <div class="user-profile-container">
-            <button class="profile-trigger" (click)="toggleProfileMenu($event)">
-              <div class="avatar">
-                @if (profileImageUrl()) {
-                  <img [src]="profileImageUrl()" alt="Avatar" class="avatar-img">
-                } @else {
-                  {{ userInitials() }}
-                }
-              </div>
-              <span class="username">{{ (userProfile()?.firstName || authService.getCurrentUser()?.firstName) }}</span>
-              <i class="ph-caret-down text-xs"></i>
-            </button>
-
-            <!-- Dropdown Menu -->
-            <div class="dropdown-menu" [class.show]="isProfileMenuOpen()">
-              <div class="menu-header">
-                <p class="name">{{ (userProfile()?.firstName || authService.getCurrentUser()?.firstName) }} {{ (userProfile()?.lastName || authService.getCurrentUser()?.lastName) }}</p>
-                <p class="email">{{ (userProfile()?.email || authService.getCurrentUser()?.email) }}</p>
-              </div>
-              <hr>
-              <a routerLink="/profile" class="menu-item">
-                <i class="ph-user"></i> User Profile
-              </a>
-              <a routerLink="/settings" class="menu-item">
-                <i class="ph-gear-six"></i> Settings
-              </a>
-              <button (click)="onSignOut()" class="menu-item logout">
-                <i class="ph-sign-out"></i> Sign Out
-              </button>
-            </div>
-          </div>
+        
+        <!-- Search bar (only when expanded) -->
+        <div class="sidebar-search" *ngIf="!isSidebarCollapsed()">
+          <i class="ph ph-magnifying-glass search-icon"></i>
+          <input type="text" placeholder="Search...">
         </div>
-      </header>
-
-      <div class="main-container">
-        <!-- Persistent Sidebar -->
-        <aside class="sidebar" [class.collapsed]="isSidebarCollapsed()">
-          <nav class="sidebar-nav">
-            @for (item of navItems(); track item.route) {
-              <a [routerLink]="item.route" 
-                 routerLinkActive="active" 
-                 class="nav-item group">
-                <span class="icon-box">
-                  <i [class]="item.icon"></i>
-                </span>
-                <span class="label">{{ item.label }}</span>
-                <div class="active-indicator"></div>
-              </a>
+        
+        <!-- Navigation items -->
+        <nav class="sidebar-nav">
+          @for (item of navItems(); track item.route) {
+            <a [routerLink]="item.route" 
+               routerLinkActive="active" 
+               class="nav-item">
+              <i [class]="item.icon + ' nav-icon'"></i>
+              <span class="nav-label" *ngIf="!isSidebarCollapsed()">{{ item.label }}</span>
+              <span class="nav-badge" *ngIf="!isSidebarCollapsed() && item.count">{{ item.count }}</span>
+            </a>
+          }
+        </nav>
+        
+        <!-- User footer (pinned bottom) -->
+        <div class="user-footer" *ngIf="!isSidebarCollapsed()">
+          <div class="avatar footer-avatar" (click)="toggleProfileMenu($event)">
+            @if (profileImageUrl()) {
+              <img [src]="profileImageUrl()" alt="Avatar" class="avatar-img">
+            } @else {
+              {{ userInitials() }}
             }
-          </nav>
-
-          <!-- Always Visible Collapse Button on Right Edge -->
-          <button class="sidebar-collapse-toggle" (click)="toggleSidebar()" title="Toggle Sidebar">
-            <i class="ph ph-caret-left"></i>
+          </div>
+          <div class="user-info" (click)="toggleProfileMenu($event)">
+            <span class="username">{{ (userProfile()?.firstName || authService.getCurrentUser()?.firstName) }}</span>
+            <span class="email">{{ (userProfile()?.email || authService.getCurrentUser()?.email) }}</span>
+          </div>
+          <button class="btn-logout" (click)="onSignOut()" title="Sign Out">
+            <i class="ph ph-sign-out"></i>
           </button>
-        </aside>
 
-        <!-- Floating Toggle Button (visible only when collapsed) -->
-        <button class="floating-expand-btn" 
-                [class.visible]="isSidebarCollapsed()" 
-                (click)="toggleSidebar()"
-                title="Expand Sidebar">
-          <i class="ph ph-list"></i>
+          <!-- Dropdown Menu -->
+          <div class="dropdown-menu" [class.show]="isProfileMenuOpen()">
+            <a routerLink="/profile" class="menu-item"><i class="ph-user"></i> Profile</a>
+            <a routerLink="/settings" class="menu-item"><i class="ph-gear-six"></i> Settings</a>
+          </div>
+        </div>
+        
+        <!-- Collapse toggle -->
+        <button class="sidebar-collapse-toggle" (click)="toggleSidebar()">
+          <i [class]="isSidebarCollapsed() ? 'ph ph-caret-right' : 'ph ph-caret-left'"></i>
         </button>
-
-        <!-- Page Content -->
+      </aside>
+      
+      <!-- Right: Flex column -->
+      <div class="main-column">
+        <!-- Fixed header on top -->
+        <header class="top-header">
+          <div class="header-left">
+            <h1>{{ activePageTitle() }}</h1>
+            <p>Welcome back! Here's what's happening.</p>
+          </div>
+          
+          <div class="header-right">
+            <div class="search-bar-header">
+              <i class="ph ph-magnifying-glass"></i>
+              <input type="text" placeholder="Search jobs, companies...">
+            </div>
+            <button class="btn-bell" routerLink="/notifications">
+              <i class="ph ph-bell"></i>
+              <span class="notification-dot"></span>
+            </button>
+            <app-theme-toggle></app-theme-toggle>
+            <div class="avatar header-avatar">
+              @if (profileImageUrl()) {
+                <img [src]="profileImageUrl()" alt="Avatar" class="avatar-img">
+              } @else {
+                {{ userInitials() }}
+              }
+            </div>
+          </div>
+        </header>
+        
+        <!-- Scrollable main content area -->
         <main class="page-content">
           <router-outlet></router-outlet>
         </main>
@@ -108,141 +117,121 @@ interface NavItem {
   `,
   styles: [`
     :host {
-      --primary: #10b981;
-      --primary-dark: #059669;
-      --sidebar-width: 260px;
-      --sidebar-collapsed: 0px;
-      --navbar-height: 60px;
-      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      --primary: #059669;
+      --sidebar-expanded: 240px;
+      --sidebar-collapsed: 64px;
+      --sidebar-bg: #0f172a;
+      --header-height: 65px;
+      --transition: all 0.3s ease-in-out;
     }
 
-    .app-shell {
+    /* Layout Architecture */
+    .app-layout {
       display: flex;
-      flex-direction: column;
       height: 100vh;
       width: 100vw;
       background-color: var(--color-background);
-      color: var(--color-text);
       overflow: hidden;
       font-family: 'Inter', sans-serif;
     }
 
-    /* Navbar Styling */
-    .navbar {
-      height: var(--navbar-height);
+    /* 1. Sidebar */
+    .sidebar {
+      width: var(--sidebar-expanded);
       background-color: var(--color-surface);
-      border-bottom: 1px solid var(--color-border);
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 24px;
-      z-index: 100;
-      flex-shrink: 0;
-    }
-
-    .navbar-left {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-    }
-
-    .navbar-right {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .logo-brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      cursor: pointer;
+      flex-direction: column;
       transition: var(--transition);
+      position: relative;
+      flex-shrink: 0;
+      z-index: 50;
+      border-right: 1px solid var(--color-border);
     }
 
-    .logo-brand:hover {
-      transform: scale(1.02);
+    .sidebar.collapsed {
+      width: var(--sidebar-collapsed);
     }
 
-    .logo-img {
+    /* Logo row */
+    .sidebar-header {
+      height: var(--header-height);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 12px;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .logo-box {
       width: 32px;
       height: 32px;
-      background: linear-gradient(135deg, var(--color-primary) 0%, #059669 100%);
       border-radius: 8px;
+      background-color: var(--primary);
       display: flex;
       align-items: center;
       justify-content: center;
       color: white;
       font-size: 1.25rem;
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+      flex-shrink: 0;
     }
 
-    .logo-name {
-      font-size: 1.25rem;
-      font-weight: 800;
-      letter-spacing: -0.03em;
+    .brand-text {
       color: var(--color-text);
+      font-size: 16px;
+      font-weight: 600;
       white-space: nowrap;
     }
 
-    .accent { color: var(--primary); }
-
-    .divider {
-      width: 1px;
-      height: 24px;
-      background-color: var(--color-border);
-    }
-
-    .page-title {
-      font-size: 1.125rem;
-      font-weight: 600;
-      color: var(--color-text);
-    }
-
-    /* Main Container (Sidebar + Content) */
-    .main-container {
-      flex: 1;
-      display: flex;
-      overflow: hidden;
-    }
-
-    /* Sidebar Styling */
-    .sidebar {
-      width: var(--sidebar-width);
+    /* Search bar (Sidebar) */
+    .sidebar-search {
+      margin: 16px;
       background-color: var(--color-surface-secondary);
-      border-right: 1px solid var(--color-border);
+      border-radius: 8px;
+      padding: 8px 12px;
       display: flex;
-      flex-direction: column;
-      transition: var(--transition);
-      flex-shrink: 0;
-      overflow: hidden;
-      min-width: 0;
-      position: relative;
+      align-items: center;
+      gap: 8px;
     }
 
-    .sidebar.collapsed {
-      width: 0;
-      border-right: none;
+    .sidebar-search .search-icon {
+      font-size: 14px;
+      color: var(--color-text-secondary);
     }
 
+    .sidebar-search input {
+      background: transparent;
+      border: none;
+      color: var(--color-text);
+      font-size: 14px;
+      width: 100%;
+      outline: none;
+    }
+
+    .sidebar-search input::placeholder {
+      color: var(--color-text-secondary);
+    }
+
+    /* Navigation items */
     .sidebar-nav {
       flex: 1;
-      padding: 24px 12px;
+      padding: 8px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      min-width: var(--sidebar-width);
+      gap: 2px;
+      overflow-y: auto;
     }
+
+    .sidebar-nav::-webkit-scrollbar { display: none; }
 
     .nav-item {
       display: flex;
       align-items: center;
-      padding: 12px;
-      border-radius: 12px;
-      color: var(--color-text-secondary);
+      padding: 10px 12px;
+      border-radius: 8px;
       text-decoration: none;
+      color: var(--color-text-secondary);
       transition: var(--transition);
-      position: relative;
+      gap: 12px;
     }
 
     .nav-item:hover {
@@ -252,72 +241,56 @@ interface NavItem {
 
     .nav-item.active {
       background-color: var(--color-secondary);
-      color: var(--color-primary);
+      color: var(--primary);
     }
 
-    .icon-box {
-      width: 24px;
-      height: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.25rem;
+    .nav-icon {
+      font-size: 17px;
       flex-shrink: 0;
     }
 
-    .label {
-      margin-left: 12px;
-      font-weight: 500;
-      transition: opacity 0.2s;
+    .nav-label {
+      font-size: 14px;
       white-space: nowrap;
+      flex: 1;
     }
 
-    .active-indicator {
-      position: absolute;
-      left: 0;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 4px;
-      height: 0;
-      background-color: var(--color-primary);
-      border-radius: 0 4px 4px 0;
-      transition: var(--transition);
+    .nav-badge {
+      background-color: rgba(255, 255, 255, 0.2);
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 9999px;
     }
 
-    .nav-item.active .active-indicator {
-      height: 20px;
-    }
-
-    /* Profile Menu */
-    .user-profile-container { position: relative; }
-
-    .profile-trigger {
+    /* User footer */
+    .user-footer {
+      border-top: 1px solid var(--color-border);
+      padding: 12px 16px;
       display: flex;
       align-items: center;
       gap: 12px;
-      background: none;
-      border: none;
-      color: var(--color-text);
-      cursor: pointer;
-      padding: 6px 12px;
-      border-radius: 50px;
       transition: var(--transition);
+      position: relative;
     }
 
-    .profile-trigger:hover { background-color: var(--color-hover); }
+    .user-footer:hover {
+      background-color: var(--color-hover);
+    }
 
     .avatar {
       width: 32px;
       height: 32px;
       border-radius: 50%;
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      background-color: var(--primary);
+      color: white;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 700;
-      font-size: 0.75rem;
-      color: white;
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+      font-size: 14px;
+      font-weight: 600;
+      flex-shrink: 0;
       overflow: hidden;
     }
 
@@ -327,117 +300,200 @@ interface NavItem {
       object-fit: cover;
     }
 
-    .username { font-weight: 500; font-size: 0.875rem; }
+    .user-info {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .username {
+      color: var(--color-text);
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .email {
+      color: var(--color-text-secondary);
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .btn-logout {
+      background: none;
+      border: none;
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      font-size: 15px;
+      padding: 4px;
+      transition: var(--transition);
+    }
+
+    .btn-logout:hover {
+      color: var(--color-error);
+    }
 
     .dropdown-menu {
       position: absolute;
-      top: calc(100% + 12px);
-      right: 0;
-      width: 220px;
+      bottom: calc(100% + 8px);
+      left: 16px;
+      width: 200px;
       background-color: var(--color-surface);
       border: 1px solid var(--color-border);
-      border-radius: 16px;
-      box-shadow: var(--shadow-lg);
+      border-radius: 8px;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
       padding: 8px;
       display: none;
-      z-index: 110;
+      z-index: 100;
     }
 
     .dropdown-menu.show { display: block; }
 
-    .menu-header { padding: 12px; }
-    .menu-header .name { font-weight: 600; margin: 0; font-size: 0.9375rem; color: var(--color-text); }
-    .menu-header .email { font-size: 0.75rem; color: var(--color-text-secondary); margin: 4px 0 0 0; }
-
-    hr { border: 0; border-top: 1px solid var(--color-border); margin: 4px 0; }
-
     .menu-item {
-      display: flex; align-items: center; gap: 10px; padding: 10px 12px;
-      border-radius: 8px; color: var(--color-text); text-decoration: none;
-      font-size: 0.875rem; width: 100%; text-align: left; background: none;
-      border: none; cursor: pointer; transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      color: var(--color-text);
+      text-decoration: none;
+      font-size: 14px;
+      transition: background-color 0.2s;
     }
 
-    .menu-item:hover { background-color: var(--color-hover); }
-    .menu-item i { font-size: 1.125rem; color: var(--color-text-secondary); }
-    .menu-item.logout { color: var(--color-error); }
-    .menu-item.logout i { color: var(--color-error); }
+    .menu-item:hover {
+      background-color: var(--color-hover);
+    }
+
+    /* Collapse toggle */
+    .sidebar-collapse-toggle {
+      position: absolute;
+      top: 24px;
+      right: -12px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background-color: var(--color-surface);
+      border: 1px solid var(--color-border);
+      color: var(--color-text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      cursor: pointer;
+      z-index: 60;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      transition: var(--transition);
+    }
+
+    /* 2. Top Header Bar */
+    .main-column {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .top-header {
+      height: var(--header-height);
+      background-color: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      flex-shrink: 0;
+      z-index: 40;
+    }
+
+    .header-left h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--color-text);
+    }
+
+    .header-left p {
+      margin: 2px 0 0 0;
+      font-size: 14px;
+      color: var(--color-text-secondary);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .search-bar-header {
+      background-color: var(--color-surface-secondary);
+      border-radius: 8px;
+      padding: 8px 12px;
+      width: 224px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .search-bar-header i {
+      color: var(--color-text-secondary);
+      font-size: 14px;
+    }
+
+    .search-bar-header input {
+      background: transparent;
+      border: none;
+      outline: none;
+      width: 100%;
+      font-size: 14px;
+      color: var(--color-text);
+    }
+
+    .btn-bell {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--color-text-secondary);
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      position: relative;
+    }
+
+    .btn-bell:hover {
+      background-color: var(--color-hover);
+    }
+
+    .notification-dot {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 6px;
+      height: 6px;
+      background-color: var(--primary);
+      border-radius: 50%;
+    }
+
+    .header-avatar {
+      cursor: pointer;
+    }
 
     /* Page Content */
     .page-content {
       flex: 1;
-      padding: 32px;
       overflow-y: auto;
-      background-color: var(--color-background);
-    }
-
-    /* Sidebar Collapse Toggle Button (Always Visible) */
-    .sidebar-collapse-toggle {
-      position: absolute;
-      right: -20px;
-      bottom: 24px;
-      width: 40px;
-      height: 40px;
-      background-color: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-radius: 8px;
-      color: var(--color-primary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.75rem;
-      cursor: pointer;
-      transition: var(--transition);
-      z-index: 95;
-    }
-
-    .sidebar-collapse-toggle:hover {
-      background-color: var(--color-hover);
-    }
-
-    .sidebar.collapsed .sidebar-collapse-toggle {
-      transform: rotateZ(180deg);
-    }
-
-    /* Floating Expand Button */
-    .floating-expand-btn {
-      position: fixed;
-      bottom: 24px;
-      left: 24px;
-      width: 48px;
-      height: 48px;
-      background-color: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-radius: 12px;
-      color: var(--color-primary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5rem;
-      cursor: pointer;
-      z-index: 100;
-      opacity: 0;
-      visibility: hidden;
-      transform: scale(0.8);
-      transition: var(--transition);
-      box-shadow: var(--shadow-lg);
-    }
-
-    .floating-expand-btn.visible {
-      opacity: 1;
-      visibility: visible;
-      transform: scale(1);
-    }
-
-    .floating-expand-btn:hover {
-      background-color: var(--color-primary);
-      color: white;
-      transform: scale(1.1);
-    }
-
-    @media (max-width: 768px) {
-      .sidebar { position: fixed; left: -100%; height: 100%; z-index: 90; }
-      .sidebar.open { left: 0; }
+      padding: 32px;
     }
   `]
 })
@@ -452,6 +508,7 @@ export class AppShellComponent implements OnInit, OnDestroy {
     { label: 'Dashboard', route: '/dashboard', icon: 'ph-house-simple' },
     { label: 'Resume Builder', route: '/resume', icon: 'ph-file-text' },
     { label: 'Job Application', route: '/jobs', icon: 'ph-briefcase' },
+    { label: 'Post a Job', route: '/job-posting', icon: 'ph-plus-circle' },
     { label: 'Sharing Forum', route: '/forum', icon: 'ph-chat-teardrop' },
     { label: 'Upskilling Courses', route: '/courses', icon: 'ph-chalkboard-teacher' },
     { label: 'Analytics', route: '/insights', icon: 'ph-chart-bar' },

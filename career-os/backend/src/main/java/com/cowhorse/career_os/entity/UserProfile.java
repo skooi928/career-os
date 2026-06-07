@@ -7,6 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.List;
+import java.util.ArrayList;
 
 @Entity
 @Table(name = "user_profiles", schema = "dbo")
@@ -51,6 +53,10 @@ public class UserProfile {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @OneToMany(mappedBy = "userProfile", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<QuickTask> quickTasks = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {
