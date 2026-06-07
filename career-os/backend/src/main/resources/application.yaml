@@ -16,3 +16,7 @@ supabase:
   jwt:
     secret: ${JWT_SECRET}
     expiration: 86400000
+
+ai:
+  service:
+    url: http://localhost:8000

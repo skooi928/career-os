@@ -1,11 +1,13 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from pydantic import BaseModel
+from typing import List
 import os
 import shutil
 import json
 
 from app.extract_text import extract_resume_text, get_extraction_quality
 from app.clean_text import clean_resume_text
-from app.llm_parser import extract_structured_resume
+from app.llm_parser import extract_structured_resume, generate_roadmap_suggestions
 from app.schema import ResumeData
 from app.normalize import normalize_resume
 
@@ -77,4 +79,33 @@ async def upload_file(file: UploadFile = File(...)):
         "extraction_quality": quality_report,
     }
 
+class RoadmapRequest(BaseModel):
+    targetRole: str
+    currentSkills: List[str]
+    education: List[str]
+    experience: List[str]
+    bio: str
 
+class SkillSuggestion(BaseModel):
+    name: str
+    why_it_matters: str
+    estimated_learning_time: str
+    type: str
+
+class RoadmapResponse(BaseModel):
+    suggestions: List[SkillSuggestion]
+
+@app.post("/roadmap/generate", response_model=RoadmapResponse)
+def generate_roadmap(req: RoadmapRequest):
+    try:
+        # Call your LLM parser to generate suggestions dynamically
+        suggestions = generate_roadmap_suggestions(
+            target_role=req.targetRole,
+            current_skills=req.currentSkills,
+            education=req.education,
+            experience=req.experience,
+            bio=req.bio
+        )
+        return {"suggestions": suggestions}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Roadmap generation failed: {str(e)}")

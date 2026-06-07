@@ -9,6 +9,7 @@ import { authGuard } from './guards/auth.guard';
 import { emailVerificationGuard } from './guards/email-verification.guard';
 import { PageNotFoundComponent } from './pages/page-not-found/page-not-found.component';
 import { AuthCallbackComponent } from './pages/auth-callback/auth-callback.component';
+import { ResumeBuilderComponent } from './pages/resume-builder/resume-builder.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -24,6 +25,7 @@ export const routes: Routes = [
       { path: 'dashboard', component: DashboardComponent },
       { path: 'profile', component: ProfileComponent, canActivate: [emailVerificationGuard] },
       // Add more routes here as you create new pages
+      { path: 'resume', component: ResumeBuilderComponent, canActivate: [emailVerificationGuard] },
       { path: '**', component: PageNotFoundComponent },
     ]
   },

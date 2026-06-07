@@ -245,3 +245,38 @@ def extract_structured_resume(text: str) -> dict:
             e.doc,
             e.pos,
         )
+    
+def generate_roadmap_suggestions(target_role, current_skills, education, experience, bio):
+    prompt = f"""
+    The user wants to become a {target_role}.
+    Current skills: {", ".join(current_skills)}
+    Education: {", ".join(education)}
+    Experience: {", ".join(experience)}
+    Bio: {bio}
+
+    Suggest 3–5 skills they should learn next.
+    For each skill, return:
+    - name
+    - why it matters
+    - estimated learning time
+    - type (Programming Language, Framework, Tool, Soft Skill, etc.)
+    Respond in JSON only with a 'suggestions' array. Use snake_case keys exactly:
+    why_it_matters, estimated_learning_time
+    """
+
+    model = genai.GenerativeModel("gemini-3.5-flash")
+    response = model.generate_content(prompt)
+
+    raw_text = response.text
+    print("Raw Gemini output:", raw_text)
+
+    raw = response.text.strip()
+    cleaned = _clean_response(raw)
+
+    try:
+        # Strip markdown fences if present
+        data = json.loads(cleaned)
+        return data.get("suggestions", [])
+    except Exception as e:
+        print("LLM parsing failed:", e)
+        return []

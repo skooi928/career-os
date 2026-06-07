@@ -42,3 +42,9 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Python
+ai-service/venv/
+ai-service/.env
+ai-service/app/__pycache__/*.py[cod]
+ai-service/uploads/*
