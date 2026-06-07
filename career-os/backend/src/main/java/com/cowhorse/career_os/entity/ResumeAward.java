@@ -5,48 +5,35 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "experience", schema = "dbo")
+@Table(name = "resume_awards", schema = "dbo")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Experience {
+public class ResumeAward {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id")
+    @Column(name = "user_id", nullable = false)
     private UUID userId;
 
-    @Column(name = "supabase_uid", nullable = true)
-    private String supabaseUid;
+    @Column(name = "title", nullable = false)
+    private String title;
 
-    @Column(nullable = false)
-    private String jobTitle;
+    @Column(name = "issuer")
+    private String issuer;
 
-    @Column(nullable = false)
-    private String company;
+    @Column(name = "year")
+    private String year;
 
-    @Column(nullable = false)
-    private LocalDate startDate;
-
-    @Column(name = "end_date")
-    private LocalDate endDate;
-
-    @Column(columnDefinition = "boolean default false")
-    private Boolean isCurrent;
-
-    @Column(columnDefinition = "TEXT")
-    private String description;
-
-    // from V4 migration
-    @Column(name = "responsibilities", columnDefinition = "TEXT[]")
-    private String[] responsibilities;
+    @Column(name = "level")
+    private String level;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
