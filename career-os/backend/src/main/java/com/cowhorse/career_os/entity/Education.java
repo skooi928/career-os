@@ -44,6 +44,16 @@ public class Education {
     @Column(columnDefinition = "boolean default false")
     private Boolean isCurrent;
 
+    // from V4 migration
+    @Column(name = "cgpa")
+    private String cgpa;
+ 
+    @Column(name = "grades")
+    private String grades;
+ 
+    @Column(name = "minor")
+    private String minor;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

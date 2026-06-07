@@ -1,1 +1,5 @@
-.env
+# Python
+career-os/ai-service/venv/
+career-os/ai-service/.env
+career-os/ai-service/app/__pycache__/*.py[cod]
+career-os/ai-service/uploads/*
