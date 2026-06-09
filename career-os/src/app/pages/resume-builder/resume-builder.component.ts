@@ -7,6 +7,7 @@ import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 import { ProfileService, UserProfileDTO } from '../../services/profile.service';
 import { ResumeService } from '../../services/resume.service';
+import { CareerAnalysisService } from '../../services/career-analysis.service';
 
 type PageState = 'loading' | 'upload' | 'uploading' | 'portfolio';
 type ActiveTab = 'roadmap' | 'experience' | 'skills' | 'projects';
@@ -49,6 +50,7 @@ export class ResumeBuilderComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private profileService = inject(ProfileService);
   private resumeService = inject(ResumeService);
+  private careerAnalysisService = inject(CareerAnalysisService);
   private router = inject(Router);
 
   // Page state
@@ -68,6 +70,7 @@ export class ResumeBuilderComponent implements OnInit, OnDestroy {
   targetRoleInput = signal('');
   targetRole = signal('');
   roadmapGenerated = signal(false);
+  predictedRoles = signal<string[]>([]);
   roadmapItems = signal<RoadmapItem[]>([]);
   skillsHave = signal<{ name: string; proficiency: string }[]>([]);
   skillSuggestions = signal<SkillSuggestion[]>([]);
@@ -127,6 +130,19 @@ export class ResumeBuilderComponent implements OnInit, OnDestroy {
                           (profile.education?.length ?? 0) > 0 ||
                           (profile.skills?.length ?? 0) > 0;
           this.pageState.set(hasData ? 'portfolio' : 'upload');
+          
+          // Fetch predicted roles from Career Insights
+          this.careerAnalysisService.getCareerPredictions()
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (predictions) => {
+                if (predictions && predictions.length > 0 && predictions[0].predictedRoles) {
+                  const roles = predictions[0].predictedRoles.map(r => r.role);
+                  this.predictedRoles.set(roles);
+                }
+              },
+              error: (err) => console.error('Failed to fetch predicted roles', err)
+            });
         },
         error: () => this.pageState.set('upload')
       });

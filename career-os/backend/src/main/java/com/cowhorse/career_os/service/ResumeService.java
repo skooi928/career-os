@@ -48,7 +48,7 @@ public class ResumeService {
     private final RestTemplate restTemplate;
 
     // FastAPI URL from application.properties
-    @Value("${ai.service.url:http://localhost:8000}")
+    @Value("${ai.service.url:http://127.0.0.1:8000}")
     private String aiServiceUrl;
 
     //  ====== MAIN METHOD: upload PDF → call FastAPI → save ===========

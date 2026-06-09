@@ -1,4 +1,4 @@
-import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, OnInit, Inject, PLATFORM_ID, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { CareerAnalysisService, CareerPrediction, PredictedRole } from '../../services/career-analysis.service';
@@ -36,12 +36,24 @@ interface RoadmapPath {
         </div>
       </div>
 
+      <!-- Error Banner -->
+      <div *ngIf="error" class="error-banner" style="margin: 0 40px 20px; padding: 12px 16px; border-radius: 8px; background: #fee2e2; border: 1px solid #fca5a5; color: #b91c1c; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+        <span>⚠️</span> {{ error }}
+      </div>
+
       <div class="analysis-content">
         <div class="roadmap-section">
           <h2>Career Trajectory</h2>
           <div class="roadmap-container">
+            <!-- Loading State -->
+            <div *ngIf="isLoading" class="trajectory-empty-state">
+              <div class="spinner"></div>
+              <h3>Running Career Analysis...</h3>
+              <p>Gemini is predicting your future career paths based on your experience and profile. This may take a few seconds...</p>
+            </div>
+
             <!-- Trajectory Empty State -->
-            <div *ngIf="roadmapNodes.length === 0" class="trajectory-empty-state">
+            <div *ngIf="!isLoading && roadmapNodes.length === 0" class="trajectory-empty-state">
               <div class="empty-icon-wrapper">
                 <i class="ph ph-graduation-cap"></i>
                 <i class="ph ph-suitcase-simple"></i>
@@ -53,7 +65,7 @@ interface RoadmapPath {
               </button>
             </div>
 
-            <svg *ngIf="roadmapNodes.length > 0" class="roadmap-canvas" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid meet">
+            <svg *ngIf="!isLoading && roadmapNodes.length > 0" class="roadmap-canvas" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid meet">
               <g class="connection-lines">
                 <path *ngFor="let path of paths" 
                       [attr.d]="path.d" 
@@ -66,6 +78,7 @@ interface RoadmapPath {
                 <g *ngFor="let node of roadmapNodes; let i = index" 
                    (mouseenter)="onNodeHover(i)" 
                    (mouseleave)="hoveredNode = null" 
+                   (click)="onNodeClick(node)"
                    class="node-group">
                   <circle [attr.cx]="node.x" [attr.cy]="node.y" 
                           [attr.r]="node.type === 'history' ? 20 : 16" 
@@ -109,9 +122,11 @@ interface RoadmapPath {
                   <span class="company">{{ nodeTooltip.prediction.likelihood }}% Match Likelihood</span>
                 </div>
                 <p class="description">
-                  Based on your current trajectory and skill sets.
+                  {{ nodeTooltip.prediction ? 'Based on your current trajectory and skill sets.' : 'Click to predict your suitable career pathway' }}
                 </p>
-                <div class="prediction-hint">Click "Run Analysis" for details</div>
+                <div class="prediction-hint">
+                  {{ nodeTooltip.prediction ? 'Click "Run Analysis" for details' : 'Click to run analysis now' }}
+                </div>
               </div>
             </div>
 
@@ -230,6 +245,7 @@ interface RoadmapPath {
     .primary-node { stroke: #059669; fill: #d1fae5; }
     .education-node { stroke: #2563eb; fill: #dbeafe; }
     .shadow-node { stroke: #10b981; fill: white; opacity: 0.8; }
+    .node-group { cursor: pointer; }
     .node-group:hover .node { r: 24; filter: drop-shadow(0 0 12px rgba(5, 150, 105, 0.4)); stroke-width: 5; }
     
     .node-label { font-size: 12px; font-weight: 700; pointer-events: none; }
@@ -250,6 +266,14 @@ interface RoadmapPath {
     .legend-indicator.primary { background: #059669; }
     .legend-indicator.education { background: #2563eb; }
     .legend-indicator.shadow { border: 2px solid #10b981; }
+    
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--color-border);
+      border-top-color: var(--color-primary);
+      border-radius: 50%; animation: spin .8s linear infinite; margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   `]
 })
 export class InsightsComponent implements OnInit {
@@ -267,6 +291,7 @@ export class InsightsComponent implements OnInit {
     private profileService: ProfileService,
     private careerAnalysisService: CareerAnalysisService,
     private router: Router,
+    private cdr: ChangeDetectorRef,
     @Inject(PLATFORM_ID) private platformId: Object
   ) { }
 
@@ -283,6 +308,12 @@ export class InsightsComponent implements OnInit {
         this.experiences = profile.experiences || [];
         this.education = profile.education || [];
         this.generateRoadmap();
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Failed to load user profile', err);
+        this.error = 'Failed to load profile data';
+        this.cdr.detectChanges();
       }
     });
   }
@@ -356,7 +387,8 @@ export class InsightsComponent implements OnInit {
     // 3. Branch Prediction from Latest Role
     if (nodes.length > 0) {
       const lastNode = nodes[nodes.length - 1];
-      const branchingOffsets = [-100, 0, 100]; // 3 predicted branches
+      const hasPrediction = this.prediction && this.prediction.predictedRoles && this.prediction.predictedRoles.length > 0;
+      const branchingOffsets = hasPrediction ? [-100, 0, 100] : [0]; // 3 predicted branches if success, 1 if fail
 
       branchingOffsets.forEach((offset, idx) => {
         const targetX = lastNode.x + stepX;
@@ -372,10 +404,10 @@ export class InsightsComponent implements OnInit {
         nodes.push({
           x: targetX,
           y: targetY,
-          label: this.prediction?.predictedRoles[idx]?.role || 'Future Opportunity',
+          label: hasPrediction ? (this.prediction?.predictedRoles[idx]?.role || 'Future Opportunity') : 'Predict Future Path',
           type: 'prediction',
-          yearsRange: (idx + 2) + '-5 yrs',
-          prediction: this.prediction?.predictedRoles[idx] || null
+          yearsRange: hasPrediction ? ((idx + 2) + '-5 yrs') : 'Next Step',
+          prediction: hasPrediction ? (this.prediction?.predictedRoles[idx] || null) : null
         });
       });
     }
@@ -387,6 +419,13 @@ export class InsightsComponent implements OnInit {
   onNodeHover(index: number) {
     this.hoveredNode = index;
     this.nodeTooltip = this.roadmapNodes[index];
+  }
+
+  onNodeClick(node: RoadmapNode) {
+    if (node.type === 'prediction' && (!this.prediction || !this.prediction.predictedRoles || this.prediction.predictedRoles.length === 0)) {
+      this.error = null;
+      this.loadCareerAnalysis();
+    }
   }
 
   formatDate(date: string | undefined): string {
@@ -402,20 +441,33 @@ export class InsightsComponent implements OnInit {
 
   loadCareerAnalysis() {
     this.isLoading = true;
-    this.careerAnalysisService.getCareerPredictions().subscribe({
-      next: (predictions) => {
-        if (predictions.length > 0) {
-          // Get the most recent prediction
-          this.prediction = predictions[0];
-        } else {
-          this.error = 'No career analysis available. Please run the analysis first.';
-        }
+    this.careerAnalysisService.analyzeCareer().subscribe({
+      next: (prediction) => {
+        this.prediction = prediction;
+        this.generateRoadmap();
         this.isLoading = false;
+        this.cdr.detectChanges();
       },
       error: (err) => {
-        console.error('Failed to load career predictions', err);
-        this.error = 'Failed to load career analysis';
-        this.isLoading = false;
+        console.error('Failed to run fresh career analysis, loading fallback list...', err);
+        this.careerAnalysisService.getCareerPredictions().subscribe({
+          next: (predictions) => {
+            if (predictions.length > 0) {
+              this.prediction = predictions[0];
+              this.generateRoadmap();
+            } else {
+              this.error = 'Failed to run analysis, and no previous predictions exist.';
+            }
+            this.isLoading = false;
+            this.cdr.detectChanges();
+          },
+          error: (fetchErr) => {
+            console.error('Failed to load predictions fallback', fetchErr);
+            this.error = 'Failed to load career analysis';
+            this.isLoading = false;
+            this.cdr.detectChanges();
+          }
+        });
       }
     });
   }

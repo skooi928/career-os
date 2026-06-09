@@ -129,7 +129,7 @@
 
   <!-- Tabs -->
   <div class="tabs">
-    <div class="tab" [class.active]="activeTab() === 'roadmap'" (click)="setTab('roadmap')">🗺 Roadmap</div>
+    <div class="tab" [class.active]="activeTab() === 'roadmap'" (click)="setTab('roadmap')">🎯 Skill Alignment</div>
     <div class="tab" [class.active]="activeTab() === 'experience'" (click)="setTab('experience')">💼 Experience</div>
     <div class="tab" [class.active]="activeTab() === 'skills'" (click)="setTab('skills')">⚡ Skills</div>
     <div class="tab" [class.active]="activeTab() === 'projects'" (click)="setTab('projects')">🚀 Projects</div>
@@ -142,14 +142,14 @@
     <div *ngIf="activeTab() === 'roadmap'">
 
       <div *ngIf="!roadmapGenerated()" class="generate-card">
-        <div class="generate-icon">🗺️</div>
-        <div class="generate-title">Generate Your Career Roadmap</div>
+        <div class="generate-icon">🎯</div>
+        <div class="generate-title">Align Your Skills with a Target Role</div>
         <div class="generate-sub">
-          Tell us your target role and AI will map your full journey — from your education and experience
-          to the specific skills you need next.<br/><br/>
-          <strong>Your roadmap is public</strong> — employers can see your direction and growth plan on your profile.
+          Tell us your target role and AI will map out the specific skills you need next to reach your destination,
+          compared against your current experiences and education.<br/><br/>
+          <strong>Your skill alignment plan is public</strong> — employers can see your upskilling direction and growth plan on your profile.
         </div>
-        <button class="btn-primary" (click)="openRoadmapModal()">✦ Generate My Roadmap</button>
+        <button class="btn-primary" (click)="openRoadmapModal()">✦ Check Skill Alignment</button>
       </div>
 
       <div *ngIf="roadmapGenerated()" class="roadmap-layout">
@@ -158,7 +158,7 @@
           <!-- Career Timeline -->
           <div class="card">
             <div class="card-header">
-              <h3 class="card-title">◈ Career Timeline</h3>
+              <h3 class="card-title">◈ Upskilling Timeline</h3>
               <button class="btn-edit-sm" (click)="openRoadmapModal()">✎ Edit Target</button>
             </div>
             <div class="timeline">
@@ -177,7 +177,7 @@
           <!-- Skill Progression -->
           <div class="card">
             <div class="card-header">
-              <h3 class="card-title">◐ Skill Progression</h3>
+              <h3 class="card-title">◐ Upskilling & Skill Alignment</h3>
             </div>
             <div class="target-bar">
               <div class="target-icon">🎯</div>
@@ -188,7 +188,7 @@
             </div>
             <div *ngIf="isGeneratingRoadmap()" class="state-center" style="height:120px">
               <div class="spinner"></div>
-              <p class="loading-text">AI is building your roadmap...</p>
+              <p class="loading-text">AI is analyzing skill alignment...</p>
             </div>
             <ng-container *ngIf="!isGeneratingRoadmap()">
               <div class="skill-section-label">Your current skills</div>
@@ -211,7 +211,7 @@
           <!-- AI Action Plan -->
           <div class="card" *ngIf="!isGeneratingRoadmap() && skillSuggestions().length">
             <div class="card-header">
-              <h3 class="card-title">📋 Your Personalised Action Plan</h3>
+              <h3 class="card-title">📋 Your Personalised Upskilling Action Plan</h3>
             </div>
             <div class="suggestion-cards">
               <div *ngFor="let s of skillSuggestions(); let i = index" class="suggestion-card">
@@ -328,17 +328,35 @@
 <div *ngIf="showRoadmapModal()" class="modal-overlay" (click)="closeRoadmapModal()">
   <div class="modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h2 class="modal-title">🗺️ Set Your Target Role</h2>
+      <h2 class="modal-title">🎯 Set Your Target Role</h2>
       <button class="modal-close" (click)="closeRoadmapModal()">✕</button>
     </div>
     <p class="modal-sub">
-      AI will analyse your profile and generate a personalised roadmap with specific skills, reasons, and timelines — tailored to your field and target role. Your roadmap is visible on your <strong>public profile</strong>.
+      AI will analyse your profile and suggest matching skillsets, reasons, and upskilling timelines — tailored to your target role. Your plan is visible on your <strong>public profile</strong>.
     </p>
+    
     <label class="modal-label">What role are you working toward?</label>
+    
+    <!-- AI Predicted Roles suggestions -->
+    <div *ngIf="predictedRoles().length > 0" class="predicted-suggestions-container">
+      <div class="predicted-label">💡 AI Predicted Future Paths (from Insights):</div>
+      <div class="modal-examples predicted-examples">
+        <span *ngFor="let role of predictedRoles()" class="modal-example predicted-example-item" (click)="setExampleRole(role)">
+          ✦ {{ role }}
+        </span>
+      </div>
+    </div>
+    
+    <div *ngIf="predictedRoles().length === 0" class="predicted-suggestions-container fallback-suggestions">
+      <div class="predicted-label">💡 Tip: Run "Career Trajectory Analysis" on the Dashboard to get personalized AI predicted roles here.</div>
+    </div>
+
     <input class="modal-input" type="text"
       placeholder="e.g. AI Engineer, Financial Analyst, Marketing Manager..."
       [ngModel]="targetRoleInput()"
       (ngModelChange)="targetRoleInput.set($event)"/>
+      
+    <div class="modal-label" style="margin-top:12px">Or choose an example:</div>
     <div class="modal-examples">
       <span class="modal-example" (click)="setExampleRole('AI / ML Engineer')">AI / ML Engineer</span>
       <span class="modal-example" (click)="setExampleRole('Frontend Developer')">Frontend Developer</span>
@@ -352,7 +370,7 @@
     <div class="modal-footer">
       <button class="btn-ghost" (click)="closeRoadmapModal()">Cancel</button>
       <button class="btn-primary" (click)="generateRoadmap()" [disabled]="!targetRoleInput().trim() || isGeneratingRoadmap()">
-        {{ isGeneratingRoadmap() ? 'Generating...' : 'Generate Roadmap →' }}
+        {{ isGeneratingRoadmap() ? 'Analyzing...' : 'Align Target Role →' }}
       </button>
     </div>
   </div>
