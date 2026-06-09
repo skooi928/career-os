@@ -20,6 +20,7 @@ export interface Experience {
   endDate?: string;
   current: boolean;
   description: string;
+  responsibilities?: string[];
 }
 
 export interface Education {
@@ -30,6 +31,9 @@ export interface Education {
   startDate: string;
   endDate?: string;
   current: boolean;
+  cgpa?: string;
+  grades?: string;
+  minor?: string;
 }
 
 export interface Project {
@@ -71,6 +75,7 @@ export interface UserProfileDTO {
   skills?: Skill[];
   quickTasks?: QuickTask[];
   userId?: string;
+  role?: string;
 }
 
 @Injectable({

@@ -19,6 +19,11 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import com.cowhorse.career_os.repository.UserProfileRepository;
+import com.cowhorse.career_os.entity.UserProfile;
+
 
 @RestController
 @RequestMapping("/api/auth")
@@ -33,11 +38,13 @@ public class SupabaseAuthController {
     private final RestTemplate restTemplate = new RestTemplate();
     private final OnboardingService onboardingService;
     private final JwtTokenProvider jwtTokenProvider;
+    private final UserProfileRepository userProfileRepository;
 
     @Autowired
-    public SupabaseAuthController(OnboardingService onboardingService, JwtTokenProvider jwtTokenProvider) {
+    public SupabaseAuthController(OnboardingService onboardingService, JwtTokenProvider jwtTokenProvider, UserProfileRepository userProfileRepository) {
         this.onboardingService = onboardingService;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.userProfileRepository = userProfileRepository;
     }
 
     @GetMapping("/azure")
@@ -150,6 +157,8 @@ public class SupabaseAuthController {
             if (tokenResponse.getStatusCode() == HttpStatus.OK && body != null && body.containsKey("access_token")) {
                 String accessToken = (String) body.get("access_token");
                 String finalToken = accessToken; // Default to Supabase token
+                boolean roleMismatch = false;
+                String actualRole = pendingRole;
                 
                 // Extract user details to initialize profile if it's their first time logging in
                 try {
@@ -170,10 +179,26 @@ public class SupabaseAuthController {
                                 if (parts.length > 1) lastName = parts[1];
                             }
                         }
-                        onboardingService.initializeNewUserProfile(firstName, lastName, uid, pendingRole);
 
-                        // Generate a backend token that includes the role
-                        finalToken = jwtTokenProvider.generateTokenWithSupabaseUid(email, uid, pendingRole);
+                        // Check if user profile already exists
+                        Optional<UserProfile> existingProfile = userProfileRepository.findByUserId(UUID.fromString(uid));
+                        if (existingProfile.isPresent()) {
+                            UserProfile profile = existingProfile.get();
+                            actualRole = profile.getRole();
+                            if (actualRole == null || actualRole.isEmpty()) {
+                                actualRole = "candidate";
+                            }
+                            if (!actualRole.equalsIgnoreCase(pendingRole)) {
+                                roleMismatch = true;
+                            }
+                        } else {
+                            // If profile does not exist, initialize it
+                            onboardingService.initializeNewUserProfile(firstName, lastName, uid, pendingRole);
+                            actualRole = pendingRole;
+                        }
+
+                        // Generate a backend token that includes the actual/correct role
+                        finalToken = jwtTokenProvider.generateTokenWithSupabaseUid(email, uid, actualRole);
                     }
                 } catch (Exception ex) {
                     System.err.println("Error extracting user data for onboarding: " + ex.getMessage());
@@ -191,7 +216,12 @@ public class SupabaseAuthController {
                 response.addCookie(clearRole);
 
                 // Redirect back to frontend with our backend token
-                response.sendRedirect(frontendCallbackUrl + "?token=" + URLEncoder.encode(finalToken, StandardCharsets.UTF_8));
+                String redirectUrl = frontendCallbackUrl + "?token=" + URLEncoder.encode(finalToken, StandardCharsets.UTF_8);
+                if (roleMismatch) {
+                    redirectUrl += "&roleMismatch=true&requestedRole=" + URLEncoder.encode(pendingRole, StandardCharsets.UTF_8) +
+                                   "&actualRole=" + URLEncoder.encode(actualRole, StandardCharsets.UTF_8);
+                }
+                response.sendRedirect(redirectUrl);
             } else {
                 response.sendRedirect(frontendLoginUrl + "?error=" + URLEncoder.encode("Failed to obtain access token", StandardCharsets.UTF_8));
             }

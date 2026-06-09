@@ -62,6 +62,10 @@
           <label>Bio</label>
           <p>{{ personalInfo().bio || 'Not provided' }}</p>
         </div>
+        <div class="info-item full-width">
+          <label>Role</label>
+          <p style="text-transform: capitalize;">{{ personalInfo().role || 'candidate' }}</p>
+        </div>
       </div>
 
       <button *ngIf="!isEditingPersonal()" class="add-btn" (click)="toggleEditPersonal()" style="margin-top: 16px;">
@@ -84,6 +88,14 @@
         <div class="form-group">
           <label for="location">Location</label>
           <input type="text" id="location" [(ngModel)]="editPersonalForm()!.location" class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="role">Role</label>
+          <select id="role" [(ngModel)]="editPersonalForm()!.role" class="form-input" style="height: auto; padding: 10px;">
+            <option value="candidate">Candidate</option>
+            <option value="employer">Employer</option>
+            <option value="mentor">Mentor</option>
+          </select>
         </div>
         <div class="form-group full-width">
           <label for="bio">Bio</label>
@@ -120,6 +132,10 @@
             <div class="form-group">
               <label>Description</label>
               <textarea [(ngModel)]="editExperienceForm()!.description" placeholder="Description" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Responsibilities (one per line)</label>
+              <textarea [(ngModel)]="editExperienceResponsibilitiesStr" placeholder="Responsibilities (one per line)" rows="4"></textarea>
             </div>
             <div class="form-group">
               <label>Start Date</label>
@@ -160,7 +176,13 @@
                 {{ exp.endDate ? ' - ' + exp.endDate : '' }}
                 <span *ngIf="exp.current" class="current-badge">Current</span>
               </span>
-              <p class="description">{{ exp.description }}</p>
+              <p class="description" *ngIf="exp.description">{{ exp.description }}</p>
+              <div *ngIf="exp.responsibilities && exp.responsibilities.length > 0" class="responsibilities-list">
+                <p class="resp-header">Key Responsibilities:</p>
+                <ul>
+                  <li *ngFor="let resp of exp.responsibilities">{{ resp }}</li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
@@ -174,6 +196,7 @@
         <input type="text" placeholder="Job Title" name="jobTitle" ngModel required>
         <input type="text" placeholder="Company" name="company" ngModel required>
         <textarea placeholder="Description" name="description" ngModel rows="3"></textarea>
+        <textarea placeholder="Responsibilities (one per line)" name="responsibilities" ngModel rows="3"></textarea>
         <input type="date" name="startDate" ngModel required>
         <input type="date" name="endDate" ngModel>
         <label class="checkbox-label">
@@ -181,7 +204,6 @@
         </label>
         <button type="submit" class="form-submit-btn">Add Experience</button>
       </form>
-    </div>
   </div>
 
   <!-- Education Section -->
@@ -190,7 +212,6 @@
       <h2><i class="ph-graduation-cap"></i> Education</h2>
       <i [class]="expandedSections().education ? 'ph-caret-down' : 'ph-caret-right'"></i>
     </div>
-
     <div *ngIf="expandedSections().education" class="section-content">
       <div class="items-list">
         <div *ngFor="let edu of education()" class="item-wrapper">
@@ -207,6 +228,18 @@
             <div class="form-group">
               <label>Field of Study</label>
               <input type="text" [(ngModel)]="editEducationForm()!.field" placeholder="Field of Study" required>
+            </div>
+            <div class="form-group">
+              <label>CGPA</label>
+              <input type="text" [(ngModel)]="editEducationForm()!.cgpa" placeholder="CGPA (e.g. 3.80)">
+            </div>
+            <div class="form-group">
+              <label>Grades / Honors</label>
+              <input type="text" [(ngModel)]="editEducationForm()!.grades" placeholder="Grades / Honors (e.g. First Class)">
+            </div>
+            <div class="form-group">
+              <label>Minor</label>
+              <input type="text" [(ngModel)]="editEducationForm()!.minor" placeholder="Minor (e.g. Computer Science)">
             </div>
             <div class="form-group">
               <label>Start Date</label>
@@ -247,6 +280,11 @@
                 {{ edu.endDate ? ' - ' + edu.endDate : '' }}
                 <span *ngIf="edu.current" class="current-badge">Current</span>
               </span>
+              <div class="education-metadata" *ngIf="edu.cgpa || edu.grades || edu.minor">
+                <span *ngIf="edu.cgpa"><strong>CGPA:</strong> {{ edu.cgpa }}</span>
+                <span *ngIf="edu.grades"><strong>Grades:</strong> {{ edu.grades }}</span>
+                <span *ngIf="edu.minor"><strong>Minor:</strong> {{ edu.minor }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -260,6 +298,9 @@
         <input type="text" placeholder="Degree" name="degree" ngModel required>
         <input type="text" placeholder="Institution" name="institution" ngModel required>
         <input type="text" placeholder="Field of Study" name="field" ngModel required>
+        <input type="text" placeholder="CGPA (e.g. 3.80)" name="cgpa" ngModel>
+        <input type="text" placeholder="Grades / Honors (e.g. First Class)" name="grades" ngModel>
+        <input type="text" placeholder="Minor (e.g. Computer Science)" name="minor" ngModel>
         <input type="date" name="startDate" ngModel required>
         <input type="date" name="endDate" ngModel>
         <label class="checkbox-label">
@@ -268,7 +309,6 @@
         <button type="submit" class="form-submit-btn">Add Education</button>
       </form>
     </div>
-  </div>
 
   <!-- Projects Section -->
   <div class="section projects-section">

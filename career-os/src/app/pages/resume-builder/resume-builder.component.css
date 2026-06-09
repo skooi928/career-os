@@ -189,11 +189,11 @@
 /* ── Tabs ── */
 .tabs {
   border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
+  background: var(--color-background);
   padding: 0 24px;
   display: flex;
   margin-top: 20px;
-  position: sticky; top: 56px; z-index: 9;
+  position: sticky; top: 0; z-index: 9;
 }
 .tab {
   padding: 14px 18px; font-size: 13px; font-weight: 600;

@@ -42,7 +42,7 @@ interface NavItem {
             <a [routerLink]="item.route" 
                routerLinkActive="active" 
                class="nav-item">
-              <i [class]="item.icon + ' nav-icon'"></i>
+              <i [class]="'ph ' + item.icon + ' nav-icon'"></i>
               <span class="nav-label" *ngIf="!isSidebarCollapsed()">{{ item.label }}</span>
               <span class="nav-badge" *ngIf="!isSidebarCollapsed() && item.count">{{ item.count }}</span>
             </a>
@@ -74,7 +74,10 @@ interface NavItem {
             </div>
             <div class="dropdown-divider"></div>
             <a routerLink="/profile" class="menu-item" (click)="closeAllMenus()">
-              <i class="ph ph-user"></i> Profile Settings
+              <i class="ph ph-user"></i> Profile
+            </a>
+            <a routerLink="/profile" class="menu-item" (click)="closeAllMenus()">
+              <i class="ph ph-gear"></i> Settings
             </a>
             <div class="dropdown-divider"></div>
             <button class="menu-item btn-menu-logout" (click)="onSignOut()">
@@ -125,7 +128,10 @@ interface NavItem {
                 </div>
                 <div class="dropdown-divider"></div>
                 <a routerLink="/profile" class="menu-item" (click)="closeAllMenus()">
-                  <i class="ph ph-user"></i> Profile Settings
+                  <i class="ph ph-user"></i> Profile
+                </a>
+                <a routerLink="/profile" class="menu-item" (click)="closeAllMenus()">
+                  <i class="ph ph-gear"></i> Settings
                 </a>
                 <div class="dropdown-divider"></div>
                 <button class="menu-item btn-menu-logout" (click)="onSignOut()">
@@ -178,6 +184,11 @@ interface NavItem {
 
     .sidebar.collapsed {
       width: var(--sidebar-collapsed);
+    }
+
+    .sidebar.collapsed .nav-item {
+      justify-content: center;
+      padding: 10px;
     }
 
     /* Logo row */

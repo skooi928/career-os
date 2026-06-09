@@ -14,6 +14,7 @@ interface PersonalInfo {
   location?: string;
   bio?: string;
   profileImage?: string;
+  role?: string;
 }
 
 interface ExpandedSectionsState {
@@ -75,6 +76,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   editingSkillId = signal<number | null>(null);
 
   editExperienceForm = signal<Experience | null>(null);
+  editExperienceResponsibilitiesStr = signal<string>('');
   editEducationForm = signal<Education | null>(null);
   editProjectForm = signal<Project | null>(null);
   editProjectTechnologiesStr = signal<string>('');
@@ -117,7 +119,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
       phone: '',
       location: '',
       bio: '',
-      profileImage: ''
+      profileImage: '',
+      role: currentUser.role || 'candidate'
     });
     
     // Fetch additional profile details from backend
@@ -135,7 +138,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
             phone: profile.phone || '',
             location: profile.location || '',
             bio: profile.bio || '',
-            profileImage: profile.profileImageUrl || ''
+            profileImage: profile.profileImageUrl || '',
+            role: profile.role || current.role
           }));
 
           if (profile.experiences)
@@ -185,7 +189,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
       phone: form.phone,
       location: form.location,
       bio: form.bio,
-      profileImageUrl: form.profileImage
+      profileImageUrl: form.profileImage,
+      role: form.role
     };
 
     this.profileService.updateUserProfile(profileDTO)
@@ -193,6 +198,14 @@ export class ProfileComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (response) => {
           this.personalInfo.set({ ...form });
+
+          // Update the stored auth user details if role has changed
+          const currentUser = this.authService.getCurrentUser();
+          if (currentUser && response.role && currentUser.role !== response.role) {
+            currentUser.role = response.role;
+            localStorage.setItem('user_data', JSON.stringify(currentUser));
+          }
+
           this.profileService.announceProfileUpdate(response);
           this.isLoading.set(false);
           this.isEditingPersonal.set(false);
@@ -211,17 +224,24 @@ export class ProfileComponent implements OnInit, OnDestroy {
   editExperience(exp: Experience) {
     this.editingExperienceId.set(exp.id);
     this.editExperienceForm.set({ ...exp });
+    this.editExperienceResponsibilitiesStr.set(exp.responsibilities ? exp.responsibilities.join('\n') : '');
   }
 
   cancelEditExperience() {
     this.editingExperienceId.set(null);
     this.editExperienceForm.set(null);
+    this.editExperienceResponsibilitiesStr.set('');
   }
 
   saveExperienceEdit() {
     const form = this.editExperienceForm();
     if (!form || !form.id) return;
     this.isLoading.set(true);
+
+    form.responsibilities = this.editExperienceResponsibilitiesStr()
+      .split('\n')
+      .map(r => r.trim())
+      .filter(r => r.length > 0);
 
     this.profileService.updateExperience(form.id, form)
       .pipe(takeUntil(this.destroy$))
@@ -348,7 +368,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
       startDate: formData.startDate,
       endDate: formData.endDate || undefined,
       current: formData.current === 'true' || formData.current === true,
-      description: formData.description
+      description: formData.description,
+      responsibilities: formData.responsibilities
+        ? formData.responsibilities.split('\n').map((r: string) => r.trim()).filter((r: string) => r.length > 0)
+        : []
     };
 
     this.profileService.addExperience(experienceDTO)
@@ -390,7 +413,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
       field: formData.field,
       startDate: formData.startDate,
       endDate: formData.endDate || undefined,
-      current: formData.current === 'true' || formData.current === true
+      current: formData.current === 'true' || formData.current === true,
+      cgpa: formData.cgpa || undefined,
+      grades: formData.grades || undefined,
+      minor: formData.minor || undefined
     };
 
     this.profileService.addEducation(educationDTO)

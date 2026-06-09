@@ -36,7 +36,17 @@ export class AuthCallbackComponent implements OnInit {
         if (token) {
           const success = this.authService.setAuthSessionFromToken(token);
           if (success) {
-            this.router.navigate(['/dashboard']);
+            if (params['roleMismatch'] === 'true') {
+              this.router.navigate(['/dashboard'], {
+                queryParams: {
+                  roleMismatch: 'true',
+                  requestedRole: params['requestedRole'],
+                  actualRole: params['actualRole']
+                }
+              });
+            } else {
+              this.router.navigate(['/dashboard']);
+            }
           } else {
             this.error.set('Failed to parse the authentication token securely. Please check the browser console for details.');
           }

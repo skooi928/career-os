@@ -18,4 +18,5 @@ public class ExperienceDTO {
     private LocalDate endDate;
     private Boolean current;
     private String description;
+    private String[] responsibilities;
 }

@@ -61,8 +61,8 @@
         </span>
       </button>
 
-      <!-- Microsoft Login Button (Employer/Mentor) -->
-      <button type="button" class="microsoft-btn" (click)="signInWithMicrosoft()" [disabled]="microsoftLoading()">
+      <!-- Microsoft Login Buttons (Employer and Mentor) -->
+      <button type="button" class="microsoft-btn" (click)="signInWithMicrosoft('employer')" [disabled]="microsoftLoading() || mentorLoading()">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" class="microsoft-icon">
           <rect x="1" y="1" width="8" height="8" fill="#F25022" />
           <rect x="12" y="1" width="8" height="8" fill="#7FBA00" />
@@ -71,6 +71,25 @@
         </svg>
         <span *ngIf="!microsoftLoading()">Sign In as Employer</span>
         <span *ngIf="microsoftLoading()" class="loading-spinner">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+            </path>
+          </svg>
+          Signing in...
+        </span>
+      </button>
+
+      <button type="button" class="microsoft-btn mentor-btn" (click)="signInWithMicrosoft('mentor')" [disabled]="microsoftLoading() || mentorLoading()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" class="microsoft-icon">
+          <rect x="1" y="1" width="8" height="8" fill="#F25022" />
+          <rect x="12" y="1" width="8" height="8" fill="#7FBA00" />
+          <rect x="1" y="12" width="8" height="8" fill="#00A4EF" />
+          <rect x="12" y="12" width="8" height="8" fill="#FFB900" />
+        </svg>
+        <span *ngIf="!mentorLoading()">Sign In as Mentor</span>
+        <span *ngIf="mentorLoading()" class="loading-spinner">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor"
