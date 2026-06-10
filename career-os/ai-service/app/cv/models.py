@@ -1,12 +1,3 @@
-"""
-cv/models.py
-
-Pydantic models for CV data flowing between:
-  - Supabase (fetcher)
-  - Preview endpoint (returned to Angular)
-  - Generate endpoint (received from Angular after user edits)
-"""
-
 from pydantic import BaseModel
 from typing import List, Optional
 

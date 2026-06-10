@@ -11,10 +11,10 @@
   <button class="btn-primary" (click)="goBack()">← Back to Portfolio</button>
 </div>
 
-<!-- ── MAIN LAYOUT ── -->
+<!-- ── MAIN ── -->
 <div *ngIf="loadState() === 'ready'" class="cv-page">
 
-  <!-- Top bar -->
+  <!-- Topbar -->
   <div class="topbar">
     <button class="btn-back" (click)="goBack()">← Back</button>
     <div class="topbar-title">
@@ -23,10 +23,10 @@
     </div>
     <div class="topbar-actions">
       <button class="btn-refresh" (click)="refreshPreview()" [disabled]="isRefreshingPreview()">
-        {{ isRefreshingPreview() ? '⟳ Refreshing...' : '⟳ Refresh Preview' }}
+        {{ isRefreshingPreview() ? '⟳ Refreshing...' : '⟳ Refresh' }}
       </button>
       <button class="btn-primary" (click)="downloadPdf()" [disabled]="isDownloading()">
-        {{ isDownloading() ? 'Generating PDF...' : '↓ Download PDF' }}
+        {{ isDownloading() ? 'Generating...' : '↓ Download PDF' }}
       </button>
     </div>
   </div>
@@ -38,27 +38,26 @@
 
   <div class="main-layout">
 
-    <!-- ── LEFT: Editor panel ── -->
+    <!-- ── LEFT: Editor ── -->
     <div class="editor-panel">
 
-      <!-- Section nav -->
+      <!-- Section nav tabs -->
       <div class="section-nav">
-        <div class="section-nav-title">Sections</div>
         <div *ngFor="let nav of SECTION_NAV" class="section-nav-item"
           [class.active]="activeSection() === nav.key"
           (click)="setSection(nav.key)">
           <span class="nav-icon">{{ nav.icon }}</span>
-          <span class="nav-label">{{ nav.label }}</span>
-          <span class="nav-toggle"
+          <span>{{ nav.label }}</span>
+          <span *ngIf="nav.key !== 'contact' && nav.key !== 'summary'"
+            class="nav-toggle"
             [class.enabled]="isSectionEnabled(nav.key)"
             (click)="$event.stopPropagation(); toggleSection(nav.key)"
-            [title]="isSectionEnabled(nav.key) ? 'Click to hide from CV' : 'Click to show in CV'">
+            [title]="isSectionEnabled(nav.key) ? 'Hide from CV' : 'Show in CV'">
             {{ isSectionEnabled(nav.key) ? '●' : '○' }}
           </span>
         </div>
       </div>
 
-      <!-- Editor content -->
       <div class="editor-content">
 
         <!-- ── CONTACT ── -->
@@ -67,41 +66,39 @@
           <div class="field-group">
             <label class="field-label">Full Name</label>
             <input class="field-input" type="text" [ngModel]="cvData()?.name"
-              (ngModelChange)="updateField('name', $event)" placeholder="Your full name"/>
+              (ngModelChange)="updateField('name', $event)"/>
           </div>
           <div class="field-group">
             <label class="field-label">Email</label>
             <input class="field-input" type="email" [ngModel]="cvData()?.email"
-              (ngModelChange)="updateField('email', $event)" placeholder="your@email.com"/>
+              (ngModelChange)="updateField('email', $event)"/>
           </div>
           <div class="field-row">
             <div class="field-group">
               <label class="field-label">Phone</label>
               <input class="field-input" type="text" [ngModel]="cvData()?.phone"
-                (ngModelChange)="updateField('phone', $event)" placeholder="+60 12-345 6789"/>
+                (ngModelChange)="updateField('phone', $event)"/>
             </div>
             <div class="field-group">
               <label class="field-label">Location</label>
               <input class="field-input" type="text" [ngModel]="cvData()?.location"
-                (ngModelChange)="updateField('location', $event)" placeholder="City, Country"/>
+                (ngModelChange)="updateField('location', $event)"/>
             </div>
           </div>
-          <div class="field-row">
-            <div class="field-group">
-              <label class="field-label">LinkedIn URL</label>
-              <input class="field-input" type="url" [ngModel]="cvData()?.linkedin"
-                (ngModelChange)="updateField('linkedin', $event)" placeholder="linkedin.com/in/..."/>
-            </div>
-            <div class="field-group">
-              <label class="field-label">GitHub URL</label>
-              <input class="field-input" type="url" [ngModel]="cvData()?.github"
-                (ngModelChange)="updateField('github', $event)" placeholder="github.com/..."/>
-            </div>
+          <div class="field-group">
+            <label class="field-label">LinkedIn URL</label>
+            <input class="field-input" type="url" [ngModel]="cvData()?.linkedin"
+              (ngModelChange)="updateField('linkedin', $event)" placeholder="https://linkedin.com/in/..."/>
+          </div>
+          <div class="field-group">
+            <label class="field-label">GitHub URL</label>
+            <input class="field-input" type="url" [ngModel]="cvData()?.github"
+              (ngModelChange)="updateField('github', $event)" placeholder="https://github.com/..."/>
           </div>
           <div class="field-group">
             <label class="field-label">Website</label>
             <input class="field-input" type="url" [ngModel]="cvData()?.website"
-              (ngModelChange)="updateField('website', $event)" placeholder="yourwebsite.com"/>
+              (ngModelChange)="updateField('website', $event)" placeholder="https://..."/>
           </div>
         </div>
 
@@ -127,7 +124,7 @@
         <div *ngIf="activeSection() === 'experience'" class="editor-section">
           <div class="editor-section-title">Work Experience</div>
           <div class="section-toggle-banner" [class.disabled]="!isSectionEnabled('experience')">
-            <span>{{ isSectionEnabled('experience') ? '● Included in CV' : '○ Hidden from CV' }}</span>
+            <span>{{ isSectionEnabled('experience') ? '● Included' : '○ Hidden' }}</span>
             <button class="btn-toggle" (click)="toggleSection('experience')">
               {{ isSectionEnabled('experience') ? 'Hide' : 'Show' }}
             </button>
@@ -136,7 +133,7 @@
             class="list-item-card">
             <div class="list-item-header">
               <span class="list-item-num">{{ i + 1 }}</span>
-              <button class="btn-remove" (click)="removeListItem('experience', i)" title="Remove">✕</button>
+              <button class="btn-remove" (click)="removeListItem('experience', i)">✕</button>
             </div>
             <div class="field-row">
               <div class="field-group">
@@ -169,20 +166,35 @@
               <label class="field-label">Description</label>
               <textarea class="field-textarea" rows="4" [ngModel]="exp.description"
                 (ngModelChange)="updateListItem('experience', i, 'description', $event)"
-                placeholder="Describe responsibilities and achievements..."></textarea>
-              <div class="field-hint">Use separate lines for bullet points — each line becomes a bullet in the CV.</div>
+                placeholder="Each new line becomes a bullet point in the CV"></textarea>
+              <div class="field-hint">Start each responsibility on a new line — they become bullet points.</div>
             </div>
           </div>
           <div *ngIf="!getSectionData('experience').length" class="empty-section">
-            No experience records. Add them via your Profile page and re-open this editor.
+            <p>No work experience added yet.</p>
+
+            <button
+              type="button"
+              class="btn-add-item"
+              (click)="addItem('experience')">
+              + Add Your First Experience
+            </button>
           </div>
+
+          <button
+            *ngIf="getSectionData('experience').length"
+            type="button"
+            class="btn-add-item"
+            (click)="addItem('experience')">
+            + Add Another Experience
+          </button>
         </div>
 
         <!-- ── EDUCATION ── -->
         <div *ngIf="activeSection() === 'education'" class="editor-section">
           <div class="editor-section-title">Education</div>
           <div class="section-toggle-banner" [class.disabled]="!isSectionEnabled('education')">
-            <span>{{ isSectionEnabled('education') ? '● Included in CV' : '○ Hidden from CV' }}</span>
+            <span>{{ isSectionEnabled('education') ? '● Included' : '○ Hidden' }}</span>
             <button class="btn-toggle" (click)="toggleSection('education')">
               {{ isSectionEnabled('education') ? 'Hide' : 'Show' }}
             </button>
@@ -212,15 +224,15 @@
             </div>
             <div class="field-row">
               <div class="field-group">
-                <label class="field-label">Start Date</label>
+                <label class="field-label">Start Year</label>
                 <input class="field-input" type="text" [ngModel]="edu.start_date"
-                  (ngModelChange)="updateListItem('education', i, 'start_date', $event)"/>
+                  (ngModelChange)="updateListItem('education', i, 'start_date', $event)" placeholder="e.g. 2021"/>
               </div>
               <div class="field-group">
-                <label class="field-label">End Date</label>
+                <label class="field-label">End Year</label>
                 <input class="field-input" type="text"
                   [ngModel]="edu.is_current ? 'Present' : edu.end_date"
-                  (ngModelChange)="updateListItem('education', i, 'end_date', $event)"/>
+                  (ngModelChange)="updateListItem('education', i, 'end_date', $event)" placeholder="e.g. 2025"/>
               </div>
             </div>
             <div class="field-row">
@@ -236,40 +248,104 @@
               </div>
             </div>
           </div>
+          <div *ngIf="!getSectionData('education').length" class="empty-section">
+            <p>No education added yet.</p>
+
+            <button
+              type="button"
+              class="btn-add-item"
+              (click)="addItem('education')">
+              + Add Your First Education
+            </button>
+          </div>
+
+          <button
+            *ngIf="getSectionData('education').length"
+            type="button"
+            class="btn-add-item"
+            (click)="addItem('education')">
+            + Add Another Education
+          </button>
         </div>
 
         <!-- ── SKILLS ── -->
         <div *ngIf="activeSection() === 'skills'" class="editor-section">
           <div class="editor-section-title">Skills</div>
           <div class="section-toggle-banner" [class.disabled]="!isSectionEnabled('skills')">
-            <span>{{ isSectionEnabled('skills') ? '● Included in CV' : '○ Hidden from CV' }}</span>
+            <span>{{ isSectionEnabled('skills') ? '● Included' : '○ Hidden' }}</span>
             <button class="btn-toggle" (click)="toggleSection('skills')">
               {{ isSectionEnabled('skills') ? 'Hide' : 'Show' }}
             </button>
           </div>
+          <div class="field-hint" style="margin-bottom:4px">
+            Set a category for each skill — they will be grouped in your CV. You can type your own category name.
+          </div>
           <div class="skills-list">
             <div *ngFor="let skill of getSectionData('skills'); let i = index; trackBy: trackByIndex"
-              class="skill-row-edit">
-              <input class="field-input skill-name-input" type="text" [ngModel]="skill.name"
-                (ngModelChange)="updateListItem('skills', i, 'name', $event)" placeholder="Skill name"/>
-              <select class="field-select" [ngModel]="skill.proficiency"
-                (ngModelChange)="updateListItem('skills', i, 'proficiency', $event)">
-                <option value="Beginner">Beginner</option>
-                <option value="Intermediate">Intermediate</option>
-                <option value="Advanced">Advanced</option>
-                <option value="Expert">Expert</option>
-              </select>
-              <button class="btn-remove-sm" (click)="removeListItem('skills', i)">✕</button>
+              class="list-item-card compact">
+              <div class="field-row">
+                <div class="field-group">
+                  <label class="field-label">Skill Name</label>
+                  <input class="field-input" type="text" [ngModel]="skill.name"
+                    (ngModelChange)="updateListItem('skills', i, 'name', $event)" placeholder="e.g. Python"/>
+                </div>
+                <div class="field-group">
+                  <label class="field-label">Proficiency</label>
+                  <select class="field-select" [ngModel]="skill.proficiency"
+                    (ngModelChange)="updateListItem('skills', i, 'proficiency', $event)">
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                    <option value="Expert">Expert</option>
+                  </select>
+                </div>
+              </div>
+              <div class="field-row" style="align-items:flex-end">
+                <div class="field-group">
+                  <label class="field-label">Category (type your own or pick)</label>
+                  <input
+                    class="field-input"
+                    type="text"
+                    [attr.list]="'skill-cats-' + i"
+                    [ngModel]="skill.category"
+                    (ngModelChange)="updateListItem('skills', i, 'category', $event)"
+                    placeholder="e.g. Technical Skills"
+                  />
+
+                  <datalist [id]="'skill-cats-' + i">
+                    <option *ngFor="let cat of getSkillCategories()" [value]="cat"></option>
+                  </datalist>
+                </div>
+                <button class="btn-remove" style="margin-bottom:0;align-self:flex-end"
+                  (click)="removeListItem('skills', i)">✕</button>
+              </div>
             </div>
           </div>
-          <div *ngIf="!getSectionData('skills').length" class="empty-section">No skills found.</div>
+          <div *ngIf="!getSectionData('skills').length" class="empty-section">
+            <p>No skills added yet.</p>
+
+            <button
+              type="button"
+              class="btn-add-item"
+              (click)="addItem('skills')">
+              + Add Your First Skill
+            </button>
+          </div>
+
+          <button
+            *ngIf="getSectionData('skills').length"
+            type="button"
+            class="btn-add-item"
+            (click)="addItem('skills')">
+            + Add Another Skill
+          </button>
         </div>
 
         <!-- ── PROJECTS ── -->
         <div *ngIf="activeSection() === 'projects'" class="editor-section">
           <div class="editor-section-title">Projects</div>
           <div class="section-toggle-banner" [class.disabled]="!isSectionEnabled('projects')">
-            <span>{{ isSectionEnabled('projects') ? '● Included in CV' : '○ Hidden from CV' }}</span>
+            <span>{{ isSectionEnabled('projects') ? '● Included' : '○ Hidden' }}</span>
             <button class="btn-toggle" (click)="toggleSection('projects')">
               {{ isSectionEnabled('projects') ? 'Hide' : 'Show' }}
             </button>
@@ -290,47 +366,95 @@
               <textarea class="field-textarea" rows="3" [ngModel]="proj.description"
                 (ngModelChange)="updateListItem('projects', i, 'description', $event)"></textarea>
             </div>
-            <div class="field-row">
-              <div class="field-group">
-                <label class="field-label">Technologies</label>
-                <input class="field-input" type="text" [ngModel]="proj.technologies"
-                  (ngModelChange)="updateListItem('projects', i, 'technologies', $event)"
-                  placeholder="Python, React, Docker (comma-separated)"/>
-              </div>
-              <div class="field-group">
-                <label class="field-label">Link</label>
-                <input class="field-input" type="url" [ngModel]="proj.link"
-                  (ngModelChange)="updateListItem('projects', i, 'link', $event)"
-                  placeholder="https://..."/>
-              </div>
+            <div class="field-group">
+              <label class="field-label">Technologies (comma-separated)</label>
+              <input class="field-input" type="text" [ngModel]="proj.technologies"
+                (ngModelChange)="updateListItem('projects', i, 'technologies', $event)"
+                placeholder="Python, React, Docker"/>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Link (optional)</label>
+              <input class="field-input" type="url" [ngModel]="proj.link"
+                (ngModelChange)="updateListItem('projects', i, 'link', $event)" placeholder="https://..."/>
             </div>
           </div>
+          <div *ngIf="!getSectionData('projects').length" class="empty-section">
+            <p>No projects added yet.</p>
+
+            <button
+              type="button"
+              class="btn-add-item"
+              (click)="addItem('projects')">
+              + Add Your First Project
+            </button>
+          </div>
+
+          <button
+            *ngIf="getSectionData('projects').length"
+            type="button"
+            class="btn-add-item"
+            (click)="addItem('projects')">
+            + Add Another Project
+          </button>
         </div>
 
         <!-- ── LANGUAGES ── -->
         <div *ngIf="activeSection() === 'languages'" class="editor-section">
           <div class="editor-section-title">Languages</div>
           <div class="section-toggle-banner" [class.disabled]="!isSectionEnabled('languages')">
-            <span>{{ isSectionEnabled('languages') ? '● Included in CV' : '○ Hidden from CV' }}</span>
-            <button class="btn-toggle" (click)="toggleSection('languages')">{{ isSectionEnabled('languages') ? 'Hide' : 'Show' }}</button>
+            <span>{{ isSectionEnabled('languages') ? '● Included' : '○ Hidden' }}</span>
+            <button class="btn-toggle" (click)="toggleSection('languages')">
+              {{ isSectionEnabled('languages') ? 'Hide' : 'Show' }}
+            </button>
           </div>
           <div *ngFor="let lang of getSectionData('languages'); let i = index; trackBy: trackByIndex"
-            class="skill-row-edit">
-            <input class="field-input skill-name-input" type="text" [ngModel]="lang.name"
-              (ngModelChange)="updateListItem('languages', i, 'name', $event)" placeholder="Language"/>
-            <input class="field-input" type="text" [ngModel]="lang.proficiency"
-              (ngModelChange)="updateListItem('languages', i, 'proficiency', $event)"
-              placeholder="e.g. Fluent, 95%"/>
-            <button class="btn-remove-sm" (click)="removeListItem('languages', i)">✕</button>
+            class="list-item-card compact">
+            <div class="list-item-header">
+              <span class="list-item-num">{{ i + 1 }}</span>
+              <button class="btn-remove" (click)="removeListItem('languages', i)">✕</button>
+            </div>
+            <div class="field-row">
+              <div class="field-group">
+                <label class="field-label">Language</label>
+                <input class="field-input" type="text" [ngModel]="lang.name"
+                  (ngModelChange)="updateListItem('languages', i, 'name', $event)" placeholder="e.g. English"/>
+              </div>
+              <div class="field-group">
+                <label class="field-label">Proficiency</label>
+                <input class="field-input" type="text" [ngModel]="lang.proficiency"
+                  (ngModelChange)="updateListItem('languages', i, 'proficiency', $event)"
+                  placeholder="e.g. Native, Fluent, 95%"/>
+              </div>
+            </div>
           </div>
+          <div *ngIf="!getSectionData('languages').length" class="empty-section">
+            <p>No languages added yet.</p>
+
+            <button
+              type="button"
+              class="btn-add-item"
+              (click)="addItem('languages')">
+              + Add Your First Language
+            </button>
+          </div>
+
+          <button
+            *ngIf="getSectionData('languages').length"
+            type="button"
+            class="btn-add-item"
+            (click)="addItem('languages')">
+            + Add Another Language
+          </button>
         </div>
 
         <!-- ── AWARDS ── -->
         <div *ngIf="activeSection() === 'awards'" class="editor-section">
           <div class="editor-section-title">Awards &amp; Achievements</div>
           <div class="section-toggle-banner" [class.disabled]="!isSectionEnabled('awards')">
-            <span>{{ isSectionEnabled('awards') ? '● Included in CV' : '○ Hidden from CV' }}</span>
-            <button class="btn-toggle" (click)="toggleSection('awards')">{{ isSectionEnabled('awards') ? 'Hide' : 'Show' }}</button>
+            <span>{{ isSectionEnabled('awards') ? '● Included' : '○ Hidden' }}</span>
+            <button class="btn-toggle" (click)="toggleSection('awards')">
+              {{ isSectionEnabled('awards') ? 'Hide' : 'Show' }}
+            </button>
           </div>
           <div *ngFor="let award of getSectionData('awards'); let i = index; trackBy: trackByIndex"
             class="list-item-card compact">
@@ -345,7 +469,7 @@
             </div>
             <div class="field-row">
               <div class="field-group">
-                <label class="field-label">Issuer</label>
+                <label class="field-label">Issuer / Organization</label>
                 <input class="field-input" type="text" [ngModel]="award.issuer"
                   (ngModelChange)="updateListItem('awards', i, 'issuer', $event)"/>
               </div>
@@ -356,14 +480,34 @@
               </div>
             </div>
           </div>
+          <div *ngIf="!getSectionData('awards').length" class="empty-section">
+            <p>No awards added yet.</p>
+
+            <button
+              type="button"
+              class="btn-add-item"
+              (click)="addItem('awards')">
+              + Add Your First Award
+            </button>
+          </div>
+
+          <button
+            *ngIf="getSectionData('awards').length"
+            type="button"
+            class="btn-add-item"
+            (click)="addItem('awards')">
+            + Add Another Award
+          </button>
         </div>
 
         <!-- ── ACTIVITIES ── -->
         <div *ngIf="activeSection() === 'activities'" class="editor-section">
           <div class="editor-section-title">Leadership &amp; Activities</div>
           <div class="section-toggle-banner" [class.disabled]="!isSectionEnabled('activities')">
-            <span>{{ isSectionEnabled('activities') ? '● Included in CV' : '○ Hidden from CV' }}</span>
-            <button class="btn-toggle" (click)="toggleSection('activities')">{{ isSectionEnabled('activities') ? 'Hide' : 'Show' }}</button>
+            <span>{{ isSectionEnabled('activities') ? '● Included' : '○ Hidden' }}</span>
+            <button class="btn-toggle" (click)="toggleSection('activities')">
+              {{ isSectionEnabled('activities') ? 'Hide' : 'Show' }}
+            </button>
           </div>
           <div *ngFor="let act of getSectionData('activities'); let i = index; trackBy: trackByIndex"
             class="list-item-card compact">
@@ -393,18 +537,38 @@
                 <label class="field-label">Duration</label>
                 <input class="field-input" type="text" [ngModel]="act.duration"
                   (ngModelChange)="updateListItem('activities', i, 'duration', $event)"
-                  placeholder="e.g. 2023-2024"/>
+                  placeholder="e.g. 2023–2024"/>
               </div>
             </div>
           </div>
+          <div *ngIf="!getSectionData('activities').length" class="empty-section">
+            <p>No activities added yet.</p>
+
+            <button
+              type="button"
+              class="btn-add-item"
+              (click)="addItem('activities')">
+              + Add Your First Activity
+            </button>
+          </div>
+
+          <button
+            *ngIf="getSectionData('activities').length"
+            type="button"
+            class="btn-add-item"
+            (click)="addItem('activities')">
+            + Add Another Activity
+          </button>
         </div>
 
         <!-- ── CERTIFICATIONS ── -->
         <div *ngIf="activeSection() === 'certifications'" class="editor-section">
           <div class="editor-section-title">Certifications</div>
           <div class="section-toggle-banner" [class.disabled]="!isSectionEnabled('certifications')">
-            <span>{{ isSectionEnabled('certifications') ? '● Included in CV' : '○ Hidden from CV' }}</span>
-            <button class="btn-toggle" (click)="toggleSection('certifications')">{{ isSectionEnabled('certifications') ? 'Hide' : 'Show' }}</button>
+            <span>{{ isSectionEnabled('certifications') ? '● Included' : '○ Hidden' }}</span>
+            <button class="btn-toggle" (click)="toggleSection('certifications')">
+              {{ isSectionEnabled('certifications') ? 'Hide' : 'Show' }}
+            </button>
           </div>
           <div *ngFor="let cert of getSectionData('certifications'); let i = index; trackBy: trackByIndex"
             class="list-item-card compact">
@@ -419,7 +583,7 @@
             </div>
             <div class="field-row">
               <div class="field-group">
-                <label class="field-label">Issuer</label>
+                <label class="field-label">Issuing Organization</label>
                 <input class="field-input" type="text" [ngModel]="cert.issuer"
                   (ngModelChange)="updateListItem('certifications', i, 'issuer', $event)"/>
               </div>
@@ -429,16 +593,40 @@
                   (ngModelChange)="updateListItem('certifications', i, 'year', $event)"/>
               </div>
             </div>
+            <div class="field-group">
+              <label class="field-label">Credential ID (optional)</label>
+              <input class="field-input" type="text" [ngModel]="cert.credential_id"
+                (ngModelChange)="updateListItem('certifications', i, 'credential_id', $event)"/>
+            </div>
           </div>
-          <div *ngIf="!getSectionData('certifications').length" class="empty-section">No certifications added yet.</div>
+          <div *ngIf="!getSectionData('certifications').length" class="empty-section">
+            <p>No certifications addd yet.</p>
+
+            <button
+              type="button"
+              class="btn-add-item"
+              (click)="addItem('certifications')">
+              + Add Your First Certification
+            </button>
+          </div>
+
+          <button
+            *ngIf="getSectionData('certifications').length"
+            type="button"
+            class="btn-add-item"
+            (click)="addItem('certifications')">
+            + Add Another Certification
+          </button>
         </div>
 
         <!-- ── REFERENCES ── -->
         <div *ngIf="activeSection() === 'references'" class="editor-section">
           <div class="editor-section-title">References</div>
           <div class="section-toggle-banner" [class.disabled]="!isSectionEnabled('references')">
-            <span>{{ isSectionEnabled('references') ? '● Included in CV' : '○ Hidden from CV' }}</span>
-            <button class="btn-toggle" (click)="toggleSection('references')">{{ isSectionEnabled('references') ? 'Hide' : 'Show' }}</button>
+            <span>{{ isSectionEnabled('references') ? '● Included' : '○ Hidden' }}</span>
+            <button class="btn-toggle" (click)="toggleSection('references')">
+              {{ isSectionEnabled('references') ? 'Hide' : 'Show' }}
+            </button>
           </div>
           <div *ngFor="let ref of getSectionData('references'); let i = index; trackBy: trackByIndex"
             class="list-item-card compact">
@@ -448,12 +636,12 @@
             </div>
             <div class="field-row">
               <div class="field-group">
-                <label class="field-label">Name</label>
+                <label class="field-label">Full Name</label>
                 <input class="field-input" type="text" [ngModel]="ref.name"
                   (ngModelChange)="updateListItem('references', i, 'name', $event)"/>
               </div>
               <div class="field-group">
-                <label class="field-label">Title</label>
+                <label class="field-label">Job Title</label>
                 <input class="field-input" type="text" [ngModel]="ref.title"
                   (ngModelChange)="updateListItem('references', i, 'title', $event)"/>
               </div>
@@ -471,33 +659,46 @@
               </div>
             </div>
           </div>
+          <div *ngIf="!getSectionData('references').length" class="empty-section">
+            <p>No references added yet.</p>
+
+            <button
+              type="button"
+              class="btn-add-item"
+              (click)="addItem('references')">
+              + Add Your First Reference
+            </button>
+          </div>
+
+          <button
+            *ngIf="getSectionData('references').length"
+            type="button"
+            class="btn-add-item"
+            (click)="addItem('references')">
+            + Add Another Reference
+          </button>
         </div>
 
       </div>
     </div>
 
-    <!-- ── RIGHT: Preview panel ── -->
+    <!-- ── RIGHT: Preview ── -->
     <div class="preview-panel">
       <div class="preview-header">
         <span class="preview-title">📄 CV Preview</span>
-        <span class="preview-hint">Auto-updates as you edit</span>
+        <span class="preview-hint">Updates automatically as you edit</span>
         <div *ngIf="isRefreshingPreview()" class="preview-refreshing">⟳ Updating...</div>
       </div>
       <div class="preview-frame-wrap">
-        <iframe
-          *ngIf="previewUrl()"
-          [src]="previewUrl()"
-          class="preview-iframe"
-          title="CV Preview"
-          [class.refreshing]="isRefreshingPreview()">
-        </iframe>
+        <iframe *ngIf="previewUrl()" [src]="previewUrl()" class="preview-iframe"
+          [class.refreshing]="isRefreshingPreview()" title="CV Preview"></iframe>
         <div *ngIf="!previewUrl()" class="preview-placeholder">
           <div class="spinner"></div>
           <p>Loading preview...</p>
         </div>
       </div>
       <div class="preview-footer">
-        <span class="preview-note">⚡ ATS-optimised single-column format</span>
+        <span class="preview-note">⚡ ATS-optimised · Single column · PDF ready</span>
       </div>
     </div>
 

@@ -1,17 +1,3 @@
-"""
-cv/generator.py
-
-Converts rendered HTML into a PDF using xhtml2pdf.
-
-xhtml2pdf is chosen as a drop-in replacement for WeasyPrint because:
-  - Pure Python — no system/GTK dependencies
-  - Produces clean, selectable text (ATS-safe)
-  - Works cross-platform without extra installs
-
-Install:
-  pip install xhtml2pdf
-"""
-
 from io import BytesIO
 from xhtml2pdf import pisa
 
