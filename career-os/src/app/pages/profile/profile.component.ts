@@ -14,6 +14,15 @@ interface PersonalInfo {
   location?: string;
   bio?: string;
   profileImage?: string;
+  role?: string;
+}
+
+interface ExpandedSectionsState {
+  personal: boolean;
+  experience: boolean;
+  education: boolean;
+  projects: boolean;
+  skills: boolean;
 }
 
 @Component({
@@ -29,7 +38,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   // State management
   isEditingPersonal = signal(false);
-  expandedSection = signal<string | null>(null);
+  expandedSections = signal<ExpandedSectionsState>({
+    personal: true,
+    experience: true,
+    education: true,
+    projects: true,
+    skills: true
+  });
   isLoading = signal(false);
   errorMessage = signal<string | null>(null);
 
@@ -53,6 +68,20 @@ export class ProfileComponent implements OnInit, OnDestroy {
   showAddEducation = signal(false);
   showAddProject = signal(false);
   showAddSkill = signal(false);
+
+  // Editing states
+  editingExperienceId = signal<number | null>(null);
+  editingEducationId = signal<number | null>(null);
+  editingProjectId = signal<number | null>(null);
+  editingSkillId = signal<number | null>(null);
+
+  editExperienceForm = signal<Experience | null>(null);
+  editExperienceResponsibilitiesStr = signal<string>('');
+  editEducationForm = signal<Education | null>(null);
+  editProjectForm = signal<Project | null>(null);
+  editProjectTechnologiesStr = signal<string>('');
+  editSkillForm = signal<Skill | null>(null);
+  editPersonalForm = signal<PersonalInfo | null>(null);
 
   constructor(
     public authService: AuthService,
@@ -90,7 +119,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
       phone: '',
       location: '',
       bio: '',
-      profileImage: ''
+      profileImage: '',
+      role: currentUser.role || 'candidate'
     });
     
     // Fetch additional profile details from backend
@@ -108,7 +138,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
             phone: profile.phone || '',
             location: profile.location || '',
             bio: profile.bio || '',
-            profileImage: profile.profileImageUrl || ''
+            profileImage: profile.profileImageUrl || '',
+            role: profile.role || current.role
           }));
 
           if (profile.experiences)
@@ -131,37 +162,198 @@ export class ProfileComponent implements OnInit, OnDestroy {
       });
   }
 
-  toggleSection(section: string) {
-    this.expandedSection.update(current => (current === section ? null : section));
+  toggleSection(section: keyof ExpandedSectionsState) {
+    this.expandedSections.update(current => ({
+      ...current,
+      [section]: !current[section]
+    }));
   }
 
   toggleEditPersonal() {
+    if (!this.isEditingPersonal()) {
+      this.editPersonalForm.set({ ...this.personalInfo() });
+    } else {
+      this.editPersonalForm.set(null);
+    }
     this.isEditingPersonal.update(v => !v);
   }
 
   savePersonalInfo() {
+    const form = this.editPersonalForm();
+    if (!form) return;
     this.isLoading.set(true);
     const profileDTO = {
-      firstName: this.personalInfo().firstName,
-      lastName: this.personalInfo().lastName,
-      email: this.personalInfo().email,
-      phone: this.personalInfo().phone,
-      location: this.personalInfo().location,
-      bio: this.personalInfo().bio,
-      profileImageUrl: this.personalInfo().profileImage
+      firstName: form.firstName,
+      lastName: form.lastName,
+      email: form.email,
+      phone: form.phone,
+      location: form.location,
+      bio: form.bio,
+      profileImageUrl: form.profileImage,
+      role: form.role
     };
 
     this.profileService.updateUserProfile(profileDTO)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
+          this.personalInfo.set({ ...form });
+
+          // Update the stored auth user details if role has changed
+          const currentUser = this.authService.getCurrentUser();
+          if (currentUser && response.role && currentUser.role !== response.role) {
+            currentUser.role = response.role;
+            localStorage.setItem('user_data', JSON.stringify(currentUser));
+          }
+
+          this.profileService.announceProfileUpdate(response);
           this.isLoading.set(false);
           this.isEditingPersonal.set(false);
+          this.editPersonalForm.set(null);
           this.errorMessage.set(null);
         },
         error: (err) => {
           console.error('Error saving profile:', err);
           this.errorMessage.set('Failed to save profile. Please try again.');
+          this.isLoading.set(false);
+        }
+      });
+  }
+
+  // Experience Edit Methods
+  editExperience(exp: Experience) {
+    this.editingExperienceId.set(exp.id);
+    this.editExperienceForm.set({ ...exp });
+    this.editExperienceResponsibilitiesStr.set(exp.responsibilities ? exp.responsibilities.join('\n') : '');
+  }
+
+  cancelEditExperience() {
+    this.editingExperienceId.set(null);
+    this.editExperienceForm.set(null);
+    this.editExperienceResponsibilitiesStr.set('');
+  }
+
+  saveExperienceEdit() {
+    const form = this.editExperienceForm();
+    if (!form || !form.id) return;
+    this.isLoading.set(true);
+
+    form.responsibilities = this.editExperienceResponsibilitiesStr()
+      .split('\n')
+      .map(r => r.trim())
+      .filter(r => r.length > 0);
+
+    this.profileService.updateExperience(form.id, form)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (updated) => {
+          this.experiences.update(exps => exps.map(e => e.id === updated.id ? updated : e));
+          this.cancelEditExperience();
+          this.isLoading.set(false);
+        },
+        error: (err) => {
+          console.error('Error updating experience:', err);
+          this.errorMessage.set('Failed to update experience. Please try again.');
+          this.isLoading.set(false);
+        }
+      });
+  }
+
+  // Education Edit Methods
+  editEducation(edu: Education) {
+    this.editingEducationId.set(edu.id);
+    this.editEducationForm.set({ ...edu });
+  }
+
+  cancelEditEducation() {
+    this.editingEducationId.set(null);
+    this.editEducationForm.set(null);
+  }
+
+  saveEducationEdit() {
+    const form = this.editEducationForm();
+    if (!form || !form.id) return;
+    this.isLoading.set(true);
+
+    this.profileService.updateEducation(form.id, form)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (updated) => {
+          this.education.update(edus => edus.map(e => e.id === updated.id ? updated : e));
+          this.cancelEditEducation();
+          this.isLoading.set(false);
+        },
+        error: (err) => {
+          console.error('Error updating education:', err);
+          this.errorMessage.set('Failed to update education. Please try again.');
+          this.isLoading.set(false);
+        }
+      });
+  }
+
+  // Project Edit Methods
+  editProject(proj: Project) {
+    this.editingProjectId.set(proj.id);
+    this.editProjectForm.set({ ...proj });
+    this.editProjectTechnologiesStr.set(proj.technologies ? proj.technologies.join(', ') : '');
+  }
+
+  cancelEditProject() {
+    this.editingProjectId.set(null);
+    this.editProjectForm.set(null);
+  }
+
+  saveProjectEdit() {
+    const form = this.editProjectForm();
+    if (!form || !form.id) return;
+    this.isLoading.set(true);
+
+    // Split technologies back to array
+    form.technologies = this.editProjectTechnologiesStr().split(',').map(t => t.trim()).filter(t => t.length > 0);
+
+    this.profileService.updateProject(form.id, form)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (updated) => {
+          this.projects.update(projs => projs.map(p => p.id === updated.id ? updated : p));
+          this.cancelEditProject();
+          this.isLoading.set(false);
+        },
+        error: (err) => {
+          console.error('Error updating project:', err);
+          this.errorMessage.set('Failed to update project. Please try again.');
+          this.isLoading.set(false);
+        }
+      });
+  }
+
+  // Skill Edit Methods
+  editSkill(skill: Skill) {
+    this.editingSkillId.set(skill.id);
+    this.editSkillForm.set({ ...skill });
+  }
+
+  cancelEditSkill() {
+    this.editingSkillId.set(null);
+    this.editSkillForm.set(null);
+  }
+
+  saveSkillEdit() {
+    const form = this.editSkillForm();
+    if (!form || !form.id) return;
+    this.isLoading.set(true);
+
+    this.profileService.updateSkill(form.id, form)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (updated) => {
+          this.skills.update(s => s.map(sk => sk.id === updated.id ? updated : sk));
+          this.cancelEditSkill();
+          this.isLoading.set(false);
+        },
+        error: (err) => {
+          console.error('Error updating skill:', err);
+          this.errorMessage.set('Failed to update skill. Please try again.');
           this.isLoading.set(false);
         }
       });
@@ -176,7 +368,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
       startDate: formData.startDate,
       endDate: formData.endDate || undefined,
       current: formData.current === 'true' || formData.current === true,
-      description: formData.description
+      description: formData.description,
+      responsibilities: formData.responsibilities
+        ? formData.responsibilities.split('\n').map((r: string) => r.trim()).filter((r: string) => r.length > 0)
+        : []
     };
 
     this.profileService.addExperience(experienceDTO)
@@ -218,7 +413,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
       field: formData.field,
       startDate: formData.startDate,
       endDate: formData.endDate || undefined,
-      current: formData.current === 'true' || formData.current === true
+      current: formData.current === 'true' || formData.current === true,
+      cgpa: formData.cgpa || undefined,
+      grades: formData.grades || undefined,
+      minor: formData.minor || undefined
     };
 
     this.profileService.addEducation(educationDTO)

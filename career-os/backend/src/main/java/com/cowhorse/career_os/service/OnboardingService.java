@@ -102,4 +102,73 @@ public class OnboardingService {
             throw new RuntimeException("Failed to initialize user profile: " + e.getMessage(), e);
         }
     }
+
+    /**
+     * Ensure the necessary role-specific tables (candidates, employers, or mentors)
+     * are created when a user's role is updated.
+     */
+    public void initializeRoleSpecificRecords(String uid, String role) {
+        try {
+            LocalDateTime now = LocalDateTime.now();
+            LocalDate today = LocalDate.now();
+            Timestamp timestamp = Timestamp.valueOf(now);
+
+            if (role == null || role.isEmpty()) {
+                return;
+            }
+
+            if ("candidate".equalsIgnoreCase(role)) {
+                String checkSql = "SELECT count(*) FROM dbo.candidates WHERE user_id = ?::uuid";
+                Integer count = jdbcTemplate.queryForObject(checkSql, Integer.class, uid);
+                if (count == null || count == 0) {
+                    String candidateSql = "INSERT INTO dbo.candidates (user_id, created_at, updated_at) " +
+                            "VALUES (?::uuid, ?, ?)";
+                    jdbcTemplate.update(candidateSql, uid, timestamp, timestamp);
+
+                    // Create placeholder education record
+                    String educationSql = "INSERT INTO dbo.education (user_id, supabase_uid, degree, institution, field, start_date, is_current, created_at, updated_at) " +
+                            "VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    jdbcTemplate.update(educationSql, uid, uid, "", "", "", java.sql.Date.valueOf(today), false, timestamp, timestamp);
+
+                    // Create placeholder experience record
+                    String experienceSql = "INSERT INTO dbo.experience (user_id, supabase_uid, job_title, company, start_date, is_current, created_at, updated_at) " +
+                            "VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?)";
+                    jdbcTemplate.update(experienceSql, uid, uid, "", "", java.sql.Date.valueOf(today), false, timestamp, timestamp);
+
+                    // Create placeholder project record
+                    String projectSql = "INSERT INTO dbo.projects (user_id, supabase_uid, title, start_date, created_at, updated_at) " +
+                            "VALUES (?::uuid, ?, ?, ?, ?, ?)";
+                    jdbcTemplate.update(projectSql, uid, uid, "", java.sql.Date.valueOf(today), timestamp, timestamp);
+
+                    // Create placeholder skill record
+                    String skillSql = "INSERT INTO dbo.skills (user_id, supabase_uid, name, proficiency, endorsed, created_at, updated_at) " +
+                            "VALUES (?::uuid, ?, ?, ?, ?, ?, ?)";
+                    jdbcTemplate.update(skillSql, uid, uid, "", "BEGINNER", 0, timestamp, timestamp);
+                    log.debug("Created candidate and placeholder records for Supabase UID: {}", uid);
+                }
+            } else if ("employer".equalsIgnoreCase(role)) {
+                String checkSql = "SELECT count(*) FROM dbo.employers WHERE user_id = ?::uuid";
+                Integer count = jdbcTemplate.queryForObject(checkSql, Integer.class, uid);
+                if (count == null || count == 0) {
+                    String employerSql = "INSERT INTO dbo.employers (user_id, created_at, updated_at) " +
+                            "VALUES (?::uuid, ?, ?)";
+                    jdbcTemplate.update(employerSql, uid, timestamp, timestamp);
+                    log.debug("Created employer record for Supabase UID: {}", uid);
+                }
+            } else if ("mentor".equalsIgnoreCase(role)) {
+                String checkSql = "SELECT count(*) FROM dbo.mentors WHERE user_id = ?::uuid";
+                Integer count = jdbcTemplate.queryForObject(checkSql, Integer.class, uid);
+                if (count == null || count == 0) {
+                    String mentorSql = "INSERT INTO dbo.mentors (user_id, created_at, updated_at) " +
+                            "VALUES (?::uuid, ?, ?)";
+                    jdbcTemplate.update(mentorSql, uid, timestamp, timestamp);
+                    log.debug("Created mentor record for Supabase UID: {}", uid);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error initializing role-specific records for role: {} and UID: {}", role, uid, e);
+            throw new RuntimeException("Failed to initialize role specific records: " + e.getMessage(), e);
+        }
+    }
 }
+

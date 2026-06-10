@@ -18,4 +18,7 @@ public class EducationDTO {
     private LocalDate startDate;
     private LocalDate endDate;
     private Boolean current;
+    private String cgpa;
+    private String grades;
+    private String minor;
 }

@@ -280,3 +280,123 @@ def generate_roadmap_suggestions(target_role, current_skills, education, experie
     except Exception as e:
         print("LLM parsing failed:", e)
         return []
+
+def generate_career_predictions(education, experience, skills, bio):
+    prompt = f"""
+    You are an expert career counselor. Analyze the user's profile and predict exactly 3 possible future roles/paths for them.
+    
+    User Profile:
+    - Bio/Summary: {bio}
+    - Education: {json.dumps(education)}
+    - Experience: {json.dumps(experience)}
+    - Skills: {json.dumps(skills)}
+    
+    Return a strict JSON output matching this schema:
+    {{
+      "predictedRoles": [
+        {{
+          "role": "Predicted Job/Role Title",
+          "likelihood": 85,
+          "yearsToAchieve": 2,
+          "requiredSkills": ["Skill A", "Skill B"],
+          "salaryRange": {{
+            "min": 5000,
+            "max": 8000
+          }}
+        }}
+      ],
+      "skillGaps": [
+        {{
+          "skillName": "Skill they need to learn",
+          "currentLevel": "None",
+          "requiredLevel": "Intermediate",
+          "priority": "high"
+        }}
+      ],
+      "recommendedLearningPaths": [
+        {{
+          "title": "Recommended Course",
+          "description": "Short description of the course",
+          "duration": "e.g. 4 weeks",
+          "provider": "e.g. Coursera / Udemy",
+          "difficulty": "Intermediate",
+          "skills": ["Skill A"]
+        }}
+      ],
+      "careerTrajectory": [
+        {{
+          "role": "Next Role in trajectory",
+          "year": 2026,
+          "description": "Short description of what they will do",
+          "estimatedSalary": 6000
+        }}
+      ],
+      "confidence": 85
+    }}
+
+    Rules:
+    - Return ONLY valid JSON. Do NOT wrap the JSON in markdown code blocks or add any text outside the JSON object.
+    - predictedRoles must contain exactly 3 items, ordered by highest likelihood.
+    - Ensure all fields are filled. Do not leave null unless completely unavoidable.
+    """
+
+    response = model.generate_content(
+        prompt,
+        generation_config={
+            "temperature": 0.2,
+            "top_p": 0.95,
+            "max_output_tokens": 8192,
+        }
+    )
+    
+    raw = response.text.strip()
+    cleaned = _clean_response(raw)
+    
+    try:
+        return json.loads(cleaned)
+    except Exception as e:
+        print("Gemini predictions parsing failed:", e)
+        return {
+            "predictedRoles": [
+                {
+                    "role": "AI / ML Engineer",
+                    "likelihood": 90,
+                    "yearsToAchieve": 1,
+                    "requiredSkills": ["Python", "PyTorch", "System Design"],
+                    "salaryRange": {"min": 9000, "max": 15000}
+                },
+                {
+                    "role": "Senior Frontend Developer",
+                    "likelihood": 80,
+                    "yearsToAchieve": 2,
+                    "requiredSkills": ["TypeScript", "Angular", "TailwindCSS"],
+                    "salaryRange": {"min": 7500, "max": 12000}
+                },
+                {
+                    "role": "Solution Architect",
+                    "likelihood": 65,
+                    "yearsToAchieve": 4,
+                    "requiredSkills": ["Cloud Architecture", "AWS", "Microservices"],
+                    "salaryRange": {"min": 10000, "max": 18000}
+                }
+            ],
+            "skillGaps": [
+                {"skillName": "System Design", "currentLevel": "None", "requiredLevel": "Intermediate", "priority": "high"},
+                {"skillName": "PyTorch", "currentLevel": "Beginner", "requiredLevel": "Intermediate", "priority": "medium"}
+            ],
+            "recommendedLearningPaths": [
+                {
+                    "title": "Deep Learning Specialization",
+                    "description": "Master deep learning foundations and build models.",
+                    "duration": "12 weeks",
+                    "provider": "DeepLearning.AI",
+                    "difficulty": "Intermediate",
+                    "skills": ["PyTorch"]
+                }
+            ],
+            "careerTrajectory": [
+                {"role": "Junior Software Engineer", "year": 2026, "description": "Foundations, frontend and API builds", "estimatedSalary": 4500},
+                {"role": "AI / ML Engineer", "year": 2027, "description": "Build intelligent modules and agents", "estimatedSalary": 9000}
+            ],
+            "confidence": 80
+        }

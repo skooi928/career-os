@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 
 export interface PersonalInfo {
   firstName: string;
@@ -20,6 +20,7 @@ export interface Experience {
   endDate?: string;
   current: boolean;
   description: string;
+  responsibilities?: string[];
 }
 
 export interface Education {
@@ -30,6 +31,9 @@ export interface Education {
   startDate: string;
   endDate?: string;
   current: boolean;
+  cgpa?: string;
+  grades?: string;
+  minor?: string;
 }
 
 export interface Project {
@@ -70,6 +74,8 @@ export interface UserProfileDTO {
   projects?: Project[];
   skills?: Skill[];
   quickTasks?: QuickTask[];
+  userId?: string;
+  role?: string;
 }
 
 @Injectable({
@@ -77,6 +83,13 @@ export interface UserProfileDTO {
 })
 export class ProfileService {
   private readonly API_URL = 'http://localhost:8080/api/profile';
+
+  private profileUpdatedSource = new Subject<UserProfileDTO>();
+  profileUpdated$ = this.profileUpdatedSource.asObservable();
+
+  announceProfileUpdate(profile: UserProfileDTO) {
+    this.profileUpdatedSource.next(profile);
+  }
 
   constructor(private http: HttpClient) {}
 

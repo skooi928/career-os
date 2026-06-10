@@ -42,7 +42,7 @@ interface NavItem {
             <a [routerLink]="item.route" 
                routerLinkActive="active" 
                class="nav-item">
-              <i [class]="item.icon + ' nav-icon'"></i>
+              <i [class]="'ph ' + item.icon + ' nav-icon'"></i>
               <span class="nav-label" *ngIf="!isSidebarCollapsed()">{{ item.label }}</span>
               <span class="nav-badge" *ngIf="!isSidebarCollapsed() && item.count">{{ item.count }}</span>
             </a>
@@ -67,9 +67,22 @@ interface NavItem {
           </button>
 
           <!-- Dropdown Menu -->
-          <div class="dropdown-menu" [class.show]="isProfileMenuOpen()">
-            <a routerLink="/profile" class="menu-item"><i class="ph-user"></i> Profile</a>
-            <a routerLink="/settings" class="menu-item"><i class="ph-gear-six"></i> Settings</a>
+          <div class="dropdown-menu sidebar-dropdown" [class.show]="isProfileMenuOpen()">
+            <div class="dropdown-header">
+              <span class="dropdown-name">{{ (userProfile()?.firstName || authService.getCurrentUser()?.firstName) }} {{ (userProfile()?.lastName || authService.getCurrentUser()?.lastName) }}</span>
+              <span class="dropdown-email">{{ (userProfile()?.email || authService.getCurrentUser()?.email) }}</span>
+            </div>
+            <div class="dropdown-divider"></div>
+            <a routerLink="/profile" class="menu-item" (click)="closeAllMenus()">
+              <i class="ph ph-user"></i> Profile
+            </a>
+            <a routerLink="/profile" class="menu-item" (click)="closeAllMenus()">
+              <i class="ph ph-gear"></i> Settings
+            </a>
+            <div class="dropdown-divider"></div>
+            <button class="menu-item btn-menu-logout" (click)="onSignOut()">
+              <i class="ph ph-sign-out"></i> Sign Out
+            </button>
           </div>
         </div>
         
@@ -98,12 +111,33 @@ interface NavItem {
               <span class="notification-dot"></span>
             </button>
             <app-theme-toggle></app-theme-toggle>
-            <div class="avatar header-avatar">
-              @if (profileImageUrl()) {
-                <img [src]="profileImageUrl()" alt="Avatar" class="avatar-img">
-              } @else {
-                {{ userInitials() }}
-              }
+            <div class="header-avatar-container">
+              <div class="avatar header-avatar" (click)="toggleHeaderMenu($event)">
+                @if (profileImageUrl()) {
+                  <img [src]="profileImageUrl()" alt="Avatar" class="avatar-img">
+                } @else {
+                  {{ userInitials() }}
+                }
+              </div>
+              
+              <!-- Dropdown Menu -->
+              <div class="dropdown-menu header-dropdown" [class.show]="isHeaderMenuOpen()">
+                <div class="dropdown-header">
+                  <span class="dropdown-name">{{ (userProfile()?.firstName || authService.getCurrentUser()?.firstName) }} {{ (userProfile()?.lastName || authService.getCurrentUser()?.lastName) }}</span>
+                  <span class="dropdown-email">{{ (userProfile()?.email || authService.getCurrentUser()?.email) }}</span>
+                </div>
+                <div class="dropdown-divider"></div>
+                <a routerLink="/profile" class="menu-item" (click)="closeAllMenus()">
+                  <i class="ph ph-user"></i> Profile
+                </a>
+                <a routerLink="/profile" class="menu-item" (click)="closeAllMenus()">
+                  <i class="ph ph-gear"></i> Settings
+                </a>
+                <div class="dropdown-divider"></div>
+                <button class="menu-item btn-menu-logout" (click)="onSignOut()">
+                  <i class="ph ph-sign-out"></i> Sign Out
+                </button>
+              </div>
             </div>
           </div>
         </header>
@@ -150,6 +184,11 @@ interface NavItem {
 
     .sidebar.collapsed {
       width: var(--sidebar-collapsed);
+    }
+
+    .sidebar.collapsed .nav-item {
+      justify-content: center;
+      padding: 10px;
     }
 
     /* Logo row */
@@ -341,19 +380,72 @@ interface NavItem {
 
     .dropdown-menu {
       position: absolute;
-      bottom: calc(100% + 8px);
-      left: 16px;
-      width: 200px;
+      width: 220px;
       background-color: var(--color-surface);
       border: 1px solid var(--color-border);
       border-radius: 8px;
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-      padding: 8px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+      padding: 6px;
       display: none;
       z-index: 100;
     }
 
-    .dropdown-menu.show { display: block; }
+    .dropdown-menu.show { 
+      display: block; 
+      animation: fadeInDropdown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes fadeInDropdown {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .sidebar-dropdown {
+      bottom: calc(100% + 8px);
+      left: 16px;
+    }
+
+    .header-avatar-container {
+      position: relative;
+    }
+
+    .header-dropdown {
+      top: calc(100% + 8px);
+      right: 0;
+      bottom: auto;
+      left: auto;
+    }
+
+    .dropdown-header {
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .dropdown-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .dropdown-email {
+      font-size: 12px;
+      color: var(--color-text-secondary);
+      word-break: break-all;
+    }
+
+    .dropdown-divider {
+      height: 1px;
+      background-color: var(--color-border);
+      margin: 6px 0;
+    }
 
     .menu-item {
       display: flex;
@@ -364,11 +456,26 @@ interface NavItem {
       color: var(--color-text);
       text-decoration: none;
       font-size: 14px;
-      transition: background-color 0.2s;
+      transition: all 0.2s ease;
+      width: 100%;
+      border: none;
+      background: none;
+      text-align: left;
+      cursor: pointer;
+      font-family: inherit;
     }
 
     .menu-item:hover {
       background-color: var(--color-hover);
+    }
+
+    .btn-menu-logout {
+      color: var(--color-error);
+    }
+
+    .btn-menu-logout:hover {
+      background-color: rgba(239, 68, 68, 0.08);
+      color: var(--color-error);
     }
 
     /* Collapse toggle */
@@ -500,6 +607,7 @@ interface NavItem {
 export class AppShellComponent implements OnInit, OnDestroy {
   isSidebarCollapsed = signal(false);
   isProfileMenuOpen = signal(false);
+  isHeaderMenuOpen = signal(false);
   userProfile = signal<UserProfileDTO | null>(null);
   profileImageUrl = signal<string | null>(null);
   private destroy$ = new Subject<void>();
@@ -524,6 +632,22 @@ export class AppShellComponent implements OnInit, OnDestroy {
   ngOnInit() {
     if (isPlatformBrowser(this.platformId)) {
       this.loadUserProfile();
+
+      // Sync user profile name and image when updated in ProfileComponent
+      this.profileService.profileUpdated$
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (profile: UserProfileDTO) => {
+            if (profile) {
+              this.userProfile.set(profile);
+              if (profile.profileImageUrl) {
+                this.profileImageUrl.set(profile.profileImageUrl);
+              } else {
+                this.profileImageUrl.set(null);
+              }
+            }
+          }
+        });
     }
   }
 
@@ -577,16 +701,27 @@ export class AppShellComponent implements OnInit, OnDestroy {
   toggleProfileMenu(event: Event) {
     event.stopPropagation();
     this.isProfileMenuOpen.update(v => !v);
+    this.isHeaderMenuOpen.set(false);
+  }
+
+  toggleHeaderMenu(event: Event) {
+    event.stopPropagation();
+    this.isHeaderMenuOpen.update(v => !v);
+    this.isProfileMenuOpen.set(false);
   }
 
   @HostListener('document:click')
-  closeProfileMenu() {
+  closeAllMenus() {
     if (this.isProfileMenuOpen()) {
       this.isProfileMenuOpen.set(false);
+    }
+    if (this.isHeaderMenuOpen()) {
+      this.isHeaderMenuOpen.set(false);
     }
   }
 
   onSignOut() {
+    this.closeAllMenus();
     this.authService.logout().subscribe({
       next: () => {
         this.router.navigate(['/login']);

@@ -173,3 +173,27 @@ def generate_roadmap(req: RoadmapRequest):
 #             "attachment; filename=careeros_cv.pdf"
 #         }
 #     )
+
+class CareerAnalysisRequest(BaseModel):
+    supabaseUid: str
+    bio: str
+    education: List[dict]
+    experience: List[dict]
+    skills: List[dict]
+
+@app.post("/career-analysis/analyze")
+def analyze_career_profile(req: CareerAnalysisRequest):
+    try:
+        from app.llm_parser import generate_career_predictions
+        prediction = generate_career_predictions(
+            education=req.education,
+            experience=req.experience,
+            skills=req.skills,
+            bio=req.bio
+        )
+        prediction["userId"] = req.supabaseUid
+        from datetime import date
+        prediction["analysisDate"] = date.today().isoformat()
+        return prediction
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Career analysis failed: {str(e)}")

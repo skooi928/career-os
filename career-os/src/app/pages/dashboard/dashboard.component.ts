@@ -1,4 +1,4 @@
-import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, OnInit, Inject, PLATFORM_ID, signal } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
@@ -6,14 +6,32 @@ import { JobService, Job } from '../../services/job.service';
 import { ProfileService, QuickTask } from '../../services/profile.service';
 import { CareerAnalysisService } from '../../services/career-analysis.service';
 import { Observable } from 'rxjs';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <div class="dashboard-content">
+      <!-- Role Mismatch Alert -->
+      <div *ngIf="roleMismatchInfo()" class="role-mismatch-alert">
+        <div class="alert-icon">
+          <i class="ph-fill ph-info"></i>
+        </div>
+        <div class="alert-content">
+          <h4>Role Mismatch Notice</h4>
+          <p>
+            You attempted to sign in as a <strong style="text-transform: capitalize;">{{ roleMismatchInfo()?.requestedRole }}</strong>. 
+            However, your profile is already configured as a <strong style="text-transform: capitalize;">{{ roleMismatchInfo()?.actualRole }}</strong>. 
+            We signed you in with your existing role. You can update your role inside 
+            <a routerLink="/profile" class="alert-link">Profile Settings</a> at any time.
+          </p>
+        </div>
+        <button class="alert-close" (click)="roleMismatchInfo.set(null)">
+          <i class="ph ph-x"></i>
+        </button>
+      </div>
       <!-- Welcome Banner -->
       <div class="welcome-banner">
         <!-- Decorative circles -->
@@ -215,6 +233,68 @@ import { Router } from '@angular/router';
       flex-direction: column;
       gap: 32px;
       padding-bottom: 32px;
+    }
+
+    /* Role Mismatch Alert */
+    .role-mismatch-alert {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 16px 20px;
+      background-color: var(--color-surface);
+      border-left: 4px solid #f59e0b; /* Amber alert border */
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      position: relative;
+      margin-bottom: -16px;
+    }
+    
+    .alert-icon {
+      font-size: 24px;
+      color: #f59e0b;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+    
+    .alert-content {
+      flex: 1;
+    }
+    
+    .alert-content h4 {
+      margin: 0 0 4px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+    
+    .alert-content p {
+      margin: 0;
+      font-size: 14px;
+      color: var(--color-text-secondary);
+      line-height: 1.5;
+    }
+    
+    .alert-link {
+      color: #059669;
+      font-weight: 500;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    
+    .alert-close {
+      background: none;
+      border: none;
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+    }
+    
+    .alert-close:hover {
+      background-color: var(--color-hover);
+      color: var(--color-text);
     }
 
     /* Typography Defaults for Dashboard */
@@ -788,6 +868,7 @@ export class DashboardComponent implements OnInit {
   newTaskDescription = '';
   newTaskPriority = 'medium';
   isAnalyzing = false;
+  roleMismatchInfo = signal<{requestedRole: string, actualRole: string} | null>(null);
 
   constructor(
     private authService: AuthService, 
@@ -795,6 +876,7 @@ export class DashboardComponent implements OnInit {
     private profileService: ProfileService,
     private careerAnalysisService: CareerAnalysisService,
     private router: Router,
+    private route: ActivatedRoute,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.jobs$ = this.jobService.jobs$;
@@ -804,6 +886,23 @@ export class DashboardComponent implements OnInit {
     if (isPlatformBrowser(this.platformId)) {
       this.jobService.loadJobs();
       this.loadTasks();
+
+      // Check for role mismatch from login redirect
+      this.route.queryParams.subscribe(params => {
+        if (params['roleMismatch'] === 'true') {
+          this.roleMismatchInfo.set({
+            requestedRole: params['requestedRole'] || '',
+            actualRole: params['actualRole'] || ''
+          });
+
+          // Clear query parameters
+          this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: { roleMismatch: null, requestedRole: null, actualRole: null },
+            queryParamsHandling: 'merge'
+          });
+        }
+      });
     }
   }
 

@@ -18,6 +18,7 @@ export class LoginComponent implements OnInit {
   submitted = signal(false);
   error = signal<string | null>(null);
   microsoftLoading = signal(false);
+  mentorLoading = signal(false);
   private sessionChecked = false;
 
   constructor(
@@ -77,9 +78,13 @@ export class LoginComponent implements OnInit {
     });
   }
 
-  signInWithMicrosoft(): void {
-    this.microsoftLoading.set(true);
-    window.location.href = 'http://localhost:8080/api/auth/azure';
+  signInWithMicrosoft(role: 'employer' | 'mentor'): void {
+    if (role === 'employer') {
+      this.microsoftLoading.set(true);
+    } else {
+      this.mentorLoading.set(true);
+    }
+    window.location.href = `http://localhost:8080/api/auth/azure/${role}`;
   }
 
   private disableForm(disabled: boolean): void {
