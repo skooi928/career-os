@@ -205,7 +205,7 @@ export class CvPreviewComponent implements OnInit, OnDestroy {
       });
   }
 
-  goBack(): void { this.router.navigate(['/resume']); }
+  goBack(): void { this.router.navigate(['/profile'], { queryParams: { tab: 'resume' } }); }
 
   getSectionData(key: string): any[] {
     return this.cvData()?.[key] ?? [];

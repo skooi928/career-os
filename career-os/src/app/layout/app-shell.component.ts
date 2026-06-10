@@ -12,6 +12,7 @@ interface NavItem {
   route: string;
   icon: string;
   count?: number;
+  queryParams?: Record<string, any>;
 }
 
 @Component({
@@ -40,6 +41,7 @@ interface NavItem {
         <nav class="sidebar-nav">
           @for (item of navItems(); track item.route) {
             <a [routerLink]="item.route" 
+               [queryParams]="item.queryParams || {}"
                routerLinkActive="active" 
                class="nav-item">
               <i [class]="'ph ' + item.icon + ' nav-icon'"></i>
@@ -614,7 +616,7 @@ export class AppShellComponent implements OnInit, OnDestroy {
   
   navItems = signal<NavItem[]>([
     { label: 'Dashboard', route: '/dashboard', icon: 'ph-house-simple' },
-    { label: 'Resume Builder', route: '/resume', icon: 'ph-file-text' },
+    { label: 'Resume Builder', route: '/profile', queryParams: { tab: 'resume' }, icon: 'ph-file-text' },
     { label: 'Job Application', route: '/jobs', icon: 'ph-briefcase' },
     { label: 'Post a Job', route: '/job-posting', icon: 'ph-plus-circle' },
     { label: 'Sharing Forum', route: '/forum', icon: 'ph-chat-teardrop' },
@@ -678,7 +680,11 @@ export class AppShellComponent implements OnInit, OnDestroy {
   }
 
   activePageTitle() {
-    const activeRoute = this.navItems().find(item => this.router.url.includes(item.route));
+    const url = this.router.url;
+    if (url.includes('/profile')) {
+      return url.includes('tab=resume') ? 'Resume Builder' : 'My Profile';
+    }
+    const activeRoute = this.navItems().find(item => url.includes(item.route));
     return activeRoute?.label || 'Overview';
   }
 
