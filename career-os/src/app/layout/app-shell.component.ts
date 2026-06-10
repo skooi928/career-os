@@ -1,4 +1,4 @@
-import { Component, HostListener, signal, Inject, PLATFORM_ID, OnInit, OnDestroy } from '@angular/core';
+import { Component, HostListener, signal, Inject, PLATFORM_ID, OnInit, OnDestroy, computed } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../services/auth.service';
@@ -39,7 +39,7 @@ interface NavItem {
         
         <!-- Navigation items -->
         <nav class="sidebar-nav">
-          @for (item of navItems(); track item.route) {
+          @for (item of filteredNavItems(); track item.route) {
             <a [routerLink]="item.route" 
                [queryParams]="item.queryParams || {}"
                routerLinkActive="active" 
@@ -624,6 +624,23 @@ export class AppShellComponent implements OnInit, OnDestroy {
     { label: 'Analytics', route: '/insights', icon: 'ph-chart-bar' },
   ]);
 
+  userRole = computed(() => {
+    return this.userProfile()?.role || this.authService.getCurrentUser()?.role || 'candidate';
+  });
+
+  filteredNavItems = computed(() => {
+    const role = this.userRole();
+    return this.navItems().filter(item => {
+      if (item.label === 'Post a Job' && role !== 'employer') {
+        return false;
+      }
+      if (item.label === 'Job Application' && role !== 'candidate') {
+        return false;
+      }
+      return true;
+    });
+  });
+
   constructor(
     public authService: AuthService,
     private profileService: ProfileService,
@@ -684,7 +701,7 @@ export class AppShellComponent implements OnInit, OnDestroy {
     if (url.includes('/profile')) {
       return url.includes('tab=resume') ? 'Resume Builder' : 'My Profile';
     }
-    const activeRoute = this.navItems().find(item => url.includes(item.route));
+    const activeRoute = this.filteredNavItems().find(item => url.includes(item.route));
     return activeRoute?.label || 'Overview';
   }
 
