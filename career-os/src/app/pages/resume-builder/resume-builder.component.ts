@@ -257,25 +257,28 @@ export class ResumeBuilderComponent implements OnInit, OnDestroy {
   setTab(tab: ActiveTab): void { this.activeTab.set(tab); }
 
   // CV Download
+  // downloadCV(): void {
+  //   const user = this.authService.getCurrentUser();
+  //   if (!user?.userId) return;
+  //   this.isDownloading.set(true);
+  //   this.resumeService.downloadCV(user.userId).subscribe({
+  //     next: (blob) => {
+  //       const url = window.URL.createObjectURL(blob);
+  //       const a = document.createElement('a');
+  //       a.href = url;
+  //       a.download = `${this.getFullName().replace(/\s+/g, '_')}_CV.pdf`;
+  //       a.click();
+  //       window.URL.revokeObjectURL(url);
+  //       this.isDownloading.set(false);
+  //     },
+  //     error: () => {
+  //       alert('CV generation is coming soon! Your profile data is ready.');
+  //       this.isDownloading.set(false);
+  //     }
+  //   });
+  // }
   downloadCV(): void {
-    const user = this.authService.getCurrentUser();
-    if (!user?.userId) return;
-    this.isDownloading.set(true);
-    this.resumeService.downloadCV(user.userId).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${this.getFullName().replace(/\s+/g, '_')}_CV.pdf`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-        this.isDownloading.set(false);
-      },
-      error: () => {
-        alert('CV generation is coming soon! Your profile data is ready.');
-        this.isDownloading.set(false);
-      }
-    });
+    this.router.navigate(['/cv-preview']);
   }
 
   // Roadmap modal

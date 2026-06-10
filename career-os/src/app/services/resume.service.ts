@@ -33,8 +33,13 @@ export class ResumeService {
     return this.http.get(`${this.apiUrl}/${supabaseUid}`);
   }
 
+  // downloadCV(supabaseUid: string): Observable<Blob> {
+  //   return this.http.get(`${this.apiUrl}/download/${supabaseUid}`, {
+  //     responseType: 'blob'
+  //   });
+  // }
   downloadCV(supabaseUid: string): Observable<Blob> {
-    return this.http.get(`${this.apiUrl}/download/${supabaseUid}`, {
+    return this.http.get(`${this.apiUrl}/cv/generate-direct/${supabaseUid}`, {
       responseType: 'blob'
     });
   }

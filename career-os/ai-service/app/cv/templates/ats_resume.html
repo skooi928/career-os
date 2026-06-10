@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+    font-size: 10pt;
+    color: #1f2937;
+    background: #f3f4f6;
+    line-height: 1.5;
+  }
+
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    background: white;
+    padding: 14mm 16mm;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.10);
+  }
+
+  /* ── Header ── */
+  .header {
+    border-bottom: 2.5px solid #009161;
+    padding-bottom: 12px;
+    margin-bottom: 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .name {
+    font-size: 22pt;
+    font-weight: 700;
+    color: #111827;
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+  }
+  .headline {
+    font-size: 10pt;
+    color: #009161;
+    font-weight: 600;
+    margin-top: 3px;
+  }
+  .contact-block {
+    text-align: right;
+    font-size: 8.5pt;
+    color: #6b7280;
+    line-height: 1.7;
+    max-width: 55mm; 
+    word-break: break-all;
+  }
+  .contact-block a { color: #009161; text-decoration: none; }
+
+  /* ── Layout ── */
+  .body-grid {
+    display: grid;
+    grid-template-columns: 1fr 62mm;
+    gap: 20px;
+  }
+
+  /* ── Section ── */
+  .section { margin-bottom: 18px; }
+  .section-title {
+    font-size: 8pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #009161;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 4px;
+    margin-bottom: 10px;
+  }
+
+  /* Summary */
+  .summary-text {
+    font-size: 9.5pt;
+    color: #374151;
+    line-height: 1.65;
+  }
+
+  /* Experience / Education */
+  .item { margin-bottom: 12px; }
+  .item:last-child { margin-bottom: 0; }
+  .item-header { display: flex; justify-content: space-between; align-items: baseline; }
+  .item-title { font-size: 10.5pt; font-weight: 700; color: #111827; }
+  .item-subtitle { font-size: 9.5pt; color: #009161; font-weight: 600; margin-top: 1px; }
+  .item-date {
+    font-size: 8.5pt; color: #9ca3af; white-space: nowrap;
+    background: #f9fafb; padding: 2px 7px; border-radius: 10px;
+    border: 1px solid #e5e7eb; flex-shrink: 0; margin-left: 8px;
+  }
+  .item-desc {
+    font-size: 9pt; color: #4b5563; margin-top: 4px; line-height: 1.55;
+  }
+  .item-bullets { margin-top: 4px; padding-left: 12px; }
+  .item-bullets li {
+    font-size: 9pt; color: #4b5563; margin-bottom: 2px; line-height: 1.5;
+  }
+
+  /* Skills */
+  .skill-item {
+    display: flex; justify-content: space-between;
+    align-items: center; padding: 5px 0;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 9pt;
+  }
+  .skill-item:last-child { border-bottom: none; }
+  .skill-name { color: #1f2937; font-weight: 500; }
+  .skill-level {
+    font-size: 7.5pt; font-weight: 600; padding: 2px 7px;
+    border-radius: 10px; white-space: nowrap;
+  }
+  .skill-level.expert       { background: #dcfce7; color: #166534; }
+  .skill-level.advanced     { background: #dbeafe; color: #1e40af; }
+  .skill-level.intermediate { background: #fef9c3; color: #854d0e; }
+  .skill-level.beginner     { background: #f3f4f6; color: #6b7280; }
+
+  /* Languages */
+  .lang-item {
+    display: flex; justify-content: space-between;
+    padding: 4px 0; font-size: 9pt;
+    border-bottom: 1px solid #f3f4f6;
+  }
+  .lang-item:last-child { border-bottom: none; }
+  .lang-name { font-weight: 500; color: #1f2937; }
+  .lang-prof { color: #009161; font-weight: 600; font-size: 8.5pt; }
+
+  /* Awards */
+  .award-item { padding: 5px 0; border-bottom: 1px solid #f3f4f6; }
+  .award-item:last-child { border-bottom: none; }
+  .award-title { font-size: 9pt; font-weight: 600; color: #1f2937; line-height: 1.4; }
+  .award-meta  { font-size: 8pt; color: #9ca3af; margin-top: 1px; }
+
+  /* Activities */
+  .activity-item { padding: 5px 0; border-bottom: 1px solid #f3f4f6; }
+  .activity-item:last-child { border-bottom: none; }
+  .activity-title { font-size: 9pt; font-weight: 600; color: #1f2937; }
+  .activity-org   { font-size: 8.5pt; color: #6b7280; }
+
+  /* Projects */
+  .proj-tech {
+    display: inline-block; font-size: 7.5pt; padding: 1px 6px;
+    background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;
+    border-radius: 10px; margin: 3px 2px 0 0;
+  }
+
+  /* Certifications */
+  .cert-item { padding: 5px 0; border-bottom: 1px solid #f3f4f6; font-size: 9pt; }
+  .cert-item:last-child { border-bottom: none; }
+  .cert-name { font-weight: 600; color: #1f2937; }
+  .cert-meta { font-size: 8pt; color: #9ca3af; margin-top: 1px; }
+
+  /* References */
+  .ref-item { padding: 5px 0; font-size: 9pt; }
+  .ref-name    { font-weight: 700; color: #1f2937; }
+  .ref-title   { color: #6b7280; font-size: 8.5pt; }
+  .ref-contact { color: #009161; font-size: 8.5pt; }
+
+  /* Footer */
+  .footer {
+    margin-top: 20px;
+    padding-top: 8px;
+    border-top: 1px solid #e5e7eb;
+    text-align: center;
+    font-size: 7.5pt;
+    color: #d1d5db;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <div class="name">{{ data.name or 'Your Name' }}</div>
+      {% if data.education %}
+        <div class="headline">
+          {{ data.education[0].degree }}{% if data.education[0].field %} &middot; {{ data.education[0].field }}{% endif %}
+        </div>
+      {% endif %}
+    </div>
+    <div class="contact-block">
+      {% if data.email %}<div>{{ data.email }}</div>{% endif %}
+      {% if data.phone %}<div>{{ data.phone }}</div>{% endif %}
+      {% if data.location %}<div>{{ data.location }}</div>{% endif %}
+      {% if data.linkedin %}<div><a href="{{ data.linkedin }}">LinkedIn</a></div>{% endif %}
+      {% if data.github %}<div><a href="{{ data.github }}">GitHub</a></div>{% endif %}
+      {% if data.website %}<div><a href="{{ data.website }}">Portfolio</a></div>{% endif %}
+    </div>
+  </div>
+
+  <div class="body-grid">
+
+    <!-- Left column -->
+    <div class="left-col">
+
+      <!-- Summary -->
+      {% if data.bio %}
+      <div class="section">
+        <div class="section-title">Summary</div>
+        <p class="summary-text">{{ data.bio }}</p>
+      </div>
+      {% endif %}
+
+      <!-- Experience -->
+      {% if data.experience %}
+      <div class="section">
+        <div class="section-title">Work Experience</div>
+        {% for exp in data.experience %}
+        <div class="item">
+          <div class="item-header">
+            <div>
+              <div class="item-title">{{ exp.job_title or 'Role' }}</div>
+              <div class="item-subtitle">{{ exp.company or 'Company not specified' }}</div>
+            </div>
+            <div class="item-date">
+              {{ exp.start_date or '' }}{% if exp.start_date %} &ndash; {% endif %}{% if exp.is_current %}Present{% else %}{{ exp.end_date or '' }}{% endif %}
+            </div>
+          </div>
+          {% if exp.description %}
+            {% set lines = exp.description.split('\n') %}
+            {% if lines | length > 1 %}
+            <ul class="item-bullets">
+              {% for line in lines %}
+              {% if line.strip() %}
+              <li>{{ line.strip().lstrip('-~•▪◦') }}</li>
+              {% endif %}
+              {% endfor %}
+            </ul>
+            {% else %}
+            <div class="item-desc">{{ exp.description }}</div>
+            {% endif %}
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Education -->
+      {% if data.education %}
+      <div class="section">
+        <div class="section-title">Education</div>
+        {% for edu in data.education %}
+        <div class="item">
+          <div class="item-header">
+            <div>
+              <div class="item-title">{{ edu.institution }}</div>
+              <div class="item-subtitle">
+                {{ edu.degree or '' }}{% if edu.field %} &middot; {{ edu.field }}{% endif %}
+                {% if edu.minor %} &middot; Minor: {{ edu.minor }}{% endif %}
+              </div>
+            </div>
+            <div class="item-date">
+              {{ edu.start_date or '' }}{% if edu.start_date %} &ndash; {% endif %}{% if edu.is_current %}Present{% else %}{{ edu.end_date or '' }}{% endif %}
+            </div>
+          </div>
+          {% if edu.cgpa %}
+          <div class="item-desc">CGPA: {{ edu.cgpa }}</div>
+          {% endif %}
+          {% if edu.grades %}
+          <div class="item-desc">Grades: {{ edu.grades }}</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Projects -->
+      {% if data.projects %}
+      <div class="section">
+        <div class="section-title">Projects</div>
+        {% for proj in data.projects %}
+        <div class="item">
+          <div class="item-header">
+            <div class="item-title">{{ proj.title or 'Project' }}</div>
+            {% if proj.link %}
+            <div class="item-date"><a href="{{ proj.link }}">View ↗</a></div>
+            {% endif %}
+          </div>
+          {% if proj.description %}
+          <div class="item-desc">{{ proj.description }}</div>
+          {% endif %}
+          {% if proj.technologies %}
+          <div>
+            {% for tech in proj.technologies.split(',') %}
+            <span class="proj-tech">{{ tech.strip() }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Activities -->
+      {% if data.activities %}
+      <div class="section">
+        <div class="section-title">Leadership &amp; Activities</div>
+        {% for act in data.activities %}
+        <div class="activity-item">
+          <div class="activity-title">
+            {{ act.role or act.title }}{% if act.organization %} &middot; {{ act.organization }}{% endif %}
+          </div>
+          <div class="activity-org">
+            {{ act.year or '' }}{% if act.duration %} ({{ act.duration }}){% endif %}
+            {% if act.description %} &mdash; {{ act.description }}{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+    </div>
+
+    <!-- Right column -->
+    <div class="right-col">
+
+      <!-- Skills -->
+      {% if data.skills %}
+      <div class="section">
+        <div class="section-title">Skills</div>
+        {% for skill in data.skills %}
+        <div class="skill-item">
+          <span class="skill-name">{{ skill.name }}</span>
+          <span class="skill-level {{ skill.proficiency | lower if skill.proficiency else 'intermediate' }}">
+            {{ skill.proficiency or 'Intermediate' }}
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Languages -->
+      {% if data.languages %}
+      <div class="section">
+        <div class="section-title">Languages</div>
+        {% for lang in data.languages %}
+        <div class="lang-item">
+          <span class="lang-name">{{ lang.name }}</span>
+          <span class="lang-prof">{{ lang.proficiency or '' }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Awards -->
+      {% if data.awards %}
+      <div class="section">
+        <div class="section-title">Awards</div>
+        {% for award in data.awards %}
+        <div class="award-item">
+          <div class="award-title">{{ award.title }}</div>
+          <div class="award-meta">
+            {% if award.issuer %}{{ award.issuer }}{% endif %}
+            {% if award.issuer and award.year %} &middot; {% endif %}
+            {{ award.year or '' }}
+            {% if award.level %} &middot; {{ award.level }}{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Certifications -->
+      {% if data.certifications %}
+      <div class="section">
+        <div class="section-title">Certifications</div>
+        {% for cert in data.certifications %}
+        <div class="cert-item">
+          <div class="cert-name">{{ cert.name }}</div>
+          <div class="cert-meta">
+            {% if cert.issuer %}{{ cert.issuer }}{% endif %}
+            {% if cert.year %} &middot; {{ cert.year }}{% endif %}
+            {% if cert.expiry %} &middot; Expires: {{ cert.expiry }}{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- References -->
+      {% if data.references %}
+      <div class="section">
+        <div class="section-title">References</div>
+        {% for ref in data.references %}
+        <div class="ref-item">
+          <div class="ref-name">{{ ref.name }}</div>
+          <div class="ref-title">
+            {{ ref.title or '' }}{% if ref.organization %} &middot; {{ ref.organization }}{% endif %}
+          </div>
+          {% if ref.email %}<div class="ref-contact">{{ ref.email }}</div>{% endif %}
+          {% if ref.phone %}<div class="ref-contact">{{ ref.phone }}</div>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <div class="footer">Generated by Career OS &middot; Living Portfolio</div>
+</div>
+</body>
+</html>
