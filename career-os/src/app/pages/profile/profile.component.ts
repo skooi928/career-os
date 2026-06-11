@@ -1,8 +1,11 @@
 import { Component, OnInit, signal, OnDestroy, Inject, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { ProfileService, Experience, Education, Project, Skill, UserProfileDTO } from '../../services/profile.service';
+import { BadgeService } from '../../services/badge.service';
+import { UserBadge } from '../../types/upskilling.types';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
@@ -19,7 +22,7 @@ interface PersonalInfo {
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.css']
 })
@@ -47,6 +50,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   education = signal<Education[]>([]);
   projects = signal<Project[]>([]);
   skills = signal<Skill[]>([]);
+  badges = signal<UserBadge[]>([]);
 
   // Form states for adding new items
   showAddExperience = signal(false);
@@ -57,6 +61,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   constructor(
     public authService: AuthService,
     private profileService: ProfileService,
+    private badgeService: BadgeService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {}
 
@@ -129,6 +134,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
           // Keep the basic user info displayed even if API fails
         }
       });
+
+    // Load badges independently
+    this.badgeService.getMyBadges()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({ next: b => this.badges.set(b), error: () => {} });
   }
 
   toggleSection(section: string) {
