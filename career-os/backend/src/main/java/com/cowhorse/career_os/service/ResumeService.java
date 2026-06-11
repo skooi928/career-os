@@ -121,8 +121,8 @@ public class ResumeService {
             }
 
             // Convert the data map to ResumeDTO
-            com.fasterxml.jackson.databind.ObjectMapper mapper =
-                    new com.fasterxml.jackson.databind.ObjectMapper();
+            tools.jackson.databind.ObjectMapper mapper =
+                    new tools.jackson.databind.ObjectMapper();
             return mapper.convertValue(dataObj, ResumeDTO.class);
 
         } catch (Exception e) {

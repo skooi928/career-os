@@ -25,6 +25,7 @@ public class ProfileService {
     private final SkillRepository skillRepository;
     private final QuickTaskRepository quickTaskRepository;
     private final OnboardingService onboardingService;
+    private final DashboardService dashboardService;
 
 
     // ==================== User Profile Methods ====================
@@ -107,6 +108,7 @@ public class ProfileService {
         }
 
         userProfileRepository.save(userProfile);
+        dashboardService.logActivity(userUuid, "PROFILE", "Profile details updated");
 
         return getUserProfileBySupabaseUid(supabaseUid);
     }
@@ -127,6 +129,7 @@ public class ProfileService {
                 .build();
 
         Experience saved = experienceRepository.save(experience);
+        dashboardService.logActivity(userUuid, "PROFILE", "Added experience: <strong>" + saved.getJobTitle() + "</strong> at <strong>" + saved.getCompany() + "</strong>");
         return convertToExperienceDTO(saved);
     }
 
@@ -168,6 +171,7 @@ public class ProfileService {
                 .build();
 
         Education saved = educationRepository.save(education);
+        dashboardService.logActivity(userUuid, "PROFILE", "Added education: <strong>" + saved.getDegree() + "</strong> at <strong>" + saved.getInstitution() + "</strong>");
         return convertToEducationDTO(saved);
     }
 
@@ -212,6 +216,7 @@ public class ProfileService {
                 .build();
 
         Project saved = projectRepository.save(project);
+        dashboardService.logActivity(userUuid, "PROFILE", "Added project: <strong>" + saved.getTitle() + "</strong>");
         return convertToProjectDTO(saved);
     }
 
@@ -253,6 +258,7 @@ public class ProfileService {
                 .build();
 
         Skill saved = skillRepository.save(skill);
+        dashboardService.logActivity(userUuid, "PROFILE", "Added skill: <strong>" + saved.getName() + "</strong>");
         return convertToSkillDTO(saved);
     }
 

@@ -1,10 +1,12 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { JobService, Job } from '../../services/job.service';
-import { combineLatest, Observable, BehaviorSubject } from 'rxjs';
-import { map, startWith, tap } from 'rxjs/operators';
+import { AuthService } from '../../services/auth.service';
+import { ApplicationService } from '../../services/application.service';
+import { combineLatest, Observable, BehaviorSubject, Subject } from 'rxjs';
+import { map, startWith, tap, takeUntil } from 'rxjs/operators';
 
 @Component({
   selector: 'app-jobs',
@@ -17,16 +19,30 @@ import { map, startWith, tap } from 'rxjs/operators';
           <h1>Find Your Dream Job</h1>
           <p>Discover thousands of opportunities that match your skills.</p>
         </div>
-        <div class="search-container">
+        <div class="search-container" *ngIf="activeTab === 'explore'">
           <div class="search-bar">
             <i class="ph ph-magnifying-glass"></i>
-            <input type="text" [(ngModel)]="searchQuery" (keyup.enter)="onSearch()" placeholder="Search jobs, companies, skills...">
+            <input type="text" [(ngModel)]="searchQuery" (input)="onSearchInput()" (keyup.enter)="onSearch()" placeholder="Search jobs, companies, skills...">
             <button class="btn-primary" (click)="onSearch()">Search</button>
           </div>
         </div>
       </div>
 
-      <div class="jobs-layout">
+      <!-- Navigation Tabs -->
+      <div class="jobs-layout-tabs">
+        <button class="tab-btn" [class.active]="activeTab === 'explore'" (click)="setTab('explore')">
+          <i class="ph ph-magnifying-glass"></i> Explore Jobs
+        </button>
+        <button class="tab-btn" [class.active]="activeTab === 'applied'" (click)="setTab('applied')">
+          <i class="ph ph-paper-plane-tilt"></i> Applied History
+        </button>
+        <button class="tab-btn" [class.active]="activeTab === 'saved'" (click)="setTab('saved')">
+          <i class="ph ph-bookmark"></i> Saved Jobs
+        </button>
+      </div>
+
+      <!-- EXPLORE TAB -->
+      <div class="jobs-layout" *ngIf="activeTab === 'explore'">
         <div class="filters-column">
           <div class="card p-4 filter-card">
             <h3>Filters</h3>
@@ -68,15 +84,131 @@ import { map, startWith, tap } from 'rxjs/operators';
             <span class="results-count">{{ (filteredJobs$ | async)?.length || 0 }} jobs found</span>
           </div>
 
-          <div class="empty-state" *ngIf="(filteredJobs$ | async)?.length === 0">
-            <i class="ph ph-magnifying-glass empty-icon"></i>
-            <h4>No jobs found</h4>
-            <p>We couldn't find any jobs matching your search criteria.</p>
-            <button class="btn-secondary mt-4" (click)="clearSearch()">Clear Search</button>
+          <div *ngIf="loadingJobs" class="loading-state-jobs">
+            <div class="spinner"></div>
+            <p>Finding the best jobs for you...</p>
           </div>
 
-          <div class="jobs-grid" *ngIf="filteredJobs$ | async as jobs">
-            <div class="job-card" *ngFor="let job of jobs" (click)="viewJob(job.id)">
+          <ng-container *ngIf="!loadingJobs">
+            <div class="empty-state" *ngIf="(filteredJobs$ | async)?.length === 0">
+              <i class="ph ph-magnifying-glass empty-icon"></i>
+              <h4>No jobs found</h4>
+              <p>We couldn't find any jobs matching your search criteria.</p>
+              <button class="btn-secondary mt-4" (click)="clearSearch()">Clear Search</button>
+            </div>
+
+            <div class="jobs-grid" *ngIf="filteredJobs$ | async as jobs">
+              <div class="job-card" *ngFor="let job of jobs" (click)="viewJob(job.id)">
+                <div class="job-card-header">
+                  <div class="logo-group">
+                    <div class="company-logo bg-primary">{{ job.initials }}</div>
+                    <div class="company-title-wrap">
+                      <p class="company-name">{{ job.company }}</p>
+                      <h4 class="job-title">{{ job.title }}</h4>
+                    </div>
+                  </div>
+                  <div class="header-actions">
+                    <span class="new-badge" *ngIf="job.isNew">NEW</span>
+                    <button class="btn-bookmark" (click)="toggleBookmark($event, job)">
+                      <i [class]="job.isSaved ? 'ph-fill ph-bookmark active-icon' : 'ph ph-bookmark inactive-icon'"></i>
+                    </button>
+                  </div>
+                </div>
+                
+                <div class="job-meta">
+                  <span class="meta-item"><i class="ph ph-map-pin"></i> {{ job.location }}</span>
+                  <span class="meta-item"><i class="ph ph-clock"></i> {{ job.employmentType }}</span>
+                  <span class="meta-item"><i class="ph ph-users"></i> {{ job.applicantsCount || 0 }} {{ job.applicantsCount === 1 ? 'applicant' : 'applicants' }}</span>
+                </div>
+                
+                <div class="job-description">
+                  {{ truncate(job.roleRequirements[0]?.jobDescription, 120) }}
+                </div>
+
+                <div class="tags-row" *ngIf="job.roleRequirements?.length && job.roleRequirements[0].technicalSkills">
+                  <span class="skill-tag" *ngFor="let skill of job.roleRequirements[0].technicalSkills.slice(0, 3)">
+                    {{ skill.technicalSkillText }}
+                  </span>
+                  <span class="skill-tag" *ngIf="job.roleRequirements[0].technicalSkills.length > 3">
+                    +{{ job.roleRequirements[0].technicalSkills.length - 3 }}
+                  </span>
+                </div>
+                
+                <div class="job-card-footer">
+                  <span class="salary-range">RM{{ formatNumber(job.minSalary) }} - RM{{ formatNumber(job.maxSalary) }}</span>
+                  <button class="btn-apply-now" (click)="$event.stopPropagation(); viewJob(job.id)">View Details</button>
+                </div>
+              </div>
+            </div>
+          </ng-container>
+        </div>
+      </div>
+
+      <!-- APPLIED HISTORY TAB -->
+      <div class="history-layout" *ngIf="activeTab === 'applied'">
+        <div *ngIf="loadingJobs" class="loading-state-jobs">
+          <div class="spinner"></div>
+          <p>Loading your applied jobs...</p>
+        </div>
+
+        <ng-container *ngIf="!loadingJobs">
+          <div class="empty-state" *ngIf="appliedHistory.length === 0">
+            <i class="ph ph-paper-plane-tilt empty-icon"></i>
+            <h4>No applications yet</h4>
+            <p>You haven't applied to any jobs yet. Start exploring opportunities!</p>
+            <button class="btn-primary mt-4" (click)="setTab('explore')">Explore Jobs</button>
+          </div>
+
+          <div class="jobs-grid" *ngIf="appliedHistory.length > 0">
+            <div class="job-card" *ngFor="let item of appliedHistory" (click)="viewJob(item.job.id)">
+              <div class="job-card-header">
+                <div class="logo-group">
+                  <div class="company-logo bg-primary">{{ item.job.initials }}</div>
+                  <div class="company-title-wrap">
+                    <p class="company-name">{{ item.job.company }}</p>
+                    <h4 class="job-title">{{ item.job.title }}</h4>
+                  </div>
+                </div>
+                <div class="header-actions">
+                  <span class="status-badge" [ngClass]="getStatusBadgeClass(item.application.status)">
+                    {{ getStatusLabel(item.application.status) }}
+                  </span>
+                </div>
+              </div>
+              
+              <div class="job-meta">
+                <span class="meta-item"><i class="ph ph-map-pin"></i> {{ item.job.location }}</span>
+                <span class="meta-item"><i class="ph ph-clock"></i> {{ item.job.employmentType }}</span>
+                <span class="meta-item"><i class="ph ph-users"></i> {{ item.job.applicantsCount || 0 }} {{ item.job.applicantsCount === 1 ? 'applicant' : 'applicants' }}</span>
+                <span class="meta-item"><i class="ph ph-calendar"></i> Applied {{ formatDate(item.application.appliedAt) }}</span>
+              </div>
+              
+              <div class="job-card-footer">
+                <span class="salary-range">RM{{ formatNumber(item.job.minSalary) }} - RM{{ formatNumber(item.job.maxSalary) }}</span>
+                <button class="btn-apply-now" (click)="$event.stopPropagation(); viewJob(item.job.id)">View Details</button>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+      </div>
+
+      <!-- SAVED JOBS TAB -->
+      <div class="saved-layout" *ngIf="activeTab === 'saved'">
+        <div *ngIf="loadingJobs" class="loading-state-jobs">
+          <div class="spinner"></div>
+          <p>Loading your saved jobs...</p>
+        </div>
+
+        <ng-container *ngIf="!loadingJobs">
+          <div class="empty-state" *ngIf="(savedJobs$ | async)?.length === 0">
+            <i class="ph ph-bookmark empty-icon"></i>
+            <h4>No saved jobs</h4>
+            <p>You haven't saved any jobs yet. Bookmark jobs to view them later.</p>
+            <button class="btn-primary mt-4" (click)="setTab('explore')">Explore Jobs</button>
+          </div>
+
+          <div class="jobs-grid" *ngIf="savedJobs$ | async as savedList">
+            <div class="job-card" *ngFor="let job of savedList" (click)="viewJob(job.id)">
               <div class="job-card-header">
                 <div class="logo-group">
                   <div class="company-logo bg-primary">{{ job.initials }}</div>
@@ -86,26 +218,16 @@ import { map, startWith, tap } from 'rxjs/operators';
                   </div>
                 </div>
                 <div class="header-actions">
-                  <span class="new-badge" *ngIf="job.isNew">NEW</span>
+                  <button class="btn-bookmark" (click)="toggleBookmark($event, job)">
+                    <i class="ph-fill ph-bookmark active-icon"></i>
+                  </button>
                 </div>
               </div>
               
               <div class="job-meta">
                 <span class="meta-item"><i class="ph ph-map-pin"></i> {{ job.location }}</span>
                 <span class="meta-item"><i class="ph ph-clock"></i> {{ job.employmentType }}</span>
-              </div>
-              
-              <div class="job-description">
-                {{ truncate(job.roleRequirements[0]?.jobDescription, 120) }}
-              </div>
-
-              <div class="tags-row" *ngIf="job.roleRequirements?.length && job.roleRequirements[0].technicalSkills">
-                <span class="skill-tag" *ngFor="let skill of job.roleRequirements[0].technicalSkills.slice(0, 3)">
-                  {{ skill.technicalSkillText }}
-                </span>
-                <span class="skill-tag" *ngIf="job.roleRequirements[0].technicalSkills.length > 3">
-                  +{{ job.roleRequirements[0].technicalSkills.length - 3 }}
-                </span>
+                <span class="meta-item"><i class="ph ph-users"></i> {{ job.applicantsCount || 0 }} {{ job.applicantsCount === 1 ? 'applicant' : 'applicants' }}</span>
               </div>
               
               <div class="job-card-footer">
@@ -114,7 +236,7 @@ import { map, startWith, tap } from 'rxjs/operators';
               </div>
             </div>
           </div>
-        </div>
+        </ng-container>
       </div>
     </div>
   `,
@@ -129,11 +251,11 @@ import { map, startWith, tap } from 'rxjs/operators';
     .page-header {
       background: linear-gradient(135deg, var(--color-primary) 0%, #059669 100%);
       border-radius: 24px;
-      padding: 40px;
+      padding: 30px;
       color: white;
       display: flex;
       flex-direction: column;
-      gap: 24px;
+      gap: 12px;
       align-items: center;
       text-align: center;
     }
@@ -200,7 +322,7 @@ import { map, startWith, tap } from 'rxjs/operators';
 
     .filters-column {
       position: sticky;
-      top: 24px;
+      top: 0px;
       z-index: 10;
     }
 
@@ -487,29 +609,157 @@ import { map, startWith, tap } from 'rxjs/operators';
       margin: 8px 0 0 0;
       color: var(--color-text-secondary);
     }
+
+    /* Tabs styling */
+    .jobs-layout-tabs {
+      display: flex;
+      gap: 12px;
+      border-bottom: 1px solid var(--color-border);
+      padding-bottom: 8px;
+    }
+    .tab-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: none;
+      border: none;
+      border-radius: 8px;
+      color: var(--color-text-secondary);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease-in-out;
+    }
+    .tab-btn:hover {
+      background-color: var(--color-surface-secondary);
+      color: var(--color-text);
+    }
+    .tab-btn.active {
+      background-color: #ECFDF5;
+      color: #059669;
+    }
+
+    /* Bookmark button styling */
+    .btn-bookmark {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s;
+    }
+    .btn-bookmark:hover {
+      transform: scale(1.1);
+    }
+    .active-icon {
+      color: #059669;
+    }
+    .inactive-icon {
+      color: #94a3b8;
+    }
+
+    /* Status badges styling */
+    .status-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      width: fit-content;
+      display: inline-block;
+    }
+    .badge-success { background-color: #d1fae5; color: #059669; }
+    .badge-pending-interview { background-color: #fef3c7; color: #d97706; }
+    .badge-pending-review { background-color: #dbeafe; color: #2563eb; }
+    .badge-rejected { background-color: #ffe4e6; color: #e11d48; }
+
+    /* Loading State */
+    .loading-state-jobs {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 64px 0;
+      color: var(--color-text-secondary);
+      background: var(--color-surface);
+      border-radius: 16px;
+      border: 1px solid var(--color-border);
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(16, 185, 129, 0.2);
+      border-top-color: var(--color-primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   `]
 })
-export class JobsComponent implements OnInit {
+export class JobsComponent implements OnInit, OnDestroy {
   searchQuery: string = '';
   filteredJobs$!: Observable<Job[]>;
-  
+  private searchSubject = new BehaviorSubject<string>('');
+  private urlUpdateTimeout: any;
+  loadingJobs = true;
+  private destroy$ = new Subject<void>();
+
   availableLocations: string[] = [];
   availableEmploymentTypes = ['Full-time', 'Part-time', 'Contract', 'Freelance'];
-  
+
   selectedEmploymentTypes: Set<string> = new Set();
   selectedLocations: Set<string> = new Set();
-  
+
   filterChange$ = new BehaviorSubject<void>(undefined);
 
+  appliedHistory: any[] = [];
+  activeTab: string = 'explore';
+  savedJobs$!: Observable<Job[]>;
+
   constructor(
-    private jobService: JobService,
+    public jobService: JobService,
     private route: ActivatedRoute,
-    private router: Router
-  ) {}
+    private router: Router,
+    private authService: AuthService,
+    private applicationService: ApplicationService
+  ) {
+    this.savedJobs$ = this.jobService.jobs$.pipe(
+      map(jobs => jobs.filter(j => j.isSaved))
+    );
+  }
 
   ngOnInit() {
     // Load jobs if not loaded
     this.jobService.loadJobs();
+    this.loadAppliedHistory();
+
+    this.jobService.loading$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(loading => {
+        this.loadingJobs = loading;
+      });
+
+    // Listen to query parameters for tab switching and search query
+    this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(params => {
+      if (params['tab']) {
+        this.activeTab = params['tab'];
+      } else {
+        this.activeTab = 'explore';
+      }
+
+      const q = params['q'] || '';
+      if (q !== this.searchQuery) {
+        this.searchQuery = q;
+        this.searchSubject.next(q);
+      }
+    });
 
     this.filteredJobs$ = combineLatest([
       this.jobService.jobs$.pipe(
@@ -521,14 +771,13 @@ export class JobsComponent implements OnInit {
           this.availableLocations = Array.from(locs).sort();
         })
       ),
-      this.route.queryParams.pipe(
-        map(params => params['q'] || ''),
-        startWith('')
-      ),
+      this.searchSubject.asObservable(),
       this.filterChange$
     ]).pipe(
-      map(([jobs, query]) => {
-        this.searchQuery = query;
+      map(([jobs, query, _]) => {
+        if (this.searchQuery !== query) {
+          this.searchQuery = query;
+        }
         let filtered = jobs;
 
         // 1. Search Query
@@ -542,13 +791,13 @@ export class JobsComponent implements OnInit {
             ) {
               return true;
             }
-            
+
             if (job.roleRequirements && job.roleRequirements[0]) {
               if (job.roleRequirements[0].jobDescription.toLowerCase().includes(lowercaseQuery)) {
                 return true;
               }
               if (job.roleRequirements[0].technicalSkills) {
-                return job.roleRequirements[0].technicalSkills.some(skill => 
+                return job.roleRequirements[0].technicalSkills.some(skill =>
                   skill.technicalSkillText.toLowerCase().includes(lowercaseQuery)
                 );
               }
@@ -559,12 +808,12 @@ export class JobsComponent implements OnInit {
 
         // 2. Employment Type Filter
         if (this.selectedEmploymentTypes.size > 0) {
-           filtered = filtered.filter(job => this.selectedEmploymentTypes.has(job.employmentType));
+          filtered = filtered.filter(job => this.selectedEmploymentTypes.has(job.employmentType));
         }
 
         // 3. Location Filter
         if (this.selectedLocations.size > 0) {
-           filtered = filtered.filter(job => this.selectedLocations.has(job.location));
+          filtered = filtered.filter(job => this.selectedLocations.has(job.location));
         }
 
         return filtered;
@@ -590,16 +839,48 @@ export class JobsComponent implements OnInit {
     this.filterChange$.next();
   }
 
+  onSearchInput() {
+    this.searchSubject.next(this.searchQuery);
+
+    if (this.urlUpdateTimeout) {
+      clearTimeout(this.urlUpdateTimeout);
+    }
+
+    this.urlUpdateTimeout = setTimeout(() => {
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { q: this.searchQuery || null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true
+      });
+    }, 400);
+  }
+
   onSearch() {
-    this.router.navigate(['/jobs'], { 
+    if (this.urlUpdateTimeout) {
+      clearTimeout(this.urlUpdateTimeout);
+    }
+    this.searchSubject.next(this.searchQuery);
+    this.router.navigate([], {
+      relativeTo: this.route,
       queryParams: { q: this.searchQuery || null },
-      queryParamsHandling: 'merge'
+      queryParamsHandling: 'merge',
+      replaceUrl: true
     });
   }
 
   clearSearch() {
     this.searchQuery = '';
-    this.onSearch();
+    this.searchSubject.next('');
+    if (this.urlUpdateTimeout) {
+      clearTimeout(this.urlUpdateTimeout);
+    }
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { q: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
   }
 
   viewJob(jobId: string | undefined) {
@@ -615,5 +896,92 @@ export class JobsComponent implements OnInit {
   truncate(text: string | undefined, length: number): string {
     if (!text) return '';
     return text.length > length ? text.substring(0, length) + '...' : text;
+  }
+
+  setTab(tabName: string) {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab: tabName },
+      queryParamsHandling: 'merge'
+    });
+  }
+
+  loadAppliedHistory() {
+    const candidateId = this.authService.getCurrentUser()?.userId;
+    if (!candidateId) return;
+
+    combineLatest([
+      this.applicationService.getApplicationsByCandidate(candidateId),
+      this.jobService.jobs$
+    ]).pipe(takeUntil(this.destroy$)).subscribe({
+      next: ([applications, jobs]) => {
+        const jobMap = new Map(jobs.map(j => [j.id, j]));
+        this.appliedHistory = applications.map(app => ({
+          application: app,
+          job: jobMap.get(app.jobId)!
+        })).filter(item => item.job !== undefined);
+      },
+      error: (err) => console.error('Failed to load applied history', err)
+    });
+  }
+
+  toggleBookmark(event: Event, job: Job) {
+    event.stopPropagation();
+    if (job.isSaved) {
+      this.jobService.unsaveJob(job.id!).subscribe(() => {
+        job.isSaved = false;
+        this.jobService.loadJobs();
+      });
+    } else {
+      this.jobService.saveJob(job.id!).subscribe(() => {
+        job.isSaved = true;
+        this.jobService.loadJobs();
+      });
+    }
+  }
+
+  getStatusBadgeClass(status?: string): string {
+    if (!status) return 'badge-pending-review';
+    switch (status.toUpperCase()) {
+      case 'OFFERED':
+      case 'ACCEPTED':
+        return 'badge-success';
+      case 'INTERVIEWING':
+        return 'badge-pending-interview';
+      case 'REJECTED':
+        return 'badge-rejected';
+      default:
+        return 'badge-pending-review';
+    }
+  }
+
+  getStatusLabel(status?: string): string {
+    if (!status) return 'Pending Review';
+    switch (status.toUpperCase()) {
+      case 'OFFERED':
+      case 'ACCEPTED':
+        return 'Success';
+      case 'INTERVIEWING':
+        return 'Pending Interview';
+      case 'REJECTED':
+        return 'Rejected';
+      default:
+        return 'Pending Review';
+    }
+  }
+
+  formatDate(dateString?: string): string {
+    if (!dateString) return 'Recently';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

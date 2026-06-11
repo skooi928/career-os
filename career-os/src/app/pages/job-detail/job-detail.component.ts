@@ -35,13 +35,17 @@ import { JobService, Job } from '../../services/job.service';
                 <span><i class="ph ph-buildings"></i> {{ job.company }}</span>
                 <span><i class="ph ph-map-pin"></i> {{ job.location }}</span>
                 <span><i class="ph ph-briefcase"></i> {{ job.employmentType }}</span>
+                <span><i class="ph ph-users"></i> {{ job.applicantsCount || 0 }} {{ job.applicantsCount === 1 ? 'applicant' : 'applicants' }}</span>
               </div>
             </div>
           </div>
 
           <!-- Actions -->
           <div class="banner-actions">
-            <button class="btn-action-banner"><i class="ph ph-bookmark"></i> Save</button>
+            <button class="btn-action-banner" (click)="toggleSave()">
+              <i [class]="job.isSaved ? 'ph-fill ph-bookmark' : 'ph ph-bookmark'"></i>
+              {{ job.isSaved ? 'Saved' : 'Save' }}
+            </button>
             <button class="btn-action-banner"><i class="ph ph-share-network"></i> Share</button>
             <button class="btn-apply-banner" (click)="applyForJob()">Apply Now <i class="ph-bold ph-arrow-right"></i></button>
           </div>
@@ -801,9 +805,16 @@ export class JobDetailComponent implements OnInit {
     if (isPlatformBrowser(this.platformId)) {
       const id = this.route.snapshot.paramMap.get('id');
       if (id) {
+        this.jobService.loadJobs();
         this.jobService.getJobById(id).subscribe({
           next: (data) => {
             this.job = data;
+            this.jobService.jobs$.subscribe(jobs => {
+              const matchedJob = jobs.find(j => j.id === id);
+              if (matchedJob && this.job) {
+                this.job.isSaved = matchedJob.isSaved;
+              }
+            });
           },
           error: (err) => {
             console.error('Failed to load job', err);
@@ -855,6 +866,32 @@ export class JobDetailComponent implements OnInit {
   applyForJob() {
     if (this.job && this.job.id) {
       this.router.navigate(['/jobs', this.job.id, 'apply']);
+    }
+  }
+
+  toggleSave() {
+    if (!this.job || !this.job.id) return;
+    
+    if (this.job.isSaved) {
+      this.jobService.unsaveJob(this.job.id).subscribe({
+        next: () => {
+          if (this.job) {
+            this.job.isSaved = false;
+          }
+          this.jobService.loadJobs();
+        },
+        error: (err) => console.error('Failed to unsave job', err)
+      });
+    } else {
+      this.jobService.saveJob(this.job.id).subscribe({
+        next: () => {
+          if (this.job) {
+            this.job.isSaved = true;
+          }
+          this.jobService.loadJobs();
+        },
+        error: (err) => console.error('Failed to save job', err)
+      });
     }
   }
 }

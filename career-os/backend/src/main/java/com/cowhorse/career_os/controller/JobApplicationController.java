@@ -14,7 +14,7 @@ public class JobApplicationController {
 
     private final JobApplicationService service;
     private final com.cowhorse.career_os.service.SupabaseStorageService storageService;
-    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+    private final tools.jackson.databind.ObjectMapper objectMapper = new tools.jackson.databind.ObjectMapper();
 
     public JobApplicationController(JobApplicationService service, 
                                     com.cowhorse.career_os.service.SupabaseStorageService storageService) {

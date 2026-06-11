@@ -11,4 +11,5 @@ import java.util.UUID;
 public interface JobApplicationRepository extends JpaRepository<JobApplication, UUID> {
     List<JobApplication> findByCandidateIdOrderByAppliedAtDesc(UUID candidateId);
     List<JobApplication> findByJobIdOrderByAppliedAtDesc(UUID jobId);
+    long countByJobId(UUID jobId);
 }

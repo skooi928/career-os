@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, combineLatest } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { AuthService } from './auth.service';
 
@@ -48,6 +48,8 @@ export interface Job {
   vacancies: number;
   website?: string;
   isNew?: boolean;
+  isSaved?: boolean;
+  applicantsCount?: number;
   createdAt?: string;
   roleRequirements: RoleRequirement[];
   questions?: JobQuestion[];
@@ -61,6 +63,8 @@ export class JobService {
   private readonly API_URL = 'http://localhost:8080/api/jobs';
   private jobsSubject = new BehaviorSubject<Job[]>([]);
   public jobs$ = this.jobsSubject.asObservable();
+  private loadingSubject = new BehaviorSubject<boolean>(false);
+  public loading$ = this.loadingSubject.asObservable();
 
   constructor(private http: HttpClient, private authService: AuthService) {}
 
@@ -72,25 +76,76 @@ export class JobService {
   }
 
   loadJobs(): void {
-    this.http.get<Job[]>(this.API_URL, { headers: this.getHeaders() }).subscribe({
-      next: (jobsData) => {
+    this.loadingSubject.next(true);
+    const token = this.authService.getToken();
+    if (!token) {
+      this.http.get<Job[]>(this.API_URL).subscribe({
+        next: (jobsData) => {
+          const now = new Date().getTime();
+          const mapped = jobsData.map(j => {
+            const createdTime = j.createdAt ? new Date(j.createdAt).getTime() : 0;
+            return { ...j, isNew: (now - createdTime) < (24 * 60 * 60 * 1000), isSaved: false };
+          });
+          this.jobsSubject.next(mapped);
+          this.loadingSubject.next(false);
+        },
+        error: (err) => {
+          console.error('Failed to load jobs', err);
+          this.loadingSubject.next(false);
+        }
+      });
+      return;
+    }
+
+    combineLatest([
+      this.http.get<Job[]>(this.API_URL, { headers: this.getHeaders() }),
+      this.http.get<Job[]>('http://localhost:8080/api/saved-jobs', { headers: this.getHeaders() })
+    ]).subscribe({
+      next: ([jobsData, savedJobs]) => {
+        const savedIds = new Set((savedJobs || []).map(sj => sj.id));
         const now = new Date().getTime();
         const mappedJobs = jobsData.map(j => {
           let isNew = false;
           if (j.createdAt) {
             const createdTime = new Date(j.createdAt).getTime();
-            // True if created within the last 24 hours
             isNew = (now - createdTime) < (24 * 60 * 60 * 1000);
           }
           return {
             ...j,
-            isNew: isNew
+            isNew: isNew,
+            isSaved: savedIds.has(j.id)
           };
         });
         this.jobsSubject.next(mappedJobs);
+        this.loadingSubject.next(false);
       },
-      error: (err) => console.error('Failed to load jobs', err)
+      error: (err) => {
+        console.error('Failed to load jobs with bookmarks', err);
+        this.http.get<Job[]>(this.API_URL, { headers: this.getHeaders() }).subscribe({
+          next: (jobsData) => {
+            const now = new Date().getTime();
+            const mapped = jobsData.map(j => {
+              const createdTime = j.createdAt ? new Date(j.createdAt).getTime() : 0;
+              return { ...j, isNew: (now - createdTime) < (24 * 60 * 60 * 1000), isSaved: false };
+            });
+            this.jobsSubject.next(mapped);
+            this.loadingSubject.next(false);
+          },
+          error: (error) => {
+            console.error('Failed to load jobs second try', error);
+            this.loadingSubject.next(false);
+          }
+        });
+      }
     });
+  }
+
+  saveJob(jobId: string): Observable<any> {
+    return this.http.post('http://localhost:8080/api/saved-jobs', { jobId }, { headers: this.getHeaders() });
+  }
+
+  unsaveJob(jobId: string): Observable<any> {
+    return this.http.delete(`http://localhost:8080/api/saved-jobs/${jobId}`, { headers: this.getHeaders() });
   }
 
   addJob(job: Job): Observable<Job> {

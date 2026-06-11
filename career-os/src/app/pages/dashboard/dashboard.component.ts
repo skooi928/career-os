@@ -1,11 +1,13 @@
-import { Component, OnInit, Inject, PLATFORM_ID, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID, signal } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { JobService, Job } from '../../services/job.service';
 import { ProfileService, QuickTask } from '../../services/profile.service';
 import { CareerAnalysisService } from '../../services/career-analysis.service';
-import { Observable } from 'rxjs';
+import { DashboardService } from '../../services/dashboard.service';
+import { Observable, Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 
 @Component({
@@ -54,14 +56,14 @@ import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 
       <!-- Stats Cards -->
       <div class="stats-grid">
-        <div class="stat-card emerald">
+        <div class="stat-card emerald" style="cursor: pointer;" [routerLink]="['/jobs']" [queryParams]="{tab: 'applied'}">
           <div class="stat-icon">
             <i class="ph ph-file-text"></i>
           </div>
           <div class="stat-info">
-            <span class="stat-value">24</span>
+            <span class="stat-value">{{ stats.applicationsCount }}</span>
             <span class="stat-label">Applications</span>
-            <span class="stat-change">+3 this week</span>
+            <span class="stat-change">{{ stats.applicationsCount > 0 ? 'Active tracking' : 'No applications' }}</span>
           </div>
         </div>
 
@@ -70,9 +72,9 @@ import { Router, ActivatedRoute, RouterLink } from '@angular/router';
             <i class="ph ph-calendar-check"></i>
           </div>
           <div class="stat-info">
-            <span class="stat-value">5</span>
+            <span class="stat-value">{{ stats.interviewsCount }}</span>
             <span class="stat-label">Interviews</span>
-            <span class="stat-change">+1 scheduled</span>
+            <span class="stat-change">{{ stats.interviewsCount > 0 ? 'Upcoming interviews' : 'No scheduled' }}</span>
           </div>
         </div>
 
@@ -81,9 +83,9 @@ import { Router, ActivatedRoute, RouterLink } from '@angular/router';
             <i class="ph ph-lightbulb"></i>
           </div>
           <div class="stat-info">
-            <span class="stat-value">2</span>
+            <span class="stat-value">{{ stats.offersCount }}</span>
             <span class="stat-label">Offers</span>
-            <span class="stat-change">Maintain momentum</span>
+            <span class="stat-change">{{ stats.offersCount > 0 ? 'Congratulations!' : 'Keep applying' }}</span>
           </div>
         </div>
       </div>
@@ -97,38 +99,17 @@ import { Router, ActivatedRoute, RouterLink } from '@angular/router';
             <button class="btn-text">View All</button>
           </div>
           <div class="activity-list">
-            <div class="activity-item">
-              <div class="activity-avatar bg-emerald">
-                <i class="ph ph-calendar-check"></i>
-              </div>
-              <div class="activity-details">
-                <p class="activity-title">Interview scheduled with <strong>Google</strong></p>
-                <div class="activity-time">
-                  <i class="ph ph-clock"></i> 2 hours ago
-                </div>
-              </div>
-              <div class="hover-dot"></div>
+            <div *ngIf="activities.length === 0" class="empty-state-activities" style="padding: 24px; text-align: center; color: var(--color-text-secondary); font-size: 14px;">
+              No recent activity yet.
             </div>
-            <div class="activity-item">
-              <div class="activity-avatar bg-green">
-                <i class="ph ph-paper-plane-tilt"></i>
+            <div class="activity-item" *ngFor="let act of activities">
+              <div class="activity-avatar" [ngClass]="getActivityClass(act.type)">
+                <i [ngClass]="getActivityIcon(act.type)"></i>
               </div>
               <div class="activity-details">
-                <p class="activity-title">Application sent to <strong>Stripe</strong></p>
+                <p class="activity-title" [innerHTML]="act.title"></p>
                 <div class="activity-time">
-                  <i class="ph ph-clock"></i> Yesterday
-                </div>
-              </div>
-              <div class="hover-dot"></div>
-            </div>
-            <div class="activity-item">
-              <div class="activity-avatar bg-amber">
-                <i class="ph ph-pencil-simple"></i>
-              </div>
-              <div class="activity-details">
-                <p class="activity-title">Resume updated: <strong>Frontend Dev v2</strong></p>
-                <div class="activity-time">
-                  <i class="ph ph-clock"></i> Oct 24, 2025
+                  <i class="ph ph-clock"></i> {{ formatTime(act.createdAt) }}
                 </div>
               </div>
               <div class="hover-dot"></div>
@@ -175,54 +156,61 @@ import { Router, ActivatedRoute, RouterLink } from '@angular/router';
       <div class="recommended-section">
         <div class="section-header">
           <h3>Recommended Jobs</h3>
-          <button class="btn-text" *ngIf="(jobs$ | async)?.length">View All</button>
+          <button class="btn-text" *ngIf="(jobs$ | async)?.length && !loadingJobs">View All</button>
         </div>
         
-        <ng-container *ngIf="(jobs$ | async) as jobs">
-          <div class="empty-state" *ngIf="jobs.length === 0">
-            <i class="ph ph-briefcase empty-icon"></i>
-            <h4>No recommended jobs available yet</h4>
-            <p>Employers haven't posted any jobs that match your profile.</p>
-          </div>
+        <div *ngIf="loadingJobs" class="loading-state-jobs">
+          <div class="spinner"></div>
+          <p>Finding the best jobs for you...</p>
+        </div>
 
-          <div class="carousel-container" *ngIf="jobs.length > 0">
-            <div class="job-card" *ngFor="let job of jobs" (click)="viewJob(job.id)">
-              <div class="job-card-header">
-                <div class="logo-group">
-                  <div class="company-logo bg-red-600">{{ job.initials }}</div>
-                  <div class="company-title-wrap">
-                    <p class="company-name">{{ job.company }}</p>
-                    <h4 class="job-title">{{ job.title }}</h4>
+        <ng-container *ngIf="!loadingJobs">
+          <ng-container *ngIf="(jobs$ | async) as jobs">
+            <div class="empty-state" *ngIf="jobs.length === 0">
+              <i class="ph ph-briefcase empty-icon"></i>
+              <h4>No recommended jobs available yet</h4>
+              <p>Employers haven't posted any jobs that match your profile.</p>
+            </div>
+
+            <div class="carousel-container" *ngIf="jobs.length > 0">
+              <div class="job-card" *ngFor="let job of jobs" (click)="viewJob(job.id)">
+                <div class="job-card-header">
+                  <div class="logo-group">
+                    <div class="company-logo bg-red-600">{{ job.initials }}</div>
+                    <div class="company-title-wrap">
+                      <p class="company-name">{{ job.company }}</p>
+                      <h4 class="job-title">{{ job.title }}</h4>
+                    </div>
+                  </div>
+                  <div class="header-actions">
+                    <span class="new-badge" *ngIf="job.isNew">NEW</span>
+                    <button class="btn-bookmark" (click)="toggleBookmark($event, job)">
+                      <i [class]="$any(job).isSaved ? 'ph-fill ph-bookmark active-icon' : 'ph ph-bookmark inactive-icon'"></i>
+                    </button>
                   </div>
                 </div>
-                <div class="header-actions">
-                  <span class="new-badge" *ngIf="job.isNew">NEW</span>
-                  <button class="btn-bookmark" (click)="toggleBookmark($event, job)">
-                    <i [class]="$any(job).isSaved ? 'ph-fill ph-bookmark active-icon' : 'ph ph-bookmark inactive-icon'"></i>
-                  </button>
+                
+                <div class="job-meta">
+                  <span class="meta-item"><i class="ph ph-map-pin"></i> {{ job.location }}</span>
+                  <span class="meta-item"><i class="ph ph-clock"></i> {{ job.employmentType }}</span>
+                </div>
+                
+                <div class="tags-row" *ngIf="job.roleRequirements.length > 0">
+                  <span class="skill-tag" *ngFor="let skill of job.roleRequirements[0].technicalSkills.slice(0,4)">
+                    {{ skill.technicalSkillText }}
+                  </span>
+                  <span class="skill-tag" *ngIf="job.roleRequirements[0].technicalSkills.length > 4">
+                    +{{ job.roleRequirements[0].technicalSkills.length - 4 }}
+                  </span>
+                </div>
+                
+                <div class="job-card-footer">
+                  <span class="salary-range">RM{{ formatNumber(job.minSalary) }} - RM{{ formatNumber(job.maxSalary) }}</span>
+                  <button class="btn-apply-now" (click)="$event.stopPropagation(); viewJob(job.id)">Apply Now</button>
                 </div>
               </div>
-              
-              <div class="job-meta">
-                <span class="meta-item"><i class="ph ph-map-pin"></i> {{ job.location }}</span>
-                <span class="meta-item"><i class="ph ph-clock"></i> {{ job.employmentType }}</span>
-              </div>
-              
-              <div class="tags-row" *ngIf="job.roleRequirements.length > 0">
-                <span class="skill-tag" *ngFor="let skill of job.roleRequirements[0].technicalSkills.slice(0,4)">
-                  {{ skill.technicalSkillText }}
-                </span>
-                <span class="skill-tag" *ngIf="job.roleRequirements[0].technicalSkills.length > 4">
-                  +{{ job.roleRequirements[0].technicalSkills.length - 4 }}
-                </span>
-              </div>
-              
-              <div class="job-card-footer">
-                <span class="salary-range">RM{{ formatNumber(job.minSalary) }} - RM{{ formatNumber(job.maxSalary) }}</span>
-                <button class="btn-apply-now" (click)="$event.stopPropagation(); viewJob(job.id)">Apply Now</button>
-              </div>
             </div>
-          </div>
+          </ng-container>
         </ng-container>
       </div>
     </div>
@@ -859,22 +847,52 @@ import { Router, ActivatedRoute, RouterLink } from '@angular/router';
       transition: background-color 0.2s;
     }
     .btn-apply-now:hover { background: #d1fae5; }
+
+    /* Loading State for Jobs */
+    .loading-state-jobs {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 0;
+      color: var(--color-text-secondary);
+      background: var(--color-surface);
+      border-radius: 12px;
+      border: 1px solid var(--color-border);
+    }
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid rgba(16, 185, 129, 0.2);
+      border-top-color: #059669;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 12px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   `]
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   jobs$: Observable<Job[]>;
+  loadingJobs = true;
+  private destroy$ = new Subject<void>();
   tasks: QuickTask[] = [];
+  stats = { applicationsCount: 0, interviewsCount: 0, offersCount: 0 };
+  activities: any[] = [];
   isAddingTask = false;
   newTaskDescription = '';
   newTaskPriority = 'medium';
   isAnalyzing = false;
-  roleMismatchInfo = signal<{requestedRole: string, actualRole: string} | null>(null);
+  roleMismatchInfo = signal<{ requestedRole: string, actualRole: string } | null>(null);
 
   constructor(
-    private authService: AuthService, 
+    private authService: AuthService,
     private jobService: JobService,
     private profileService: ProfileService,
     private careerAnalysisService: CareerAnalysisService,
+    private dashboardService: DashboardService,
     private router: Router,
     private route: ActivatedRoute,
     @Inject(PLATFORM_ID) private platformId: Object
@@ -885,7 +903,15 @@ export class DashboardComponent implements OnInit {
   ngOnInit() {
     if (isPlatformBrowser(this.platformId)) {
       this.jobService.loadJobs();
+      
+      this.jobService.loading$
+        .pipe(takeUntil(this.destroy$))
+        .subscribe(loading => {
+          this.loadingJobs = loading;
+        });
+
       this.loadTasks();
+      this.loadDashboardSummary();
 
       // Check for role mismatch from login redirect
       this.route.queryParams.subscribe(params => {
@@ -931,14 +957,24 @@ export class DashboardComponent implements OnInit {
     return num.toLocaleString();
   }
 
-  toggleBookmark(event: Event, job: any) {
+  toggleBookmark(event: Event, job: Job) {
     event.stopPropagation();
-    job.isSaved = !job.isSaved; // Mock toggle for UI purposes
+    if (job.isSaved) {
+      this.jobService.unsaveJob(job.id!).subscribe(() => {
+        job.isSaved = false;
+        this.jobService.loadJobs();
+      });
+    } else {
+      this.jobService.saveJob(job.id!).subscribe(() => {
+        job.isSaved = true;
+        this.jobService.loadJobs();
+      });
+    }
   }
 
   saveTask() {
     if (!this.newTaskDescription.trim()) return;
-    
+
     const task: QuickTask = {
       description: this.newTaskDescription,
       status: 'added',
@@ -959,7 +995,7 @@ export class DashboardComponent implements OnInit {
   toggleTask(task: QuickTask) {
     if (!task.id) return;
     const newStatus = task.status === 'closed' ? 'added' : 'closed';
-    
+
     // Optimistic UI update
     const originalStatus = task.status;
     task.status = newStatus;
@@ -974,7 +1010,7 @@ export class DashboardComponent implements OnInit {
 
   analyzeCareer() {
     if (this.isAnalyzing) return;
-    
+
     this.isAnalyzing = true;
     this.careerAnalysisService.analyzeCareer().subscribe({
       next: (prediction) => {
@@ -989,5 +1025,48 @@ export class DashboardComponent implements OnInit {
         this.isAnalyzing = false;
       }
     });
+  }
+
+  loadDashboardSummary() {
+    this.dashboardService.getDashboardSummary().subscribe({
+      next: (summary) => {
+        this.stats = {
+          applicationsCount: summary.applicationsCount,
+          interviewsCount: summary.interviewsCount,
+          offersCount: summary.offersCount
+        };
+        this.activities = summary.recentActivities;
+      },
+      error: (err) => console.error('Failed to load dashboard summary', err)
+    });
+  }
+
+  formatTime(dateStr?: string): string {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  getActivityClass(type: string): string {
+    switch (type) {
+      case 'APPLICATION': return 'bg-green';
+      case 'INTERVIEW': return 'bg-emerald';
+      case 'PROFILE': return 'bg-amber';
+      default: return 'bg-amber';
+    }
+  }
+
+  getActivityIcon(type: string): string {
+    switch (type) {
+      case 'APPLICATION': return 'ph ph-paper-plane-tilt';
+      case 'INTERVIEW': return 'ph ph-calendar-check';
+      case 'PROFILE': return 'ph ph-pencil-simple';
+      default: return 'ph ph-info';
+    }
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

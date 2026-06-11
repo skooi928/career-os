@@ -12,9 +12,12 @@ import java.util.List;
 @Service
 public class JobService {
     private final JobRepository jobRepository;
+    private final com.cowhorse.career_os.repository.JobApplicationRepository jobApplicationRepository;
 
-    public JobService(JobRepository jobRepository) {
+    public JobService(JobRepository jobRepository, 
+                      com.cowhorse.career_os.repository.JobApplicationRepository jobApplicationRepository) {
         this.jobRepository = jobRepository;
+        this.jobApplicationRepository = jobApplicationRepository;
     }
 
     public Job createJob(Job job) {
@@ -47,11 +50,40 @@ public class JobService {
     }
 
     public List<Job> getAllJobs() {
-        return jobRepository.findAllByOrderByCreatedAtDesc();
+        List<Job> jobs = jobRepository.findAllByOrderByCreatedAtDesc();
+        for (Job job : jobs) {
+            long count = jobApplicationRepository.countByJobId(job.getId());
+            job.setApplicantsCount(count);
+        }
+        return jobs;
     }
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public Job getJobById(java.util.UUID id) {
-        return jobRepository.findById(id)
+        Job job = jobRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Job not found with id: " + id));
+        
+        if (job.getRoleRequirements() != null) {
+            job.getRoleRequirements().size();
+            for (com.cowhorse.career_os.entity.RoleRequirement req : job.getRoleRequirements()) {
+                if (req.getTechnicalSkills() != null) {
+                    req.getTechnicalSkills().size();
+                }
+                if (req.getMustHaveRequirements() != null) {
+                    req.getMustHaveRequirements().size();
+                }
+            }
+        }
+        if (job.getQuestions() != null) {
+            job.getQuestions().size();
+        }
+        if (job.getBenefits() != null) {
+            job.getBenefits().size();
+        }
+        
+        long count = jobApplicationRepository.countByJobId(job.getId());
+        job.setApplicantsCount(count);
+        
+        return job;
     }
 }
