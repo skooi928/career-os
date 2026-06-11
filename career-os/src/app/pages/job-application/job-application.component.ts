@@ -180,7 +180,7 @@ import { AuthService } from '../../services/auth.service';
 
     /* Job Header Card */
     .job-header-card {
-      background: linear-gradient(135deg, var(--color-primary) 0%, #059669 100%);
+      background: linear-gradient(135deg, #059669 0%, #047857 50%, #065f46 100%);
       padding: 24px 32px;
       border-radius: 20px;
       color: white;
@@ -554,7 +554,7 @@ import { AuthService } from '../../services/auth.service';
       font-size: 1.5rem;
     }
     .btn-submit-app {
-      background: linear-gradient(135deg, var(--color-primary) 0%, #059669 100%);
+      background: linear-gradient(135deg, #059669 0%, #047857 50%, #065f46 100%);
       color: white;
       border: none;
       padding: 14px 40px;

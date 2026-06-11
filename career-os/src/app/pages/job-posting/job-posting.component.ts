@@ -533,30 +533,50 @@ import { JobService } from '../../services/job.service';
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 40px;
-      background: linear-gradient(135deg, var(--color-primary) 0%, #059669 100%);
-      border-radius: 24px;
+      padding: 48px;
+      background: linear-gradient(135deg, #059669 0%, #047857 50%, #065f46 100%);
+      border-radius: 28px;
       color: white;
-      box-shadow: 0 10px 30px -10px rgba(16, 185, 129, 0.4);
+      box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.3);
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .page-header::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.2), transparent 50%);
+      pointer-events: none;
     }
 
     .header-content h1 {
       margin: 0;
-      font-size: 2.25rem;
+      font-size: 2.5rem;
       font-weight: 800;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.03em;
+      position: relative;
+      z-index: 2;
+      color: white;
     }
 
     .header-content p {
-      margin: 8px 0 0 0;
-      font-size: 1.0625rem;
-      opacity: 0.9;
+      margin: 12px 0 0 0;
+      font-size: 1.125rem;
+      color: rgba(255, 255, 255, 0.9);
+      position: relative;
+      z-index: 2;
+      font-weight: 400;
     }
 
     .header-icon {
-      font-size: 5rem;
-      opacity: 0.2;
-      transform: rotate(15deg);
+      font-size: 9rem;
+      color: rgba(255, 255, 255, 0.03);
+      transform: rotate(15deg) translateY(-20px);
+      position: absolute;
+      right: 40px;
+      pointer-events: none;
     }
 
     @media (max-width: 600px) {
