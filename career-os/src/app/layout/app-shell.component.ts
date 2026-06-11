@@ -106,7 +106,7 @@ interface NavItem {
           <div class="header-right">
             <div class="search-bar-header">
               <i class="ph ph-magnifying-glass"></i>
-              <input type="text" placeholder="Search jobs, companies...">
+              <input type="text" #searchInput (keyup.enter)="onSearch(searchInput.value)" placeholder="Search jobs, companies...">
             </div>
             <button class="btn-bell" routerLink="/notifications">
               <i class="ph ph-bell"></i>
@@ -618,6 +618,7 @@ export class AppShellComponent implements OnInit, OnDestroy {
     { label: 'Dashboard', route: '/dashboard', icon: 'ph-house-simple' },
     { label: 'Resume Builder', route: '/profile', queryParams: { tab: 'resume' }, icon: 'ph-file-text' },
     { label: 'Job Application', route: '/jobs', icon: 'ph-briefcase' },
+    { label: 'Mock Interview', route: '/mock-interview', icon: 'ph-video-camera' },
     { label: 'Post a Job', route: '/job-posting', icon: 'ph-plus-circle' },
     { label: 'Sharing Forum', route: '/forum', icon: 'ph-chat-teardrop' },
     { label: 'Upskilling Courses', route: '/courses', icon: 'ph-chalkboard-teacher' },
@@ -740,6 +741,14 @@ export class AppShellComponent implements OnInit, OnDestroy {
     }
     if (this.isHeaderMenuOpen()) {
       this.isHeaderMenuOpen.set(false);
+    }
+  }
+
+  onSearch(query: string) {
+    if (query.trim()) {
+      this.router.navigate(['/jobs'], { queryParams: { q: query.trim() } });
+    } else {
+      this.router.navigate(['/jobs']);
     }
   }
 
