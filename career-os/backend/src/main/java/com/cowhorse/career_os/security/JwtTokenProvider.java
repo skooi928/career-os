@@ -4,6 +4,7 @@ import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 
 import javax.crypto.SecretKey;
@@ -11,6 +12,7 @@ import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.cowhorse.career_os.repository.UserProfileRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -111,6 +113,20 @@ public class JwtTokenProvider {
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
+    }
+
+    /**
+     * Resolves the role of a user from the DB given their UUID string (from JWT sub claim).
+     * Returns "candidate" as default if profile not found.
+     */
+    public String getRoleForUser(String userId, UserProfileRepository userProfileRepo) {
+        try {
+            return userProfileRepo.findByUserId(UUID.fromString(userId))
+                    .map(p -> p.getRole() != null ? p.getRole() : "candidate")
+                    .orElse("candidate");
+        } catch (Exception e) {
+            return "candidate";
+        }
     }
 }
 

@@ -9,6 +9,7 @@ public class SupabaseClient {
     
     private String url;
     private String apiKey;
+    private String serviceKey;
 
     public String getUrl() {
         return url;
@@ -24,5 +25,19 @@ public class SupabaseClient {
 
     public void setApiKey(String apiKey) {
         this.apiKey = apiKey;
+    }
+
+    /** Service-role key — bypasses RLS for server-side Storage operations. */
+    public String getServiceKey() {
+        return serviceKey;
+    }
+
+    public void setServiceKey(String serviceKey) {
+        this.serviceKey = serviceKey;
+    }
+
+    /** Returns service-key if configured, otherwise falls back to api-key. */
+    public String getStorageKey() {
+        return (serviceKey != null && !serviceKey.isBlank()) ? serviceKey : apiKey;
     }
 }

@@ -613,18 +613,33 @@ export class AppShellComponent implements OnInit, OnDestroy {
   userProfile = signal<UserProfileDTO | null>(null);
   profileImageUrl = signal<string | null>(null);
   private destroy$ = new Subject<void>();
-  
-  navItems = signal<NavItem[]>([
-    { label: 'Dashboard', route: '/dashboard', icon: 'ph-house-simple' },
+
+  // Base nav items visible to all roles
+  private readonly baseNav: NavItem[] = [
+    { label: 'Dashboard',      route: '/dashboard',    icon: 'ph-house-simple' },
     { label: 'Resume Builder', route: '/profile', queryParams: { tab: 'resume' }, icon: 'ph-file-text' },
-    { label: 'Job Application', route: '/jobs', icon: 'ph-briefcase' },
+    { label: 'Job Application',route: '/jobs',          icon: 'ph-briefcase' },
     { label: 'Mock Interview', route: '/mock-interview', icon: 'ph-video-camera' },
-    { label: 'Post a Job', route: '/job-posting', icon: 'ph-plus-circle' },
-    { label: 'Sharing Forum', route: '/forum', icon: 'ph-chat-teardrop' },
-    { label: 'Upskilling', route: '/upskilling', icon: 'ph-chalkboard-teacher' },
-    { label: 'Organisation', route: '/organisation/dashboard', icon: 'ph-buildings' },
-    { label: 'Analytics', route: '/insights', icon: 'ph-chart-bar' },
-  ]);
+    { label: 'Upskilling',     route: '/upskilling',    icon: 'ph-chalkboard-teacher' },
+    { label: 'Analytics',      route: '/insights',      icon: 'ph-chart-bar' },
+  ];
+
+  navItems = signal<NavItem[]>(this.buildNav());
+
+  private buildNav(): NavItem[] {
+    const role = this.authService?.getRole() ?? 'candidate';
+    const items = [...this.baseNav];
+    if (role === 'candidate') {
+      items.push({ label: 'Organisations', route: '/organisation', icon: 'ph-buildings' });
+    }
+    if (role === 'employer' || role === 'admin') {
+      items.splice(4, 0, { label: 'Post a Job', route: '/job-posting', icon: 'ph-plus-circle' });
+    }
+    if (role === 'employer' || role === 'admin') {
+      items.push({ label: 'Organisation', route: '/organisation', icon: 'ph-buildings' });
+    }
+    return items;
+  }
 
   userRole = computed(() => {
     return this.userProfile()?.role || this.authService.getCurrentUser()?.role || 'candidate';
@@ -672,6 +687,11 @@ export class AppShellComponent implements OnInit, OnDestroy {
             }
           }
         });
+
+      // Update nav when role resolves (async fetch after init)
+      this.authService.currentUser$.pipe(takeUntil(this.destroy$)).subscribe(() => {
+        this.navItems.set(this.buildNav());
+      });
     }
   }
 

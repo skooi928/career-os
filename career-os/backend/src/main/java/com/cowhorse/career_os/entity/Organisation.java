@@ -27,7 +27,7 @@ public class Organisation {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String name;
 
     @Enumerated(EnumType.STRING)
@@ -44,6 +44,9 @@ public class Organisation {
     @Column(name = "email_domain")
     private String emailDomain;
 
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "verification_status", nullable = false)
     @Builder.Default
@@ -52,10 +55,12 @@ public class Organisation {
     @Column(name = "verification_document_url")
     private String verificationDocumentUrl;
 
-    @Column(name = "verified_at")
+    @Column(name = "verified_at", insertable = false, updatable = false)
     private Instant verifiedAt;
 
-    @Column(name = "created_at", updatable = false)
-    @Builder.Default
-    private Instant createdAt = Instant.now();
+    @Column(name = "created_at", insertable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at", insertable = false, updatable = false)
+    private Instant updatedAt;
 }

@@ -1,18 +1,33 @@
 package com.cowhorse.career_os.controller;
 
-import com.cowhorse.career_os.dto.OrganisationDTOs.*;
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.cowhorse.career_os.dto.OrganisationDTOs.CreateOrganisationRequest;
+import com.cowhorse.career_os.dto.OrganisationDTOs.DashboardStatsResponse;
+import com.cowhorse.career_os.dto.OrganisationDTOs.InviteMemberRequest;
+import com.cowhorse.career_os.dto.OrganisationDTOs.UpdateMemberRoleRequest;
+import com.cowhorse.career_os.dto.OrganisationDTOs.UpdateOrganisationRequest;
 import com.cowhorse.career_os.entity.Organisation;
 import com.cowhorse.career_os.entity.OrganisationMember;
 import com.cowhorse.career_os.exception.AuthenticationException;
+import com.cowhorse.career_os.exception.DuplicateOrganisationNameException;
 import com.cowhorse.career_os.security.JwtTokenProvider;
 import com.cowhorse.career_os.service.OrganisationService;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/organisations")
@@ -49,30 +64,48 @@ public class OrganisationController {
     }
 
     @PostMapping
-    public ResponseEntity<Organisation> createOrganisation(@RequestHeader("Authorization") String auth,
+    public ResponseEntity<?> createOrganisation(@RequestHeader("Authorization") String auth,
                                                            @RequestBody CreateOrganisationRequest req) {
-        return ResponseEntity.ok(orgService.createOrganisation(getUid(auth), req));
+        try {
+            return ResponseEntity.ok(orgService.createOrganisation(getUid(auth), req));
+        } catch (DuplicateOrganisationNameException e) {
+            return ResponseEntity.status(409).body(java.util.Map.of("error", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+        }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Organisation> updateOrganisation(@PathVariable UUID id,
+    public ResponseEntity<?> updateOrganisation(@PathVariable UUID id,
                                                            @RequestHeader("Authorization") String auth,
                                                            @RequestBody UpdateOrganisationRequest req) {
-        return ResponseEntity.ok(orgService.updateOrganisation(id, getUid(auth), req));
+        try {
+            return ResponseEntity.ok(orgService.updateOrganisation(id, getUid(auth), req));
+        } catch (DuplicateOrganisationNameException e) {
+            return ResponseEntity.status(409).body(java.util.Map.of("error", e.getMessage()));
+        }
     }
 
     @PostMapping("/{id}/upload-document")
-    public ResponseEntity<Organisation> uploadDocument(@PathVariable UUID id,
-                                                       @RequestHeader("Authorization") String auth,
-                                                       @RequestParam("file") MultipartFile file) throws IOException {
-        return ResponseEntity.ok(orgService.uploadVerificationDocument(id, getUid(auth), file));
+    public ResponseEntity<?> uploadDocument(@PathVariable UUID id,
+                                            @RequestHeader("Authorization") String auth,
+                                            @RequestParam("file") MultipartFile file) {
+        try {
+            return ResponseEntity.ok(orgService.uploadVerificationDocument(id, getUid(auth), file));
+        } catch (Exception e) {
+            return ResponseEntity.status(502).body(java.util.Map.of("error", e.getMessage()));
+        }
     }
 
     @PostMapping("/{id}/upload-logo")
-    public ResponseEntity<Organisation> uploadLogo(@PathVariable UUID id,
-                                                   @RequestHeader("Authorization") String auth,
-                                                   @RequestParam("file") MultipartFile file) throws IOException {
-        return ResponseEntity.ok(orgService.uploadLogo(id, getUid(auth), file));
+    public ResponseEntity<?> uploadLogo(@PathVariable UUID id,
+                                        @RequestHeader("Authorization") String auth,
+                                        @RequestParam("file") MultipartFile file) {
+        try {
+            return ResponseEntity.ok(orgService.uploadLogo(id, getUid(auth), file));
+        } catch (Exception e) {
+            return ResponseEntity.status(502).body(java.util.Map.of("error", e.getMessage()));
+        }
     }
 
     @GetMapping("/{id}/members")
@@ -108,5 +141,24 @@ public class OrganisationController {
     public ResponseEntity<DashboardStatsResponse> getDashboardStats(@PathVariable UUID id,
                                                                     @RequestHeader("Authorization") String auth) {
         return ResponseEntity.ok(orgService.getDashboardStats(id, getUid(auth)));
+    }
+
+    // ── Admin endpoints ──
+
+    @GetMapping("/admin/all")
+    public ResponseEntity<List<Organisation>> getAllOrganisations(@RequestHeader("Authorization") String auth) {
+        return ResponseEntity.ok(orgService.getAllOrganisations(getUid(auth)));
+    }
+
+    @PostMapping("/{id}/verify")
+    public ResponseEntity<Organisation> verifyOrganisation(@PathVariable UUID id,
+                                                           @RequestHeader("Authorization") String auth) {
+        return ResponseEntity.ok(orgService.verifyOrganisation(id, getUid(auth)));
+    }
+
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<Organisation> rejectOrganisation(@PathVariable UUID id,
+                                                           @RequestHeader("Authorization") String auth) {
+        return ResponseEntity.ok(orgService.rejectOrganisation(id, getUid(auth)));
     }
 }

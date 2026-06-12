@@ -22,7 +22,7 @@ export class OrganisationService {
   }
 
   getMyOrganisations(): Observable<Organisation[]> {
-    return this.http.get<Organisation[]>(`${this.base}/my`);
+    return this.http.get<Organisation[]>(`${this.base}/me`);
   }
 
   createOrganisation(req: CreateOrganisationRequest): Observable<Organisation> {
@@ -36,13 +36,13 @@ export class OrganisationService {
   uploadVerificationDocument(orgId: string, file: File): Observable<Organisation> {
     const form = new FormData();
     form.append('file', file);
-    return this.http.post<Organisation>(`${this.base}/${orgId}/verification-document`, form);
+    return this.http.post<Organisation>(`${this.base}/${orgId}/upload-document`, form);
   }
 
   uploadLogo(orgId: string, file: File): Observable<Organisation> {
     const form = new FormData();
     form.append('file', file);
-    return this.http.post<Organisation>(`${this.base}/${orgId}/logo`, form);
+    return this.http.post<Organisation>(`${this.base}/${orgId}/upload-logo`, form);
   }
 
   getMembers(orgId: string): Observable<OrganisationMember[]> {
@@ -62,6 +62,19 @@ export class OrganisationService {
   }
 
   getDashboardStats(orgId: string): Observable<OrgDashboardStats> {
-    return this.http.get<OrgDashboardStats>(`${this.base}/${orgId}/dashboard-stats`);
+    return this.http.get<OrgDashboardStats>(`${this.base}/${orgId}/stats`);
+  }
+
+  // Admin
+  getAllOrganisations(): Observable<Organisation[]> {
+    return this.http.get<Organisation[]>(`${this.base}/admin/all`);
+  }
+
+  verifyOrganisation(orgId: string): Observable<Organisation> {
+    return this.http.post<Organisation>(`${this.base}/${orgId}/verify`, {});
+  }
+
+  rejectOrganisation(orgId: string): Observable<Organisation> {
+    return this.http.post<Organisation>(`${this.base}/${orgId}/reject`, {});
   }
 }
