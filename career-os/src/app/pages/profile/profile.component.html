@@ -93,7 +93,7 @@
     <button class="profile-tab" [class.active]="mainActiveTab() === 'details'" (click)="switchTab('details')">
       <i class="ph ph-user"></i> Profile Details
     </button>
-    
+
     <ng-container *ngIf="authService.getCurrentUser()?.role !== 'employer'">
       <button class="profile-tab" [class.active]="mainActiveTab() === 'resume'" (click)="switchTab('resume')">
         <i class="ph ph-file-text"></i> Resume & Alignment
@@ -865,7 +865,8 @@
           <div class="badge-info">
             <strong>{{ b.badge?.name || 'Badge' }}</strong>
             <span class="badge-org">{{ b.badge?.organisation?.name }}</span>
-            <span class="badge-status" [class.verified]="b.verificationStatus === 'VERIFIED'">{{ b.verificationStatus }}</span>
+            <span class="badge-status" [class.verified]="b.verificationStatus === 'VERIFIED'">{{ b.verificationStatus
+              }}</span>
           </div>
         </div>
       </div>

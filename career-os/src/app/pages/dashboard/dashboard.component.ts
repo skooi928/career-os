@@ -206,7 +206,7 @@ import { DashboardService } from '../../services/dashboard.service';
       </div>
 
       <!-- Recommended Jobs -->
-      <div class="recommended-section">
+      <div class="recommended-section" *ngIf="!isEmployer() && !isMentor()">
         <div class="section-header">
           <h3>Recommended Jobs</h3>
           <button class="btn-text" *ngIf="(jobs$ | async)?.length && !loadingJobs">View All</button>
@@ -1243,6 +1243,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Employer state
   isEmployer = signal<boolean>(false);
+  isMentor = signal<boolean>(false);
   postedJobs = signal<Job[]>([]);
   receivedApplications = signal<any[]>([]);
   expandedJobApplicationsId = signal<string | null>(null);
@@ -1284,6 +1285,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         const user = this.authService.getCurrentUser();
         if(user) {
           this.isEmployer.set(user.role?.toLowerCase() === 'employer');
+          this.isMentor.set(user.role?.toLowerCase() === 'mentor');
 
           if (this.isEmployer()) {
             this.fetchEmployerData(user.userId);
