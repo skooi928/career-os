@@ -8,7 +8,6 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.cowhorse.career_os.dto.BadgeDTOs.*;
 import com.cowhorse.career_os.dto.BadgeDTOs.CreateBadgeRequest;
 import com.cowhorse.career_os.dto.BadgeDTOs.IssueBadgeRequest;
 import com.cowhorse.career_os.dto.BadgeDTOs.ReviewConversionRequest;
@@ -142,7 +141,7 @@ public class BadgeService {
 
     // --- Helpers ---
     private void assertAdmin(UUID orgId, String userId) {
-        OrganisationMember m = memberRepo.findByOrganisationIdAndUserId(orgId, userId)
+        OrganisationMember m = memberRepo.findByOrganisationIdAndUserId(orgId, UUID.fromString(userId))
                 .orElseThrow(() -> new RuntimeException("Not a member"));
         if (m.getRole() != OrgMemberRole.ORG_ADMIN) throw new RuntimeException("Requires ORG_ADMIN role");
     }

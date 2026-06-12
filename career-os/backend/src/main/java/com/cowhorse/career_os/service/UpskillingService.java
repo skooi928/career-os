@@ -137,13 +137,13 @@ public class UpskillingService {
 
     // --- Helpers ---
     private void assertAdmin(UUID orgId, String userId) {
-        OrganisationMember m = memberRepo.findByOrganisationIdAndUserId(orgId, userId)
+        OrganisationMember m = memberRepo.findByOrganisationIdAndUserId(orgId, UUID.fromString(userId))
                 .orElseThrow(() -> new RuntimeException("Not a member"));
         if (m.getRole() != OrgMemberRole.ORG_ADMIN) throw new RuntimeException("Requires ORG_ADMIN role");
     }
 
     private void assertMember(UUID orgId, String userId) {
-        if (!memberRepo.existsByOrganisationIdAndUserId(orgId, userId))
+        if (!memberRepo.existsByOrganisationIdAndUserId(orgId, UUID.fromString(userId)))
             throw new RuntimeException("Not a member of this organisation");
     }
 }

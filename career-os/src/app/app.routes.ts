@@ -20,10 +20,14 @@ import { MyLearningComponent } from './pages/upskilling/my-learning/my-learning.
 import { MyBadgesComponent } from './pages/upskilling/my-badges/my-badges.component';
 import { VerificationComponent } from './pages/upskilling/verification/verification.component';
 import { OrgDashboardComponent } from './pages/organisation/org-dashboard/org-dashboard.component';
+import { OrgListComponent } from './pages/organisation/org-list/org-list.component';
 import { OrgCoursesComponent } from './pages/organisation/org-courses/org-courses.component';
 import { OrgMembersComponent } from './pages/organisation/org-members/org-members.component';
 import { OrgVerificationsComponent } from './pages/organisation/org-verifications/org-verifications.component';
 import { OrgPublicComponent } from './pages/organisation/org-public/org-public.component';
+import { OrgReviewComponent } from './pages/organisation/org-review/org-review.component';
+import { AdminOrganisationsComponent } from './pages/admin/admin-organisations/admin-organisations.component';
+import { roleGuard } from './guards/role.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -45,20 +49,23 @@ export const routes: Routes = [
       { path: 'profile', component: ProfileComponent, canActivate: [emailVerificationGuard] },
       { path: 'mock-interview', loadComponent: () => import('./pages/mock-interview/mock-interview.component').then(m => m.MockInterviewComponent) },
       // Add more routes here as you create new pages
-      { path: 'resume', component: ResumeBuilderComponent, canActivate: [emailVerificationGuard] },
+      { path: 'resume', redirectTo: 'profile', pathMatch: 'full' },
+      { path: 'cv-preview', component: CvPreviewComponent, canActivate: [emailVerificationGuard] },
       // Upskilling
       { path: 'upskilling', component: UpskillingComponent },
       { path: 'upskilling/my-learning', component: MyLearningComponent },
       { path: 'upskilling/my-badges', component: MyBadgesComponent },
       { path: 'upskilling/verification', component: VerificationComponent },
       // Organisation (specific before :id wildcard)
-      { path: 'organisation/dashboard', component: OrgDashboardComponent },
-      { path: 'organisation/courses', component: OrgCoursesComponent },
-      { path: 'organisation/members', component: OrgMembersComponent },
-      { path: 'organisation/verifications', component: OrgVerificationsComponent },
+      { path: 'organisation', component: OrgListComponent, canActivate: [roleGuard(['candidate', 'employer', 'admin'])] },
+      { path: 'organisation/dashboard', component: OrgDashboardComponent, canActivate: [roleGuard(['employer', 'admin'])] },
+      { path: 'organisation/courses', component: OrgCoursesComponent, canActivate: [roleGuard(['employer', 'admin'])] },
+      { path: 'organisation/members', component: OrgMembersComponent, canActivate: [roleGuard(['employer', 'admin'])] },
+      { path: 'organisation/verifications', component: OrgVerificationsComponent, canActivate: [roleGuard(['employer', 'admin'])] },
+      { path: 'organisation/:id/review', component: OrgReviewComponent, canActivate: [roleGuard(['admin'])] },
       { path: 'organisation/:id', component: OrgPublicComponent },
-      { path: 'resume', redirectTo: 'profile', pathMatch: 'full' },
-      { path: 'cv-preview', component: CvPreviewComponent, canActivate: [emailVerificationGuard] },
+      // Admin
+      { path: 'admin/organisations', component: AdminOrganisationsComponent, canActivate: [roleGuard(['admin'])] },
       { path: '**', component: PageNotFoundComponent },
     ]
   },

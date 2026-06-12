@@ -2,6 +2,7 @@ package com.cowhorse.career_os.dto;
 
 import com.cowhorse.career_os.entity.OrgMemberRole;
 import com.cowhorse.career_os.entity.OrgType;
+
 import lombok.Data;
 
 public class OrganisationDTOs {
@@ -25,7 +26,7 @@ public class OrganisationDTOs {
 
     @Data
     public static class InviteMemberRequest {
-        private String email;
+        private String userId;
         private OrgMemberRole role;
     }
 

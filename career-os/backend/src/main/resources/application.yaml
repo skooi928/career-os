@@ -20,6 +20,7 @@ spring:
 supabase:
   url: https://mgqmcfawkgiwjdhxazmy.supabase.co
   api-key: sb_publishable_xJP9R0ZzP9SxulF648yeow_1_kuamXo
+  service-key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ncW1jZmF3a2dpd2pkaHhhem15Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTE5Nzc2OSwiZXhwIjoyMDk0NzczNzY5fQ.kkfV7NjvyHBIzULTwyI4WscxMsVJWwpVcZdhM4FgkVo
   jwt:
     secret: ${JWT_SECRET}
     expiration: 86400000
