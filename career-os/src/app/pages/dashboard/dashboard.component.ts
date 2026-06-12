@@ -1232,10 +1232,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   newTaskDescription = '';
   newTaskPriority = 'medium';
   isAnalyzing = false;
-  roleMismatchInfo = signal<{requestedRole: string, actualRole: string} | null>(null);
-  
+  roleMismatchInfo = signal<{ requestedRole: string, actualRole: string } | null>(null);
+
   activeView = signal<'dashboard' | 'applications' | 'saved_jobs' | 'posted_jobs'>('dashboard');
-  
+
   savedJobIds: Set<string> = new Set();
   savedJobs = signal<any[]>([]);
   applications = signal<any[]>([]);
@@ -1267,7 +1267,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ngOnInit() {
     if (isPlatformBrowser(this.platformId)) {
       this.jobService.loadJobs();
-      
+
       this.jobService.loading$
         .pipe(takeUntil(this.destroy$))
         .subscribe(loading => {
@@ -1281,297 +1281,297 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
       this.loadDashboardSummary();
 
-      const user = this.authService.getCurrentUser();
-      if (user) {
-        this.isEmployer.set(user.role?.toLowerCase() === 'employer');
+        const user = this.authService.getCurrentUser();
+        if(user) {
+          this.isEmployer.set(user.role?.toLowerCase() === 'employer');
 
-        if (this.isEmployer()) {
-          this.fetchEmployerData(user.userId);
-        } else {
-          this.savedJobService.getSavedJobsForUser(user.userId).subscribe({
-            next: (saved) => {
-              this.savedJobIds = new Set(saved.map(s => s.jobId));
-              this.savedJobs.set(saved);
-              saved.forEach(s => {
-                this.jobService.getJobById(s.jobId).subscribe(jobDetails => {
-                  this.savedJobs.update(jobs => jobs.map(j => j.id === s.id ? { ...j, jobDetails } : j));
+          if (this.isEmployer()) {
+            this.fetchEmployerData(user.userId);
+          } else {
+            this.savedJobService.getSavedJobsForUser(user.userId).subscribe({
+              next: (saved) => {
+                this.savedJobIds = new Set(saved.map(s => s.jobId));
+                this.savedJobs.set(saved);
+                saved.forEach(s => {
+                  this.jobService.getJobById(s.jobId).subscribe(jobDetails => {
+                    this.savedJobs.update(jobs => jobs.map(j => j.id === s.id ? { ...j, jobDetails } : j));
+                  });
                 });
-              });
-            },
-            error: (err) => console.error('Failed to load saved jobs', err)
-          });
+              },
+              error: (err) => console.error('Failed to load saved jobs', err)
+            });
 
-          this.applicationService.getApplicationsByCandidate(user.userId).subscribe({
-            next: (apps) => {
-              this.applications.set(apps);
-              apps.forEach(app => {
-                this.jobService.getJobById(app.jobId).subscribe(jobDetails => {
-                  this.applications.update(a => a.map(x => x.applicationId === app.applicationId ? { ...x, jobDetails } : x));
+            this.applicationService.getApplicationsByCandidate(user.userId).subscribe({
+              next: (apps) => {
+                this.applications.set(apps);
+                apps.forEach(app => {
+                  this.jobService.getJobById(app.jobId).subscribe(jobDetails => {
+                    this.applications.update(a => a.map(x => x.applicationId === app.applicationId ? { ...x, jobDetails } : x));
+                  });
                 });
-              });
-            },
-            error: (err) => console.error('Error fetching applications', err)
-          });
+              },
+              error: (err) => console.error('Error fetching applications', err)
+            });
+          }
         }
-      }
 
       // Check for role mismatch from login redirect
       this.route.queryParams.subscribe(params => {
-        if (params['roleMismatch'] === 'true') {
-          this.roleMismatchInfo.set({
-            requestedRole: params['requestedRole'] || '',
-            actualRole: params['actualRole'] || ''
-          });
-
-          // Clear query parameters
-          this.router.navigate([], {
-            relativeTo: this.route,
-            queryParams: { roleMismatch: null, requestedRole: null, actualRole: null },
-            queryParamsHandling: 'merge'
-          });
-        }
-      });
-    }
-  }
-
-  ngOnDestroy() {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
-
-  fetchEmployerData(userId: string) {
-    this.jobService.getJobsByEmployerId(userId)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (jobs) => this.postedJobs.set(jobs),
-        error: (err) => console.error('Error fetching posted jobs', err)
-      });
-
-    this.http.get<any[]>(`http://localhost:8080/api/applications/employer/${userId}`, {
-      headers: { 'Authorization': `Bearer ${this.authService.getToken()}` }
-    }).pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (apps) => {
-          this.receivedApplications.set(apps);
-          apps.forEach(app => {
-            this.jobService.getJobById(app.jobId).subscribe(jobDetails => {
-              this.receivedApplications.update(a => 
-                a.map(x => x.applicationId === app.applicationId ? { ...x, jobDetails } : x)
-              );
+          if (params['roleMismatch'] === 'true') {
+            this.roleMismatchInfo.set({
+              requestedRole: params['requestedRole'] || '',
+              actualRole: params['actualRole'] || ''
             });
-          });
-        },
-        error: (err) => console.error('Error fetching received applications', err)
-      });
-  }
 
-  updateApplicationStatus(applicationId: string, status: string) {
-    this.http.put<any>(`http://localhost:8080/api/applications/${applicationId}/status`, { status }, {
-      headers: { 'Authorization': `Bearer ${this.authService.getToken()}` }
-    }).pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (updatedApp) => {
-          this.receivedApplications.update(apps => 
-            apps.map(app => app.applicationId === applicationId ? { ...app, status: updatedApp.status } : app)
-          );
-        },
-        error: (err) => console.error('Error updating status', err)
-      });
-  }
-
-  toggleJobApplications(jobId: string) {
-    if (this.expandedJobApplicationsId() === jobId) {
-      this.expandedJobApplicationsId.set(null);
-    } else {
-      this.expandedJobApplicationsId.set(jobId);
-      const appsForJob = this.getApplicationsForJob(jobId);
-      appsForJob.forEach(app => {
-        if (!app.candidateProfile) {
-          this.profileService.getProfile(app.candidateId).pipe(takeUntil(this.destroy$)).subscribe({
-            next: (profile) => {
-              this.receivedApplications.update(apps => 
-                apps.map(a => a.applicationId === app.applicationId ? { ...a, candidateProfile: profile } : a)
-              );
-            },
-            error: (err) => console.error('Failed to fetch candidate profile', err)
-          });
-        }
-      });
-    }
-  }
-
-  getApplicationsForJob(jobId: string) {
-    return this.receivedApplications().filter(a => a.jobId === jobId);
-  }
-
-  getQuestionText(app: any, questionId: string): string {
-    if (!app.jobDetails || !app.jobDetails.questions) return 'Custom Question';
-    const q = app.jobDetails.questions.find((q: any) => q.id === questionId);
-    return q ? q.questionText : 'Custom Question';
-  }
-
-  editPostedJob(job: Job) {
-    this.router.navigate(['/job-posting'], { queryParams: { edit: job.id } });
-  }
-
-  loadTasks() {
-    this.profileService.getUserProfile().subscribe({
-      next: (profile) => {
-        if (profile.quickTasks) {
-          this.tasks = profile.quickTasks;
-        }
-      },
-      error: (err) => console.error('Failed to load tasks', err)
-    });
-  }
-
-  firstName() {
-    return this.authService.getCurrentUser()?.firstName || 'User';
-  }
-
-  toggleApplicationDetails(appId: string) {
-    if (this.expandedApplicationId() === appId) {
-      this.expandedApplicationId.set(null);
-    } else {
-      this.expandedApplicationId.set(appId);
-    }
-  }
-
-
-  viewJob(id?: string) {
-    if (id) {
-      this.router.navigate(['/jobs', id]);
-    }
-  }
-
-  formatNumber(num: number): string {
-    return num.toLocaleString();
-  }
-
-  isJobSaved(jobId?: string): boolean {
-    if (!jobId) return false;
-    return this.savedJobIds.has(jobId);
-  }
-
-  toggleBookmark(event: Event, job: any) {
-    event.stopPropagation();
-    if (!job.id) return;
-    
-    const user = this.authService.getCurrentUser();
-    if (!user) return;
-
-    if (this.savedJobIds.has(job.id)) {
-      // Unsave
-      this.savedJobIds.delete(job.id);
-      this.savedJobService.unsaveJob(user.userId, job.id).subscribe({
-        error: (err) => {
-          console.error('Failed to unsave job', err);
-          this.savedJobIds.add(job.id); // Revert on failure
-        }
-      });
-    } else {
-      // Save
-      this.savedJobIds.add(job.id);
-      this.savedJobService.saveJob(user.userId, job.id).subscribe({
-        error: (err) => {
-          console.error('Failed to save job', err);
-          this.savedJobIds.delete(job.id); // Revert on failure
-        }
-      });
-    }
-  }
-
-  saveTask() {
-    if (!this.newTaskDescription.trim()) return;
-
-    const task: QuickTask = {
-      description: this.newTaskDescription,
-      status: 'added',
-      priority: this.newTaskPriority
-    };
-
-    this.profileService.addQuickTask(task).subscribe({
-      next: (savedTask) => {
-        this.tasks.push(savedTask);
-        this.isAddingTask = false;
-        this.newTaskDescription = '';
-        this.newTaskPriority = 'medium';
-      },
-      error: (err) => console.error('Failed to add task', err)
-    });
-  }
-
-  toggleTask(task: QuickTask) {
-    if (!task.id) return;
-    const newStatus = task.status === 'closed' ? 'added' : 'closed';
-
-    // Optimistic UI update
-    const originalStatus = task.status;
-    task.status = newStatus;
-
-    this.profileService.updateQuickTask(task.id, { ...task, status: newStatus }).subscribe({
-      error: (err) => {
-        console.error('Failed to update task', err);
-        task.status = originalStatus; // Revert on failure
+            // Clear query parameters
+            this.router.navigate([], {
+              relativeTo: this.route,
+              queryParams: { roleMismatch: null, requestedRole: null, actualRole: null },
+              queryParamsHandling: 'merge'
+            });
+          }
+        });
       }
-    });
   }
 
-  analyzeCareer() {
-    if (this.isAnalyzing) return;
+    ngOnDestroy() {
+      this.destroy$.next();
+      this.destroy$.complete();
+    }
 
-    this.isAnalyzing = true;
-    this.careerAnalysisService.analyzeCareer().subscribe({
-      next: (prediction) => {
-        // Navigate to insights page with the prediction data
-        this.router.navigate(['/insights'], { state: { prediction } });
-        this.isAnalyzing = false;
-      },
-      error: (err) => {
-        console.error('Failed to analyze career', err);
-        // Fallback navigation in case of error
-        this.router.navigate(['/insights']);
-        this.isAnalyzing = false;
+    fetchEmployerData(userId: string) {
+      this.jobService.getJobsByEmployerId(userId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (jobs) => this.postedJobs.set(jobs),
+          error: (err) => console.error('Error fetching posted jobs', err)
+        });
+
+      this.http.get<any[]>(`http://localhost:8080/api/applications/employer/${userId}`, {
+        headers: { 'Authorization': `Bearer ${this.authService.getToken()}` }
+      }).pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (apps) => {
+            this.receivedApplications.set(apps);
+            apps.forEach(app => {
+              this.jobService.getJobById(app.jobId).subscribe(jobDetails => {
+                this.receivedApplications.update(a =>
+                  a.map(x => x.applicationId === app.applicationId ? { ...x, jobDetails } : x)
+                );
+              });
+            });
+          },
+          error: (err) => console.error('Error fetching received applications', err)
+        });
+    }
+
+    updateApplicationStatus(applicationId: string, status: string) {
+      this.http.put<any>(`http://localhost:8080/api/applications/${applicationId}/status`, { status }, {
+        headers: { 'Authorization': `Bearer ${this.authService.getToken()}` }
+      }).pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (updatedApp) => {
+            this.receivedApplications.update(apps =>
+              apps.map(app => app.applicationId === applicationId ? { ...app, status: updatedApp.status } : app)
+            );
+          },
+          error: (err) => console.error('Error updating status', err)
+        });
+    }
+
+    toggleJobApplications(jobId: string) {
+      if (this.expandedJobApplicationsId() === jobId) {
+        this.expandedJobApplicationsId.set(null);
+      } else {
+        this.expandedJobApplicationsId.set(jobId);
+        const appsForJob = this.getApplicationsForJob(jobId);
+        appsForJob.forEach(app => {
+          if (!app.candidateProfile) {
+            this.profileService.getProfile(app.candidateId).pipe(takeUntil(this.destroy$)).subscribe({
+              next: (profile) => {
+                this.receivedApplications.update(apps =>
+                  apps.map(a => a.applicationId === app.applicationId ? { ...a, candidateProfile: profile } : a)
+                );
+              },
+              error: (err) => console.error('Failed to fetch candidate profile', err)
+            });
+          }
+        });
       }
-    });
-  }
-
-  loadDashboardSummary() {
-    this.dashboardService.getDashboardSummary().subscribe({
-      next: (summary: any) => {
-        this.stats = {
-          applicationsCount: summary.applicationsCount,
-          interviewsCount: summary.interviewsCount,
-          offersCount: summary.offersCount
-        };
-        this.activities = summary.recentActivities;
-      },
-      error: (err: any) => console.error('Failed to load dashboard summary', err)
-    });
-  }
-
-  formatTime(dateStr?: string): string {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-  }
-
-  getActivityClass(type: string): string {
-    switch (type) {
-      case 'APPLICATION': return 'bg-green';
-      case 'INTERVIEW': return 'bg-emerald';
-      case 'PROFILE': return 'bg-amber';
-      default: return 'bg-amber';
     }
-  }
 
-  getActivityIcon(type: string): string {
-    switch (type) {
-      case 'APPLICATION': return 'ph ph-paper-plane-tilt';
-      case 'INTERVIEW': return 'ph ph-calendar-check';
-      case 'PROFILE': return 'ph ph-pencil-simple';
-      default: return 'ph ph-info';
+    getApplicationsForJob(jobId: string) {
+      return this.receivedApplications().filter(a => a.jobId === jobId);
     }
-  }
 
-}
+    getQuestionText(app: any, questionId: string): string {
+      if (!app.jobDetails || !app.jobDetails.questions) return 'Custom Question';
+      const q = app.jobDetails.questions.find((q: any) => q.id === questionId);
+      return q ? q.questionText : 'Custom Question';
+    }
+
+    editPostedJob(job: Job) {
+      this.router.navigate(['/job-posting'], { queryParams: { edit: job.id } });
+    }
+
+    loadTasks() {
+      this.profileService.getUserProfile().subscribe({
+        next: (profile) => {
+          if (profile.quickTasks) {
+            this.tasks = profile.quickTasks;
+          }
+        },
+        error: (err) => console.error('Failed to load tasks', err)
+      });
+    }
+
+    firstName() {
+      return this.authService.getCurrentUser()?.firstName || 'User';
+    }
+
+    toggleApplicationDetails(appId: string) {
+      if (this.expandedApplicationId() === appId) {
+        this.expandedApplicationId.set(null);
+      } else {
+        this.expandedApplicationId.set(appId);
+      }
+    }
+
+
+    viewJob(id ?: string) {
+      if (id) {
+        this.router.navigate(['/jobs', id]);
+      }
+    }
+
+    formatNumber(num: number): string {
+      return num.toLocaleString();
+    }
+
+    isJobSaved(jobId ?: string): boolean {
+      if (!jobId) return false;
+      return this.savedJobIds.has(jobId);
+    }
+
+    toggleBookmark(event: Event, job: any) {
+      event.stopPropagation();
+      if (!job.id) return;
+
+      const user = this.authService.getCurrentUser();
+      if (!user) return;
+
+      if (this.savedJobIds.has(job.id)) {
+        // Unsave
+        this.savedJobIds.delete(job.id);
+        this.savedJobService.unsaveJob(user.userId, job.id).subscribe({
+          error: (err) => {
+            console.error('Failed to unsave job', err);
+            this.savedJobIds.add(job.id); // Revert on failure
+          }
+        });
+      } else {
+        // Save
+        this.savedJobIds.add(job.id);
+        this.savedJobService.saveJob(user.userId, job.id).subscribe({
+          error: (err) => {
+            console.error('Failed to save job', err);
+            this.savedJobIds.delete(job.id); // Revert on failure
+          }
+        });
+      }
+    }
+
+    saveTask() {
+      if (!this.newTaskDescription.trim()) return;
+
+      const task: QuickTask = {
+        description: this.newTaskDescription,
+        status: 'added',
+        priority: this.newTaskPriority
+      };
+
+      this.profileService.addQuickTask(task).subscribe({
+        next: (savedTask) => {
+          this.tasks.push(savedTask);
+          this.isAddingTask = false;
+          this.newTaskDescription = '';
+          this.newTaskPriority = 'medium';
+        },
+        error: (err) => console.error('Failed to add task', err)
+      });
+    }
+
+    toggleTask(task: QuickTask) {
+      if (!task.id) return;
+      const newStatus = task.status === 'closed' ? 'added' : 'closed';
+
+      // Optimistic UI update
+      const originalStatus = task.status;
+      task.status = newStatus;
+
+      this.profileService.updateQuickTask(task.id, { ...task, status: newStatus }).subscribe({
+        error: (err) => {
+          console.error('Failed to update task', err);
+          task.status = originalStatus; // Revert on failure
+        }
+      });
+    }
+
+    analyzeCareer() {
+      if (this.isAnalyzing) return;
+
+      this.isAnalyzing = true;
+      this.careerAnalysisService.analyzeCareer().subscribe({
+        next: (prediction) => {
+          // Navigate to insights page with the prediction data
+          this.router.navigate(['/insights'], { state: { prediction } });
+          this.isAnalyzing = false;
+        },
+        error: (err) => {
+          console.error('Failed to analyze career', err);
+          // Fallback navigation in case of error
+          this.router.navigate(['/insights']);
+          this.isAnalyzing = false;
+        }
+      });
+    }
+
+    loadDashboardSummary() {
+      this.dashboardService.getDashboardSummary().subscribe({
+        next: (summary: any) => {
+          this.stats = {
+            applicationsCount: summary.applicationsCount,
+            interviewsCount: summary.interviewsCount,
+            offersCount: summary.offersCount
+          };
+          this.activities = summary.recentActivities;
+        },
+        error: (err: any) => console.error('Failed to load dashboard summary', err)
+      });
+    }
+
+    formatTime(dateStr ?: string): string {
+      if (!dateStr) return '';
+      const date = new Date(dateStr);
+      return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    getActivityClass(type: string): string {
+      switch (type) {
+        case 'APPLICATION': return 'bg-green';
+        case 'INTERVIEW': return 'bg-emerald';
+        case 'PROFILE': return 'bg-amber';
+        default: return 'bg-amber';
+      }
+    }
+
+    getActivityIcon(type: string): string {
+      switch (type) {
+        case 'APPLICATION': return 'ph ph-paper-plane-tilt';
+        case 'INTERVIEW': return 'ph ph-calendar-check';
+        case 'PROFILE': return 'ph ph-pencil-simple';
+        default: return 'ph ph-info';
+      }
+    }
+
+  }
