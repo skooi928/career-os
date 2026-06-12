@@ -6,6 +6,8 @@ import { AuthService } from '../../services/auth.service';
 import { ProfileService, Experience, Education, Project, Skill, UserProfileDTO } from '../../services/profile.service';
 import { ResumeService } from '../../services/resume.service';
 import { CareerAnalysisService } from '../../services/career-analysis.service';
+import { BadgeService } from '../../services/badge.service';
+import { UserBadge } from '../../types/upskilling.types';
 import { JobService, Job } from '../../services/job.service';
 import { SavedJobService, SavedJob } from '../../services/saved-job.service';
 import { EventService } from '../../services/event.service';
@@ -159,6 +161,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   education = signal<Education[]>([]);
   projects = signal<Project[]>([]);
   skills = signal<Skill[]>([]);
+  badges = signal<UserBadge[]>([]);
 
   // Form states for adding new items
   showAddExperience = signal(false);
@@ -183,6 +186,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   constructor(
     public authService: AuthService,
     private profileService: ProfileService,
+    private badgeService: BadgeService,
     private resumeService: ResumeService,
     private careerAnalysisService: CareerAnalysisService,
     private jobService: JobService,
@@ -333,6 +337,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
         }
       });
 
+    // Load badges independently
+    this.badgeService.getMyBadges()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({ next: b => this.badges.set(b), error: () => {} });
   }
 
   toggleSection(section: keyof ExpandedSectionsState) {

@@ -621,7 +621,8 @@ export class AppShellComponent implements OnInit, OnDestroy {
     { label: 'Mock Interview', route: '/mock-interview', icon: 'ph-video-camera' },
     { label: 'Post a Job', route: '/job-posting', icon: 'ph-plus-circle' },
     { label: 'Sharing Forum', route: '/forum', icon: 'ph-chat-teardrop' },
-    { label: 'Upskilling Courses', route: '/courses', icon: 'ph-chalkboard-teacher' },
+    { label: 'Upskilling', route: '/upskilling', icon: 'ph-chalkboard-teacher' },
+    { label: 'Organisation', route: '/organisation/dashboard', icon: 'ph-buildings' },
     { label: 'Analytics', route: '/insights', icon: 'ph-chart-bar' },
   ]);
 

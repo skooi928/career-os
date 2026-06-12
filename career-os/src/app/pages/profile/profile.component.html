@@ -848,4 +848,27 @@
     </div>
   </div>
 
+  <!-- Badges Section -->
+  <div class="section badges-section">
+    <div class="section-header" (click)="toggleSection('badges')">
+      <h2><i class="ph-medal"></i> My Badges</h2>
+      <i [class]="expandedSection() === 'badges' ? 'ph-caret-down' : 'ph-caret-right'"></i>
+    </div>
+    <div *ngIf="expandedSection() === 'badges'" class="section-content">
+      <div *ngIf="badges().length === 0" class="empty-badges">
+        <p>No badges yet. Complete courses to earn digital credentials.</p>
+        <a routerLink="/upskilling">Browse Courses</a>
+      </div>
+      <div class="badges-grid">
+        <div *ngFor="let b of badges()" class="badge-item">
+          <div class="badge-icon">🏅</div>
+          <div class="badge-info">
+            <strong>{{ b.badge?.name || 'Badge' }}</strong>
+            <span class="badge-org">{{ b.badge?.organisation?.name }}</span>
+            <span class="badge-status" [class.verified]="b.verificationStatus === 'VERIFIED'">{{ b.verificationStatus }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>

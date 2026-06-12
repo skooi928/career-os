@@ -1,10 +1,15 @@
 import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID, signal } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { JobService, Job } from '../../services/job.service';
 import { ProfileService, QuickTask } from '../../services/profile.service';
 import { CareerAnalysisService } from '../../services/career-analysis.service';
+import { UpskillingService } from '../../services/upskilling.service';
+import { CourseEnrollment } from '../../types/upskilling.types';
+import { Observable } from 'rxjs';
+import { Router } from '@angular/router';
 import { Observable, takeUntil, Subject } from 'rxjs';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -16,7 +21,7 @@ import { DashboardService } from '../../services/dashboard.service';
   // ... imports and template ...
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, RouterModule],
   template: `
     <div class="dashboard-content">
       <!-- Role Mismatch Alert -->
@@ -168,6 +173,37 @@ import { DashboardService } from '../../services/dashboard.service';
               <i class="ph ph-plus"></i> Add task
             </button>
           </div>
+        </div>
+      </div>
+
+      <!-- Enrolled Courses -->
+      <div class="card enrolled-section" *ngIf="enrollments().length > 0">
+        <div class="card-header">
+          <h3>My Learning</h3>
+          <a routerLink="/upskilling/my-learning" class="btn-text">View All</a>
+        </div>
+        <div class="enrolled-list">
+          <a routerLink="/upskilling/my-learning" class="enrolled-item" *ngFor="let e of enrollments().slice(0, 3)">
+            <div class="enrolled-avatar" [class.done-bg]="e.completionStatus === 'COMPLETED'">
+              <i class="ph ph-book-open"></i>
+            </div>
+            <div class="enrolled-details">
+              <p class="enrolled-title">{{ e.course?.title || 'Course' }}</p>
+              <div class="enrolled-meta">
+                <i class="ph ph-buildings"></i> {{ e.course?.organisation?.name || 'Organisation' }}
+              </div>
+              <div class="enr-progress-row">
+                <div class="enr-progress-bar">
+                  <div class="enr-progress-fill" [style.width.%]="e.progressPercentage"></div>
+                </div>
+                <span class="enrolled-pct">{{ e.progressPercentage }}%</span>
+              </div>
+            </div>
+            <span class="enrolled-status" [class.done]="e.completionStatus === 'COMPLETED'">
+              {{ e.completionStatus === 'COMPLETED' ? 'Done' : 'In Progress' }}
+            </span>
+            <div class="hover-dot"></div>
+          </a>
         </div>
       </div>
 
@@ -1143,6 +1179,22 @@ import { DashboardService } from '../../services/dashboard.service';
       transition: background-color 0.2s;
     }
     .btn-apply-now:hover { background: #d1fae5; }
+    .enrolled-section { }
+    .enrolled-list { display: flex; flex-direction: column; gap: 4px; }
+    .enrolled-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 8px; text-decoration: none; cursor: pointer; transition: background-color 0.2s; position: relative; }
+    .enrolled-item:hover { background: var(--color-surface-secondary); }
+    .enrolled-item:hover .hover-dot { opacity: 1; }
+    .enrolled-avatar { width: 32px; height: 32px; border-radius: 50%; background: #d1fae5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+    .enrolled-avatar.done-bg { background: #dbeafe; color: #2563eb; }
+    .enrolled-details { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .enrolled-title { font-size: 14px; font-weight: 500; color: var(--color-text); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .enrolled-meta { font-size: 11px; color: var(--color-text-secondary); display: flex; align-items: center; gap: 4px; }
+    .enr-progress-row { display: flex; align-items: center; gap: 8px; }
+    .enr-progress-bar { flex: 1; height: 4px; border-radius: 999px; background: var(--color-border); overflow: hidden; }
+    .enr-progress-fill { height: 100%; background: #059669; border-radius: 999px; transition: width 0.4s; }
+    .enrolled-pct { font-size: 11px; font-weight: 600; color: var(--color-text-secondary); min-width: 28px; text-align: right; }
+    .enrolled-status { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #fef3c7; color: #92400e; white-space: nowrap; flex-shrink: 0; }
+    .enrolled-status.done { background: #d1fae5; color: #065f46; }
 
     /* Loading State for Jobs */
     .loading-state-jobs {
@@ -1175,6 +1227,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   loadingJobs = true;
   private destroy$ = new Subject<void>();
   tasks: QuickTask[] = [];
+  enrollments = signal<CourseEnrollment[]>([]);
   stats = { applicationsCount: 0, interviewsCount: 0, offersCount: 0 };
   activities: any[] = [];
   isAddingTask = false;
@@ -1201,6 +1254,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private jobService: JobService,
     private profileService: ProfileService,
     private careerAnalysisService: CareerAnalysisService,
+    private upskillingService: UpskillingService,
     private savedJobService: SavedJobService,
     private applicationService: ApplicationService,
     private router: Router,
@@ -1223,6 +1277,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
         });
 
       this.loadTasks();
+      this.upskillingService.getMyEnrollments().subscribe({
+        next: e => this.enrollments.set(e),
+        error: () => {}
       this.loadDashboardSummary();
 
       const user = this.authService.getCurrentUser();
