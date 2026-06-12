@@ -1,6 +1,6 @@
 ﻿import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { OrganisationService } from '../../../services/organisation.service';
 import { StatusPillComponent } from '../../../components/status-pill/status-pill.component';
@@ -20,66 +20,13 @@ import { Organisation, CreateOrganisationRequest, UpdateOrganisationRequest, Org
       <!-- Loading -->
       <div class="loading-state" *ngIf="isLoading()"><div class="spinner"></div></div>
 
-      <!-- â”€â”€ Create form â”€â”€ -->
-      <div class="create-org card" *ngIf="!isLoading() && !activeOrg()">
-        <div class="create-hero">
-          <i class="ph ph-buildings"></i>
-          <h2>Create Your Organisation</h2>
-          <p>Set up your company or university to publish courses, issue badges, and manage your team.</p>
-        </div>
-        <form class="create-form" (ngSubmit)="createOrg()" #orgForm="ngForm">
-          <div class="form-row">
-            <div class="field">
-              <label>Organisation Name <span class="req">*</span></label>
-              <input type="text" [(ngModel)]="createForm.name" name="name" required
-                     placeholder="e.g. TechCorp Malaysia" #nameCtrl="ngModel"
-                     [class.input-error]="nameCtrl.invalid && nameCtrl.touched">
-              <span class="field-hint error" *ngIf="nameCtrl.invalid && nameCtrl.touched">Name is required.</span>
-            </div>
-            <div class="field">
-              <label>Organisation Type <span class="req">*</span></label>
-              <select [(ngModel)]="createForm.type" name="type" required #typeCtrl="ngModel"
-                      [class.input-error]="typeCtrl.invalid && typeCtrl.touched">
-                <option value="">â€” Select type â€”</option>
-                <option value="INDUSTRY">Industry / Company</option>
-                <option value="UNIVERSITY">University</option>
-              </select>
-              <span class="field-hint error" *ngIf="typeCtrl.invalid && typeCtrl.touched">Please select a type.</span>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="field">
-              <label>Website</label>
-              <input type="url" [(ngModel)]="createForm.website" name="website"
-                     placeholder="https://company.com" #websiteCtrl="ngModel"
-                     pattern="https?://.+"
-                     [class.input-error]="websiteCtrl.invalid && websiteCtrl.touched">
-              <span class="field-hint error" *ngIf="websiteCtrl.invalid && websiteCtrl.touched">Enter a valid URL (https://...).</span>
-            </div>
-            <div class="field">
-              <label>Email Domain</label>
-              <input type="text" [(ngModel)]="createForm.emailDomain" name="emailDomain"
-                     placeholder="company.com">
-              <span class="field-hint">Used to auto-verify members with matching email.</span>
-            </div>
-          </div>
-          <div class="field">
-            <label>Description</label>
-            <textarea [(ngModel)]="createForm.description" name="description" rows="3"
-                      placeholder="Brief description of your organisation (optional)"></textarea>
-          </div>
-          <div class="field">
-            <label>Verification Document <span class="field-hint">(optional â€” speed up admin review)</span></label>
-            <app-file-upload label="Upload registration document / business cert" (fileSelected)="verifyDoc = $event"></app-file-upload>
-          </div>
-          <div class="form-error" *ngIf="createError()">
-            <i class="ph ph-warning-circle"></i> {{ createError() }}
-          </div>
-          <button type="submit" class="btn-primary"
-                  [disabled]="isCreating() || orgForm.invalid || !createForm.type">
-            {{ isCreating() ? 'Creatingâ€¦' : 'Create Organisation' }}
-          </button>
-        </form>
+      <!-- No org found -->
+      <div class="empty-state card" *ngIf="!isLoading() && !activeOrg()">
+        <i class="ph ph-buildings" style="font-size:2.5rem;color:var(--color-primary);display:block;margin-bottom:12px;"></i>
+        <p style="color:var(--color-text-secondary);margin:0 0 16px;">No active organisation found. Register one from the Organisations page.</p>
+        <a routerLink="/organisation" style="display:inline-flex;align-items:center;gap:7px;padding:10px 24px;background:var(--color-primary);color:white;border-radius:9px;text-decoration:none;font-weight:700;font-size:0.9rem;">
+          <i class="ph ph-arrow-left"></i> Go to Organisations
+        </a>
       </div>
 
       <!-- â”€â”€ Org view / edit â”€â”€ -->
@@ -293,18 +240,28 @@ export class OrgDashboardComponent implements OnInit {
   showVerifyUpload = false;
   verifyDoc: File | null = null;
 
-  createForm: CreateOrganisationRequest = { name: '', type: 'INDUSTRY', website: '', description: '', emailDomain: '' };
   editFormData: UpdateOrganisationRequest = { name: '', website: '', description: '', emailDomain: '', logoUrl: '' };
 
-  constructor(private orgService: OrganisationService) {}
+  constructor(private orgService: OrganisationService, private route: ActivatedRoute) {}
 
   ngOnInit() {
-    this.orgService.getMyOrganisations().subscribe({
-      next: orgs => {
-        if (orgs.length > 0) { this.activeOrg.set(orgs[0]); this.loadStats(orgs[0].id); }
-        this.isLoading.set(false);
-      },
-      error: () => this.isLoading.set(false)
+    this.route.queryParams.subscribe(params => {
+      const orgId = params['orgId'];
+      if (orgId) {
+        this.orgService.getOrganisationById(orgId).subscribe({
+          next: org => { this.activeOrg.set(org); this.loadStats(org.id); this.isLoading.set(false); },
+          error: () => this.isLoading.set(false)
+        });
+      } else {
+        this.orgService.getMyOrganisations().subscribe({
+          next: orgs => {
+            const verified = orgs.find(o => o.verificationStatus === 'VERIFIED') ?? orgs[0] ?? null;
+            if (verified) { this.activeOrg.set(verified); this.loadStats(verified.id); }
+            this.isLoading.set(false);
+          },
+          error: () => this.isLoading.set(false)
+        });
+      }
     });
   }
 
@@ -336,36 +293,6 @@ export class OrgDashboardComponent implements OnInit {
         const msg = err.error?.message || err.error?.error || (err.status === 403 ? 'You do not have permission to edit this organisation.' : 'Failed to save. Please try again.');
         this.editError.set(msg);
         this.isSaving.set(false);
-      }
-    });
-  }
-
-  createOrg() {
-    if (!this.createForm.name || !this.createForm.type) return;
-    this.isCreating.set(true); this.createError.set('');
-    this.orgService.createOrganisation(this.createForm).subscribe({
-      next: org => {
-        this.activeOrg.set(org);
-        this.isCreating.set(false);
-        this.showToast('Organisation created!');
-        if (this.verifyDoc) this.uploadVerifyDoc();
-      },
-      error: err => {
-        const body = err.error;
-        let msg = 'Failed to create. Please try again.';
-        if (err.status === 409 || (typeof body === 'string' && body.includes('unique'))) {
-          msg = 'An organisation with that name already exists.';
-        } else if (body?.message) {
-          msg = body.message;
-        } else if (body?.error) {
-          msg = body.error;
-        } else if (err.status === 400) {
-          msg = 'Invalid input â€” please check all fields and try again.';
-        } else if (err.status === 401) {
-          msg = 'You must be signed in to create an organisation.';
-        }
-        this.createError.set(msg);
-        this.isCreating.set(false);
       }
     });
   }

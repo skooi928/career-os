@@ -120,7 +120,7 @@ type UploadState = { orgId: string; error: string; uploading: boolean } | null;
                   {{ uploadState()!.error }}
                 </span>
               </div>
-              <a [routerLink]="['/organisation/dashboard']" class="manage-btn"
+              <a [routerLink]="['/organisation/dashboard']" [queryParams]="{orgId: org.id}" class="manage-btn"
                  *ngIf="org.verificationStatus === 'VERIFIED'">
                 <i class="ph ph-gear"></i> Manage
               </a>
