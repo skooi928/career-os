@@ -45,7 +45,6 @@ export const routes: Routes = [
       { path: 'profile', component: ProfileComponent, canActivate: [emailVerificationGuard] },
       { path: 'mock-interview', loadComponent: () => import('./pages/mock-interview/mock-interview.component').then(m => m.MockInterviewComponent) },
       // Add more routes here as you create new pages
-      { path: 'resume', component: ResumeBuilderComponent, canActivate: [emailVerificationGuard] },
       // Upskilling
       { path: 'upskilling', component: UpskillingComponent },
       { path: 'upskilling/my-learning', component: MyLearningComponent },

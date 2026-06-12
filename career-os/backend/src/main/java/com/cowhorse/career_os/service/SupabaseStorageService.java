@@ -28,7 +28,10 @@ public class SupabaseStorageService {
     }
 
     public String uploadResume(MultipartFile file) throws IOException {
-        String bucketName = "resumes";
+        return uploadFile(file, "resumes");
+    }
+
+    public String uploadFile(MultipartFile file, String bucketName) throws IOException {
         String originalFilename = file.getOriginalFilename();
         String extension = "";
         if (originalFilename != null && originalFilename.contains(".")) {
@@ -45,7 +48,7 @@ public class SupabaseStorageService {
         headers.setBearerAuth(supabaseClient.getApiKey());
         headers.set("apikey", supabaseClient.getApiKey());
         // Supabase storage requires the content type to be set accurately
-        headers.setContentType(MediaType.valueOf(file.getContentType() != null ? file.getContentType() : "application/pdf"));
+        headers.setContentType(MediaType.valueOf(file.getContentType() != null ? file.getContentType() : "application/octet-stream"));
 
         HttpEntity<byte[]> requestEntity = new HttpEntity<>(file.getBytes(), headers);
 

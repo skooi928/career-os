@@ -32,6 +32,7 @@ interface ExpandedSectionsState {
   education: boolean;
   projects: boolean;
   skills: boolean;
+  badges: boolean;
 }
 
 type PageState = 'loading' | 'upload' | 'uploading' | 'portfolio';
@@ -142,7 +143,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
     experience: true,
     education: true,
     projects: true,
-    skills: true
+    skills: true,
+    badges: true
   });
   isLoading = signal(false);
   errorMessage = signal<string | null>(null);
