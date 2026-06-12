@@ -23,6 +23,9 @@ public class Job {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(name = "employer_id")
+    private UUID employerId;
+
     @Column(nullable = false)
     private String title;
 

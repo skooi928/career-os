@@ -32,4 +32,14 @@ public class JobController {
     public ResponseEntity<Job> getJobById(@PathVariable java.util.UUID id) {
         return ResponseEntity.ok(jobService.getJobById(id));
     }
+
+    @GetMapping("/employer/{employerId}")
+    public ResponseEntity<List<Job>> getJobsByEmployerId(@PathVariable java.util.UUID employerId) {
+        return ResponseEntity.ok(jobService.getJobsByEmployerId(employerId));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Job> updateJob(@PathVariable java.util.UUID id, @RequestBody Job job) {
+        return ResponseEntity.ok(jobService.updateJob(id, job));
+    }
 }

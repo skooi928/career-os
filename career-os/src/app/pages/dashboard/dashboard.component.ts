@@ -5,12 +5,15 @@ import { AuthService } from '../../services/auth.service';
 import { JobService, Job } from '../../services/job.service';
 import { ProfileService, QuickTask } from '../../services/profile.service';
 import { CareerAnalysisService } from '../../services/career-analysis.service';
-import { DashboardService } from '../../services/dashboard.service';
-import { Observable, Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { Observable, takeUntil, Subject } from 'rxjs';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 
+import { SavedJobService } from '../../services/saved-job.service';
+import { ApplicationService } from '../../services/application.service';
+import { DashboardService } from '../../services/dashboard.service';
 @Component({
+  // ... imports and template ...
   selector: 'app-dashboard',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
@@ -34,8 +37,9 @@ import { Router, ActivatedRoute, RouterLink } from '@angular/router';
           <i class="ph ph-x"></i>
         </button>
       </div>
-      <!-- Welcome Banner -->
-      <div class="welcome-banner">
+      <div *ngIf="activeView() === 'dashboard'" class="dashboard-main-view" style="display: flex; flex-direction: column; gap: 32px;">
+        <!-- Welcome Banner -->
+        <div class="welcome-banner">
         <!-- Decorative circles -->
         <div class="circle circle-large"></div>
         <div class="circle circle-small"></div>
@@ -56,27 +60,42 @@ import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 
       <!-- Stats Cards -->
       <div class="stats-grid">
-        <div class="stat-card emerald" style="cursor: pointer;" [routerLink]="['/jobs']" [queryParams]="{tab: 'applied'}">
-          <div class="stat-icon">
-            <i class="ph ph-file-text"></i>
+        <ng-container *ngIf="!isEmployer()">
+          <div class="stat-card emerald" style="cursor: pointer;" (click)="activeView.set('applications')">
+            <div class="stat-icon">
+              <i class="ph ph-file-text"></i>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value">{{ applications().length }}</span>
+              <span class="stat-label">Applications</span>
+              <span class="stat-change" style="background: var(--color-surface-secondary); color: var(--color-text-secondary);">View History →</span>
+            </div>
           </div>
-          <div class="stat-info">
-            <span class="stat-value">{{ stats.applicationsCount }}</span>
-            <span class="stat-label">Applications</span>
-            <span class="stat-change">{{ stats.applicationsCount > 0 ? 'Active tracking' : 'No applications' }}</span>
-          </div>
-        </div>
 
-        <div class="stat-card blue">
-          <div class="stat-icon">
-            <i class="ph ph-calendar-check"></i>
+          <div class="stat-card amber" style="cursor: pointer;" (click)="activeView.set('saved_jobs')">
+            <div class="stat-icon">
+              <i class="ph ph-bookmark"></i>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value">{{ savedJobs().length }}</span>
+              <span class="stat-label">Saved Jobs</span>
+              <span class="stat-change" style="background: var(--color-surface-secondary); color: var(--color-text-secondary);">View Saved →</span>
+            </div>
           </div>
-          <div class="stat-info">
-            <span class="stat-value">{{ stats.interviewsCount }}</span>
-            <span class="stat-label">Interviews</span>
-            <span class="stat-change">{{ stats.interviewsCount > 0 ? 'Upcoming interviews' : 'No scheduled' }}</span>
+        </ng-container>
+
+        <ng-container *ngIf="isEmployer()">
+          <div class="stat-card emerald" style="cursor: pointer;" (click)="activeView.set('posted_jobs')">
+            <div class="stat-icon">
+              <i class="ph ph-briefcase"></i>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value">{{ postedJobs().length }}</span>
+              <span class="stat-label">Posted Jobs</span>
+              <span class="stat-change" style="background: var(--color-surface-secondary); color: var(--color-text-secondary);">Manage Jobs →</span>
+            </div>
           </div>
-        </div>
+        </ng-container>
 
         <div class="stat-card amber">
           <div class="stat-icon">
@@ -176,7 +195,7 @@ import { Router, ActivatedRoute, RouterLink } from '@angular/router';
               <div class="job-card" *ngFor="let job of jobs" (click)="viewJob(job.id)">
                 <div class="job-card-header">
                   <div class="logo-group">
-                    <div class="company-logo bg-red-600">{{ job.initials }}</div>
+                    <div class="company-logo bg-primary">{{ job.initials }}</div>
                     <div class="company-title-wrap">
                       <p class="company-name">{{ job.company }}</p>
                       <h4 class="job-title">{{ job.title }}</h4>
@@ -185,7 +204,7 @@ import { Router, ActivatedRoute, RouterLink } from '@angular/router';
                   <div class="header-actions">
                     <span class="new-badge" *ngIf="job.isNew">NEW</span>
                     <button class="btn-bookmark" (click)="toggleBookmark($event, job)">
-                      <i [class]="$any(job).isSaved ? 'ph-fill ph-bookmark active-icon' : 'ph ph-bookmark inactive-icon'"></i>
+                      <i [class]="isJobSaved(job.id) ? 'ph-fill ph-bookmark active-icon text-yellow' : 'ph ph-bookmark inactive-icon'"></i>
                     </button>
                   </div>
                 </div>
@@ -195,24 +214,301 @@ import { Router, ActivatedRoute, RouterLink } from '@angular/router';
                   <span class="meta-item"><i class="ph ph-clock"></i> {{ job.employmentType }}</span>
                 </div>
                 
-                <div class="tags-row" *ngIf="job.roleRequirements.length > 0">
-                  <span class="skill-tag" *ngFor="let skill of job.roleRequirements[0].technicalSkills.slice(0,4)">
+                <div class="tags-row" *ngIf="job.roleRequirements && job.roleRequirements.length > 0 && job.roleRequirements[0].technicalSkills">
+                  <span class="skill-tag" *ngFor="let skill of job.roleRequirements[0].technicalSkills.slice(0, 3)">
                     {{ skill.technicalSkillText }}
                   </span>
-                  <span class="skill-tag" *ngIf="job.roleRequirements[0].technicalSkills.length > 4">
-                    +{{ job.roleRequirements[0].technicalSkills.length - 4 }}
+                  <span class="skill-tag" *ngIf="job.roleRequirements[0].technicalSkills.length > 3">
+                    +{{ job.roleRequirements[0].technicalSkills.length - 3 }}
                   </span>
                 </div>
                 
                 <div class="job-card-footer">
-                  <span class="salary-range">RM{{ formatNumber(job.minSalary) }} - RM{{ formatNumber(job.maxSalary) }}</span>
-                  <button class="btn-apply-now" (click)="$event.stopPropagation(); viewJob(job.id)">Apply Now</button>
+                  <span class="salary-range">RM{{ job.minSalary }} - RM{{ job.maxSalary }}</span>
+                  <button class="btn-apply-now" (click)="$event.stopPropagation(); viewJob(job.id)">View Details</button>
                 </div>
               </div>
             </div>
           </ng-container>
         </ng-container>
+      </div> <!-- End recommended-section -->
+      </div> <!-- End dashboard-main-view -->
+
+      <!-- ── APPLICATIONS VIEW ── -->
+      <div *ngIf="activeView() === 'applications'" class="applications-view">
+        <button class="btn-text" (click)="activeView.set('dashboard')" style="margin-bottom: 24px; font-size: 14px; padding: 8px 16px; background: var(--color-surface); border-radius: 8px; border: 1px solid var(--color-border);"><i class="ph-bold ph-arrow-left"></i> Back to Dashboard</button>
+        <div class="card">
+          <div class="card-header">
+            <h3 style="display: flex; align-items: center; gap: 8px;"><i class="ph-paper-plane-tilt"></i> Application History</h3>
+            <span class="task-count">{{ applications().length }} items</span>
+          </div>
+          
+          <div class="empty-state" *ngIf="applications().length === 0" style="padding: 60px 40px; text-align: center; color: var(--color-text-secondary);">
+            <i class="ph-paper-plane-tilt" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+            <p style="font-size: 16px;">You haven't submitted any applications yet.</p>
+            <button class="btn-primary mt-4" (click)="activeView.set('dashboard')" style="margin-top: 16px; padding: 10px 20px;">Explore Jobs</button>
+          </div>
+
+          <div class="list-container" *ngIf="applications().length > 0" style="padding: 0 24px 24px 24px; display: flex; flex-direction: column; gap: 16px;">
+            <div *ngFor="let a of applications()" class="list-item" style="border: 1px solid var(--color-border); border-radius: 12px; padding: 20px; background: white; transition: all 0.2s ease;">
+              
+              <!-- List Header / Main Row -->
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 24px;">
+                
+                <!-- Left side: Logo & Title -->
+                <div style="display: flex; gap: 16px; align-items: flex-start; flex: 1;">
+                  <div class="company-logo" style="width: 48px; height: 48px; background-color: #ecfdf5; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #10b981; border-radius: 10px; flex-shrink: 0;">
+                    <i class="ph-buildings"></i>
+                  </div>
+                  <div>
+                    <h4 style="margin: 0 0 4px 0; font-size: 1.1rem; color: var(--color-text);">{{ a.jobDetails?.title || 'Loading...' }}</h4>
+                    <p style="margin: 0; font-size: 0.95rem; color: var(--color-text-secondary); font-weight: 500;">{{ a.jobDetails?.company || 'Loading...' }}</p>
+                    <div style="display: flex; gap: 12px; margin-top: 8px; align-items: center;">
+                      <span style="font-size: 0.85rem; color: var(--color-text-tertiary); display: flex; align-items: center; gap: 4px;">
+                        <i class="ph ph-clock"></i> Applied {{ a.appliedAt | date:'mediumDate' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Right side: Status & Actions -->
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 12px; min-width: 140px;">
+                  <span class="status-tag" [ngStyle]="{
+                    'background': a.status === 'ACCEPTED' ? '#dcfce7' : (a.status === 'REJECTED' ? '#fee2e2' : (a.status === 'SCHEDULED_INTERVIEW' ? '#fef9c3' : '#f3f4f6')),
+                    'color': a.status === 'ACCEPTED' ? '#166534' : (a.status === 'REJECTED' ? '#991b1b' : (a.status === 'SCHEDULED_INTERVIEW' ? '#854d0e' : '#4b5563')),
+                    'padding': '6px 12px', 'border-radius': '20px', 'font-size': '0.75rem', 'font-weight': '600', 'letter-spacing': '0.5px'
+                  }">
+                    <i class="ph-fill" [ngClass]="{'ph-check-circle': a.status === 'ACCEPTED', 'ph-x-circle': a.status === 'REJECTED', 'ph-clock-circle': a.status === 'PENDING', 'ph-calendar-check': a.status === 'SCHEDULED_INTERVIEW'}" style="margin-right: 4px;"></i>
+                    {{ a.status || 'PENDING' }}
+                  </span>
+                  
+                  <div style="display: flex; gap: 8px;">
+                    <button class="btn-ghost" style="padding: 8px 16px; font-size: 0.85rem; border: 1px solid var(--color-border); border-radius: 8px; color: var(--color-text-secondary); background: white;" (click)="toggleApplicationDetails(a.applicationId)">
+                      {{ expandedApplicationId() === a.applicationId ? 'Hide Details' : 'View Details' }}
+                    </button>
+                    <button class="btn-primary" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 8px;" [routerLink]="['/jobs', a.jobId]">
+                      View Job
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Expanded Application Details -->
+              <div *ngIf="expandedApplicationId() === a.applicationId" style="margin-top: 20px; padding-top: 20px; border-top: 1px dashed var(--color-border);">
+                <div style="background: var(--color-surface); padding: 16px; border-radius: 8px; border: 1px solid var(--color-border);">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                    <h5 style="margin: 0; font-size: 0.95rem; color: var(--color-text);"><i class="ph-file-text" style="margin-right: 6px;"></i> Application Materials</h5>
+                    <a *ngIf="a.resumeUrl" [href]="a.resumeUrl" target="_blank" style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #fee2e2; color: #b91c1c; border-radius: 6px; text-decoration: none; font-size: 0.85rem; font-weight: 500; transition: background 0.2s;">
+                      <i class="ph-bold ph-file-pdf"></i> View Resume
+                    </a>
+                  </div>
+                  
+                  <div *ngIf="a.answers && a.answers.length > 0">
+                    <h5 style="margin: 0 0 12px 0; font-size: 0.85rem; color: var(--color-text-tertiary); text-transform: uppercase; letter-spacing: 0.5px;">Questionnaire Answers</h5>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                      <div *ngFor="let answer of a.answers" style="background: white; padding: 12px; border-radius: 6px; border: 1px solid var(--color-border);">
+                        <p style="margin: 0 0 4px 0; font-size: 0.9rem; color: var(--color-text); font-weight: 600;">Q: {{ getQuestionText(a, answer.questionId) }}</p>
+                        <p style="margin: 0; font-size: 0.9rem; color: var(--color-text-secondary); line-height: 1.5;">A: {{ answer.answerText }}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div *ngIf="!a.answers || a.answers.length === 0" style="padding: 12px; background: white; border-radius: 6px; border: 1px dashed var(--color-border); text-align: center; color: var(--color-text-tertiary); font-size: 0.9rem; font-style: italic;">
+                    No additional questionnaire answers provided.
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
       </div>
+
+      <!-- ── SAVED JOBS VIEW ── -->
+      <div *ngIf="activeView() === 'saved_jobs'" class="saved-jobs-view">
+        <button class="btn-text" (click)="activeView.set('dashboard')" style="margin-bottom: 24px; font-size: 14px; padding: 8px 16px; background: var(--color-surface); border-radius: 8px; border: 1px solid var(--color-border);"><i class="ph-bold ph-arrow-left"></i> Back to Dashboard</button>
+        <div class="card">
+          <div class="card-header">
+            <h3 style="display: flex; align-items: center; gap: 8px;"><i class="ph-bookmark-simple"></i> Saved Jobs</h3>
+            <span class="task-count">{{ savedJobs().length }} items</span>
+          </div>
+
+          <div class="empty-state" *ngIf="savedJobs().length === 0" style="padding: 60px 40px; text-align: center; color: var(--color-text-secondary);">
+            <i class="ph-bookmark-simple" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+            <p style="font-size: 16px;">You haven't saved any jobs yet.</p>
+            <button class="btn-primary mt-4" (click)="activeView.set('dashboard')" style="margin-top: 16px; padding: 10px 20px;">Explore Jobs</button>
+          </div>
+
+          <div class="list-container" *ngIf="savedJobs().length > 0" style="padding: 0 24px 24px 24px; display: flex; flex-direction: column; gap: 16px;">
+            <div *ngFor="let s of savedJobs()" class="list-item" style="border: 1px solid var(--color-border); border-radius: 12px; padding: 20px; background: white; transition: all 0.2s ease;">
+              
+              <!-- List Header / Main Row -->
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 24px;">
+                
+                <!-- Left side: Logo & Title -->
+                <div style="display: flex; gap: 16px; align-items: flex-start; flex: 1;">
+                  <div class="company-logo" style="width: 48px; height: 48px; background-color: #fffbeb; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #d97706; border-radius: 10px; flex-shrink: 0;">
+                    <i class="ph-buildings"></i>
+                  </div>
+                  <div>
+                    <h4 style="margin: 0 0 4px 0; font-size: 1.1rem; color: var(--color-text);">{{ s.jobDetails?.title || 'Loading...' }}</h4>
+                    <p style="margin: 0; font-size: 0.95rem; color: var(--color-text-secondary); font-weight: 500;">{{ s.jobDetails?.company || 'Loading...' }}</p>
+                    <div style="display: flex; gap: 12px; margin-top: 8px; align-items: center; flex-wrap: wrap;">
+                      <span style="font-size: 0.85rem; color: var(--color-text-secondary); display: flex; align-items: center; gap: 4px;">
+                        <i class="ph ph-map-pin"></i> {{ s.jobDetails?.location || 'Anywhere' }}
+                      </span>
+                      <span style="font-size: 0.85rem; color: var(--color-text-secondary); display: flex; align-items: center; gap: 4px;">
+                        <i class="ph ph-clock"></i> {{ s.jobDetails?.employmentType || 'Full-time' }}
+                      </span>
+                      <span style="font-size: 0.85rem; font-weight: 600; color: var(--color-text); background: var(--color-surface); padding: 2px 8px; border-radius: 4px;">
+                        RM{{ formatNumber(s.jobDetails?.minSalary) }} - RM{{ formatNumber(s.jobDetails?.maxSalary) }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Right side: Status & Actions -->
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 12px; min-width: 120px;">
+                  <i class="ph-fill ph-bookmark" style="color: var(--color-primary); font-size: 24px;"></i>
+                  
+                  <button class="btn-primary" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 8px;" [routerLink]="['/jobs', s.jobId]">
+                    <i class="ph-eye" style="margin-right: 4px;"></i> View Job
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── POSTED JOBS VIEW ── -->
+      <div *ngIf="activeView() === 'posted_jobs'" class="posted-jobs-view">
+        <button class="btn-text" (click)="activeView.set('dashboard')" style="margin-bottom: 24px; font-size: 14px; padding: 8px 16px; background: var(--color-surface); border-radius: 8px; border: 1px solid var(--color-border);"><i class="ph-bold ph-arrow-left"></i> Back to Dashboard</button>
+        <div class="card" style="padding: 24px;">
+          <div class="card-header" style="margin-bottom: 24px;">
+            <h3 style="display: flex; align-items: center; gap: 8px;"><i class="ph-briefcase"></i> Posted Jobs</h3>
+            <span class="task-count">{{ postedJobs().length }} items</span>
+          </div>
+
+          <div class="empty-state" *ngIf="postedJobs().length === 0" style="padding: 60px 40px; text-align: center; color: var(--color-text-secondary);">
+            <i class="ph-briefcase" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+            <p style="font-size: 16px;">You haven't posted any jobs yet.</p>
+            <button class="btn-primary mt-4" [routerLink]="['/job-posting']" style="margin-top: 16px; padding: 10px 20px;">Post a Job</button>
+          </div>
+
+          <div class="list-container" *ngIf="postedJobs().length > 0" style="padding: 0 24px 24px 24px; display: flex; flex-direction: column; gap: 16px;">
+            <div *ngFor="let j of postedJobs()" class="list-item" style="border: 1px solid var(--color-border); border-radius: 12px; padding: 20px; background: white; transition: all 0.2s ease;">
+              
+              <!-- List Header / Main Row -->
+              <div style="display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap;">
+                
+                <!-- Left side: Job Info -->
+                <div style="display: flex; flex-direction: column; gap: 8px; flex: 1;">
+                  <div>
+                    <h4 style="margin: 0 0 4px 0; font-size: 1.1rem; color: var(--color-text);">{{ j.title }}</h4>
+                    <p style="margin: 0; font-size: 0.95rem; color: var(--color-text-secondary); font-weight: 500;">{{ j.company }} • {{ j.location }}</p>
+                  </div>
+                  
+                  <div style="display: flex; gap: 16px; margin-top: 4px; align-items: center; flex-wrap: wrap;">
+                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--color-text); background: var(--color-surface); padding: 4px 10px; border-radius: 6px;">
+                      RM{{ formatNumber(j.minSalary) }} - RM{{ formatNumber(j.maxSalary) }}
+                    </span>
+                    <span style="font-size: 0.85rem; color: var(--color-text-secondary); display: flex; align-items: center; gap: 4px;">
+                      <i class="ph ph-calendar"></i> Deadline: {{ j.deadline | date:'shortDate' }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Right side: Actions -->
+                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                  <button class="btn-ghost" (click)="editPostedJob(j)" title="Edit Job" style="padding: 8px 16px; font-size: 0.85rem; border: 1px solid var(--color-border); border-radius: 8px; color: var(--color-text); background: white;">
+                    <i class="ph-bold ph-pencil-simple" style="margin-right: 4px;"></i> Edit Job
+                  </button>
+                  <button class="btn-ghost" style="padding: 8px 16px; font-size: 0.85rem; border: 1px solid var(--color-border); border-radius: 8px; color: var(--color-text-secondary); background: white;" (click)="toggleJobApplications(j.id || '')">
+                    {{ expandedJobApplicationsId() === j.id ? 'Hide Applicants' : 'Applicants (' + getApplicationsForJob(j.id || '').length + ')' }}
+                  </button>
+                  <button class="btn-primary" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 8px;" [routerLink]="['/jobs', j.id]">
+                    View Job
+                  </button>
+                </div>
+              </div>
+
+              <!-- Job Applications Expanded View -->
+              <div *ngIf="expandedJobApplicationsId() === j.id" style="margin-top: 20px; padding-top: 20px; border-top: 1px dashed var(--color-border);">
+                <div style="background: var(--color-surface); padding: 20px; border-radius: 8px; border: 1px solid var(--color-border);">
+                  <h4 style="margin: 0 0 16px 0; color: var(--color-text); font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="ph-users"></i> Applications Received
+                  </h4>
+                  
+                  <div *ngIf="getApplicationsForJob(j.id || '').length === 0" style="padding: 16px; background: white; border-radius: 8px; border: 1px dashed var(--color-border); text-align: center; color: var(--color-text-tertiary); font-style: italic;">
+                    No applications received for this job yet.
+                  </div>
+
+                  <div class="items-list" style="display: flex; flex-direction: column; gap: 16px;">
+                    <div *ngFor="let a of getApplicationsForJob(j.id || '')" style="background: white; padding: 20px; border-radius: 8px; border: 1px solid var(--color-border);">
+                      
+                      <!-- Candidate Profile Header -->
+                      <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;">
+                        <div style="display: flex; gap: 16px; align-items: center; flex: 1;">
+                          <div style="width: 48px; height: 48px; font-size: 1.2rem; font-weight: 600; background: #e0e7ff; color: #4f46e5; display: flex; align-items: center; justify-content: center; border-radius: 10px; flex-shrink: 0;">
+                            {{ a.candidateProfile?.firstName?.[0] || 'C' }}{{ a.candidateProfile?.lastName?.[0] || '' }}
+                          </div>
+                          <div>
+                            <h3 style="margin: 0 0 4px 0; font-size: 1.05rem; color: var(--color-text);">{{ a.candidateProfile ? (a.candidateProfile.firstName + ' ' + a.candidateProfile.lastName) : 'Loading Profile...' }}</h3>
+                            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                              <span *ngIf="a.candidateProfile?.email" style="font-size: 0.85rem; color: var(--color-text-secondary);"><i class="ph-envelope-simple" style="margin-right: 4px;"></i>{{ a.candidateProfile?.email }}</span>
+                              <span *ngIf="a.candidateProfile?.phone" style="font-size: 0.85rem; color: var(--color-text-secondary);"><i class="ph-phone" style="margin-right: 4px;"></i>{{ a.candidateProfile?.phone }}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                          <span class="status-tag" [ngStyle]="{
+                            'background': a.status === 'ACCEPTED' ? '#dcfce7' : (a.status === 'REJECTED' ? '#fee2e2' : (a.status === 'SCHEDULED_INTERVIEW' ? '#fef9c3' : '#f3f4f6')),
+                            'color': a.status === 'ACCEPTED' ? '#166534' : (a.status === 'REJECTED' ? '#991b1b' : (a.status === 'SCHEDULED_INTERVIEW' ? '#854d0e' : '#4b5563')),
+                            'padding': '6px 12px', 'border-radius': '20px', 'font-size': '0.75rem', 'font-weight': '600', 'letter-spacing': '0.5px'
+                          }">
+                            {{ a.status || 'PENDING' }}
+                          </span>
+                          <span style="font-size: 0.8rem; color: var(--color-text-tertiary);">Applied: {{ a.appliedAt | date:'mediumDate' }}</span>
+                        </div>
+                      </div>
+
+                      <div *ngIf="a.resumeUrl" style="margin-bottom: 20px;">
+                        <a [href]="a.resumeUrl" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: #fee2e2; color: #b91c1c; border-radius: 6px; text-decoration: none; font-size: 0.85rem; font-weight: 500; transition: background 0.2s;">
+                          <i class="ph-bold ph-file-pdf"></i> View Resume
+                        </a>
+                      </div>
+
+                      <!-- Questionnaire Answers -->
+                      <div *ngIf="a.answers && a.answers.length > 0" style="margin-bottom: 20px;">
+                        <h5 style="margin: 0 0 12px 0; font-size: 0.85rem; color: var(--color-text-tertiary); text-transform: uppercase; letter-spacing: 0.5px;">Questionnaire Answers</h5>
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                          <div *ngFor="let answer of a.answers" style="background: var(--color-surface); padding: 12px; border-radius: 6px; border: 1px solid var(--color-border);">
+                            <p style="margin: 0 0 4px 0; font-size: 0.9rem; color: var(--color-text); font-weight: 600;">Q: {{ getQuestionText(a, answer.questionId) }}</p>
+                            <p style="margin: 0; font-size: 0.9rem; color: var(--color-text-secondary); line-height: 1.5;">A: {{ answer.answerText }}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Action Buttons -->
+                      <div style="border-top: 1px solid var(--color-border); padding-top: 16px; display: flex; gap: 12px; flex-wrap: wrap;">
+                        <button class="btn-ghost" style="color: var(--color-text-secondary); padding: 8px 16px; font-size: 0.85rem; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-surface);" (click)="updateApplicationStatus(a.applicationId, 'PENDING')" [disabled]="a.status === 'PENDING'">Set Pending</button>
+                        <button class="btn-primary" style="background: #eab308; padding: 8px 16px; font-size: 0.85rem; border-radius: 6px; color: white; border: none;" (click)="updateApplicationStatus(a.applicationId, 'SCHEDULED_INTERVIEW')" [disabled]="a.status === 'SCHEDULED_INTERVIEW'">Schedule Interview</button>
+                        <button class="btn-primary" style="background: #22c55e; padding: 8px 16px; font-size: 0.85rem; border-radius: 6px; color: white; border: none;" (click)="updateApplicationStatus(a.applicationId, 'ACCEPTED')" [disabled]="a.status === 'ACCEPTED'">Accept</button>
+                        <button class="btn-ghost" style="color: #ef4444; border: 1px solid #ef4444; padding: 8px 16px; font-size: 0.85rem; border-radius: 6px; background: #fef2f2;" (click)="updateApplicationStatus(a.applicationId, 'REJECTED')" [disabled]="a.status === 'REJECTED'">Reject</button>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   `,
   styles: [`
@@ -885,16 +1181,32 @@ export class DashboardComponent implements OnInit, OnDestroy {
   newTaskDescription = '';
   newTaskPriority = 'medium';
   isAnalyzing = false;
-  roleMismatchInfo = signal<{ requestedRole: string, actualRole: string } | null>(null);
+  roleMismatchInfo = signal<{requestedRole: string, actualRole: string} | null>(null);
+  
+  activeView = signal<'dashboard' | 'applications' | 'saved_jobs' | 'posted_jobs'>('dashboard');
+  
+  savedJobIds: Set<string> = new Set();
+  savedJobs = signal<any[]>([]);
+  applications = signal<any[]>([]);
+  expandedApplicationId = signal<string | null>(null);
+
+  // Employer state
+  isEmployer = signal<boolean>(false);
+  postedJobs = signal<Job[]>([]);
+  receivedApplications = signal<any[]>([]);
+  expandedJobApplicationsId = signal<string | null>(null);
 
   constructor(
     private authService: AuthService,
     private jobService: JobService,
     private profileService: ProfileService,
     private careerAnalysisService: CareerAnalysisService,
-    private dashboardService: DashboardService,
+    private savedJobService: SavedJobService,
+    private applicationService: ApplicationService,
     private router: Router,
     private route: ActivatedRoute,
+    private http: HttpClient,
+    private dashboardService: DashboardService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.jobs$ = this.jobService.jobs$;
@@ -912,6 +1224,40 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
       this.loadTasks();
       this.loadDashboardSummary();
+
+      const user = this.authService.getCurrentUser();
+      if (user) {
+        this.isEmployer.set(user.role?.toLowerCase() === 'employer');
+
+        if (this.isEmployer()) {
+          this.fetchEmployerData(user.userId);
+        } else {
+          this.savedJobService.getSavedJobsForUser(user.userId).subscribe({
+            next: (saved) => {
+              this.savedJobIds = new Set(saved.map(s => s.jobId));
+              this.savedJobs.set(saved);
+              saved.forEach(s => {
+                this.jobService.getJobById(s.jobId).subscribe(jobDetails => {
+                  this.savedJobs.update(jobs => jobs.map(j => j.id === s.id ? { ...j, jobDetails } : j));
+                });
+              });
+            },
+            error: (err) => console.error('Failed to load saved jobs', err)
+          });
+
+          this.applicationService.getApplicationsByCandidate(user.userId).subscribe({
+            next: (apps) => {
+              this.applications.set(apps);
+              apps.forEach(app => {
+                this.jobService.getJobById(app.jobId).subscribe(jobDetails => {
+                  this.applications.update(a => a.map(x => x.applicationId === app.applicationId ? { ...x, jobDetails } : x));
+                });
+              });
+            },
+            error: (err) => console.error('Error fetching applications', err)
+          });
+        }
+      }
 
       // Check for role mismatch from login redirect
       this.route.queryParams.subscribe(params => {
@@ -932,6 +1278,86 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  fetchEmployerData(userId: string) {
+    this.jobService.getJobsByEmployerId(userId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (jobs) => this.postedJobs.set(jobs),
+        error: (err) => console.error('Error fetching posted jobs', err)
+      });
+
+    this.http.get<any[]>(`http://localhost:8080/api/applications/employer/${userId}`, {
+      headers: { 'Authorization': `Bearer ${this.authService.getToken()}` }
+    }).pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (apps) => {
+          this.receivedApplications.set(apps);
+          apps.forEach(app => {
+            this.jobService.getJobById(app.jobId).subscribe(jobDetails => {
+              this.receivedApplications.update(a => 
+                a.map(x => x.applicationId === app.applicationId ? { ...x, jobDetails } : x)
+              );
+            });
+          });
+        },
+        error: (err) => console.error('Error fetching received applications', err)
+      });
+  }
+
+  updateApplicationStatus(applicationId: string, status: string) {
+    this.http.put<any>(`http://localhost:8080/api/applications/${applicationId}/status`, { status }, {
+      headers: { 'Authorization': `Bearer ${this.authService.getToken()}` }
+    }).pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (updatedApp) => {
+          this.receivedApplications.update(apps => 
+            apps.map(app => app.applicationId === applicationId ? { ...app, status: updatedApp.status } : app)
+          );
+        },
+        error: (err) => console.error('Error updating status', err)
+      });
+  }
+
+  toggleJobApplications(jobId: string) {
+    if (this.expandedJobApplicationsId() === jobId) {
+      this.expandedJobApplicationsId.set(null);
+    } else {
+      this.expandedJobApplicationsId.set(jobId);
+      const appsForJob = this.getApplicationsForJob(jobId);
+      appsForJob.forEach(app => {
+        if (!app.candidateProfile) {
+          this.profileService.getProfile(app.candidateId).pipe(takeUntil(this.destroy$)).subscribe({
+            next: (profile) => {
+              this.receivedApplications.update(apps => 
+                apps.map(a => a.applicationId === app.applicationId ? { ...a, candidateProfile: profile } : a)
+              );
+            },
+            error: (err) => console.error('Failed to fetch candidate profile', err)
+          });
+        }
+      });
+    }
+  }
+
+  getApplicationsForJob(jobId: string) {
+    return this.receivedApplications().filter(a => a.jobId === jobId);
+  }
+
+  getQuestionText(app: any, questionId: string): string {
+    if (!app.jobDetails || !app.jobDetails.questions) return 'Custom Question';
+    const q = app.jobDetails.questions.find((q: any) => q.id === questionId);
+    return q ? q.questionText : 'Custom Question';
+  }
+
+  editPostedJob(job: Job) {
+    this.router.navigate(['/job-posting'], { queryParams: { edit: job.id } });
+  }
+
   loadTasks() {
     this.profileService.getUserProfile().subscribe({
       next: (profile) => {
@@ -947,6 +1373,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.authService.getCurrentUser()?.firstName || 'User';
   }
 
+  toggleApplicationDetails(appId: string) {
+    if (this.expandedApplicationId() === appId) {
+      this.expandedApplicationId.set(null);
+    } else {
+      this.expandedApplicationId.set(appId);
+    }
+  }
+
+
   viewJob(id?: string) {
     if (id) {
       this.router.navigate(['/jobs', id]);
@@ -957,17 +1392,35 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return num.toLocaleString();
   }
 
-  toggleBookmark(event: Event, job: Job) {
+  isJobSaved(jobId?: string): boolean {
+    if (!jobId) return false;
+    return this.savedJobIds.has(jobId);
+  }
+
+  toggleBookmark(event: Event, job: any) {
     event.stopPropagation();
-    if (job.isSaved) {
-      this.jobService.unsaveJob(job.id!).subscribe(() => {
-        job.isSaved = false;
-        this.jobService.loadJobs();
+    if (!job.id) return;
+    
+    const user = this.authService.getCurrentUser();
+    if (!user) return;
+
+    if (this.savedJobIds.has(job.id)) {
+      // Unsave
+      this.savedJobIds.delete(job.id);
+      this.savedJobService.unsaveJob(user.userId, job.id).subscribe({
+        error: (err) => {
+          console.error('Failed to unsave job', err);
+          this.savedJobIds.add(job.id); // Revert on failure
+        }
       });
     } else {
-      this.jobService.saveJob(job.id!).subscribe(() => {
-        job.isSaved = true;
-        this.jobService.loadJobs();
+      // Save
+      this.savedJobIds.add(job.id);
+      this.savedJobService.saveJob(user.userId, job.id).subscribe({
+        error: (err) => {
+          console.error('Failed to save job', err);
+          this.savedJobIds.delete(job.id); // Revert on failure
+        }
       });
     }
   }
@@ -1029,7 +1482,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   loadDashboardSummary() {
     this.dashboardService.getDashboardSummary().subscribe({
-      next: (summary) => {
+      next: (summary: any) => {
         this.stats = {
           applicationsCount: summary.applicationsCount,
           interviewsCount: summary.interviewsCount,
@@ -1037,7 +1490,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         };
         this.activities = summary.recentActivities;
       },
-      error: (err) => console.error('Failed to load dashboard summary', err)
+      error: (err: any) => console.error('Failed to load dashboard summary', err)
     });
   }
 
@@ -1065,8 +1518,4 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  ngOnDestroy() {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
 }

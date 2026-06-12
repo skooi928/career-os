@@ -93,9 +93,14 @@
     <button class="profile-tab" [class.active]="mainActiveTab() === 'details'" (click)="switchTab('details')">
       <i class="ph ph-user"></i> Profile Details
     </button>
-    <button class="profile-tab" [class.active]="mainActiveTab() === 'resume'" (click)="switchTab('resume')">
-      <i class="ph ph-file-text"></i> Resume & Alignment
-    </button>
+    
+    <ng-container *ngIf="authService.getCurrentUser()?.role !== 'employer'">
+      <button class="profile-tab" [class.active]="mainActiveTab() === 'resume'" (click)="switchTab('resume')">
+        <i class="ph ph-file-text"></i> Resume & Alignment
+      </button>
+    </ng-container>
+
+
     <div *ngIf="mainActiveTab() === 'resume' && pageState() === 'portfolio' && isSyncNoticeMinimized()"
       class="sync-shrink-icon" (click)="expandSyncNotice()" title="Extracted Data Sync Status (Click to expand)">
       <i class="ph ph-arrows-counter-clockwise"></i>
@@ -842,4 +847,5 @@
       </div>
     </div>
   </div>
+
 </div>
