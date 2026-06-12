@@ -21,6 +21,7 @@ public class ForumService {
     private final PostLikeRepository      postLikeRepository;
     private final PostCommentRepository   postCommentRepository;
     private final NotificationRepository  notificationRepository;
+    private final UserProfileRepository   userProfileRepository;
  
     // ── helper: build author initials from a display name ────────────────────
     private String toInitials(String name) {
@@ -28,6 +29,13 @@ public class ForumService {
         String[] parts = name.trim().split("\\s+");
         if (parts.length == 1) return parts[0].substring(0, 1).toUpperCase();
         return (parts[0].substring(0, 1) + parts[parts.length - 1].substring(0, 1)).toUpperCase();
+    }
+
+    // ── helper: resolve author name from userId (if not stored directly in PostComment) ────────────────────
+    private String resolveAuthorName(UUID userId) {
+    return userProfileRepository.findByUserId(userId)
+            .map(p -> p.getFirstName() + " " + p.getLastName())
+            .orElse("Unknown");
     }
  
     // ── helper: map PostMedia entity → DTO ───────────────────────────────────
@@ -69,11 +77,22 @@ public class ForumService {
                     .orElse(null);
         }
  
+        String authorName = null;
+        String authorInitials = null;
+        if (post.getUserId() != null) {
+            Optional<UserProfile> userOpt = userProfileRepository.findByUserId(post.getUserId());
+            if (userOpt.isPresent()) {
+                UserProfile userProfile = userOpt.get();
+                authorName = userProfile.getFirstName() + " " + userProfile.getLastName();
+                authorInitials = toInitials(authorName);
+            }
+        }
+
         return PostDTO.builder()
                 .id(post.getId())
                 .userId(post.getUserId())
-                .authorName(post.getAuthorName())
-                .authorInitials(toInitials(post.getAuthorName()))
+                .authorName(authorName)
+                .authorInitials(authorInitials)
                 .content(post.getContent())
                 .postType(post.getPostType())
                 .includeInCv(post.getIncludeInCv())
@@ -151,7 +170,7 @@ public class ForumService {
  
         Post post = Post.builder()
                 .userId(userId)
-                .authorName(authorName)
+                .authorName(resolveAuthorName(userId))
                 .content(req.getContent())
                 .postType(req.getPostType() != null ? req.getPostType() : "general")
                 .includeInCv(Boolean.TRUE.equals(req.getIncludeInCv()))
@@ -294,15 +313,25 @@ public class ForumService {
                 .stream()
                 .map(this::toCommentDTOShallow)
                 .collect(Collectors.toList());
- 
+        
+        String authorName = null;
+        String authorInitials = null;
+        if (c.getUserId() != null) {
+            Optional<UserProfile> userOpt = userProfileRepository.findByUserId(c.getUserId());
+            if (userOpt.isPresent()) {
+                UserProfile userProfile = userOpt.get();
+                authorName = userProfile.getFirstName() + " " + userProfile.getLastName();
+                authorInitials = toInitials(authorName);
+            }
+        }
         // NOTE: If you get a Hibernate error here, remember your V9 DB table doesn't store authorNames directly.
         // You should resolve c.getUserId() to a UserProfile table or keep this stub if using an extended model.
         return CommentDTO.builder()
                 .id(c.getId())
                 .postId(c.getPostId())
                 .userId(c.getUserId())
-                .authorName(c.getAuthorName() != null ? c.getAuthorName() : "Anonymous User")
-                .authorInitials(toInitials(c.getAuthorName()))
+                .authorName(authorName)
+                .authorInitials(authorInitials)
                 .content(c.getContent())
                 .parentCommentId(c.getParentCommentId())
                 .replies(replies)
@@ -312,12 +341,24 @@ public class ForumService {
     }
  
     private CommentDTO toCommentDTOShallow(PostComment c) {
+
+        String authorName = null;
+        String authorInitials = null;
+        if (c.getUserId() != null) {
+            Optional<UserProfile> userOpt = userProfileRepository.findByUserId(c.getUserId());
+            if (userOpt.isPresent()) {
+                UserProfile userProfile = userOpt.get();
+                authorName = userProfile.getFirstName() + " " + userProfile.getLastName();
+                authorInitials = toInitials(authorName);
+            }
+        }
+
         return CommentDTO.builder()
                 .id(c.getId())
                 .postId(c.getPostId())
                 .userId(c.getUserId())
-                .authorName(c.getAuthorName() != null ? c.getAuthorName() : "Anonymous User")
-                .authorInitials(toInitials(c.getAuthorName()))
+                .authorName(authorName != null ? authorName : "Anonymous User")
+                .authorInitials(authorInitials != null ? authorInitials : "AU")
                 .content(c.getContent())
                 .parentCommentId(c.getParentCommentId())
                 .replies(Collections.emptyList())
@@ -332,7 +373,6 @@ public class ForumService {
         PostComment comment = PostComment.builder()
                 .postId(postId)
                 .userId(userId)
-                .authorName(authorName) // Ensure your Java Entity maps this field as @Transient if not in DB schema!
                 .content(content)
                 .parentCommentId(parentCommentId)
                 .isEdited(false)

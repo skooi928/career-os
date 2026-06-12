@@ -81,13 +81,12 @@ public class ForumController {
     @PostMapping("/posts")
     public ResponseEntity<PostDTO> createPost(
             @RequestBody CreatePostRequest request,
-            @RequestHeader("X-User-Id")   String userId,
-            @RequestHeader("X-User-Name") String userName) {
+            @RequestParam("supabaseUid") String userId) {
  
         PostDTO created = forumService.createPost(
                 request,
-                requiredUserId(userId),
-                userName
+                UUID.fromString(userId),
+                ""
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
@@ -96,18 +95,18 @@ public class ForumController {
     public ResponseEntity<PostDTO> updatePost(
             @PathVariable Long postId,
             @RequestBody  CreatePostRequest request,
-            @RequestHeader("X-User-Id") String userId) {
+            @RequestParam("supabaseUid") String userId) {
  
         return ResponseEntity.ok(
-                forumService.updatePost(postId, request, requiredUserId(userId)));
+                forumService.updatePost(postId, request, UUID.fromString(userId)));
     }
  
     @DeleteMapping("/posts/{postId}")
     public ResponseEntity<Void> deletePost(
             @PathVariable Long postId,
-            @RequestHeader("X-User-Id") String userId) {
+            @RequestParam("supabaseUid") String userId) {
  
-        forumService.deletePost(postId, requiredUserId(userId));
+        forumService.deletePost(postId, UUID.fromString(userId));
         return ResponseEntity.noContent().build();
     }
  
@@ -116,10 +115,9 @@ public class ForumController {
     @PostMapping("/posts/{postId}/like")
     public ResponseEntity<Void> toggleLike(
             @PathVariable Long postId,
-            @RequestHeader("X-User-Id")   String userId,
-            @RequestHeader("X-User-Name") String userName) {
+            @RequestParam("supabaseUid")   String userId){
  
-        forumService.toggleLike(postId, requiredUserId(userId), userName);
+        forumService.toggleLike(postId, UUID.fromString(userId), "");
         return ResponseEntity.ok().build();
     }
  
@@ -134,15 +132,14 @@ public class ForumController {
     public ResponseEntity<CommentDTO> addComment(
             @PathVariable Long postId,
             @RequestBody  CommentDTO request, // FIX: Replaced untyped Map with structured Request DTO
-            @RequestHeader("X-User-Id")   String userId,
-            @RequestHeader("X-User-Name") String userName) {
+            @RequestParam("supabaseUid") String userId) {
  
         CommentDTO comment = forumService.addComment(
                 postId, 
                 request.getContent(), 
                 request.getParentCommentId(),
-                requiredUserId(userId), 
-                userName
+                UUID.fromString(userId), 
+                ""
         );
  
         return ResponseEntity.status(HttpStatus.CREATED).body(comment);
@@ -152,21 +149,21 @@ public class ForumController {
     public ResponseEntity<CommentDTO> editComment(
             @PathVariable Long commentId,
             @RequestBody  Map<String, String> body, // Keep simple maps if text-only, but ensure fallback safety
-            @RequestHeader("X-User-Id") String userId) {
+            @RequestHeader("supabaseUid") String userId) {
  
         String content = body != null ? body.get("content") : null;
         if (content == null || content.isBlank()) {
             throw new IllegalArgumentException("Comment content cannot be empty.");
         }
-        return ResponseEntity.ok(forumService.editComment(commentId, content, requiredUserId(userId)));
+        return ResponseEntity.ok(forumService.editComment(commentId, content, UUID.fromString(userId)));
     }
  
     @DeleteMapping("/comments/{commentId}")
     public ResponseEntity<Void> deleteComment(
             @PathVariable Long commentId,
-            @RequestHeader("X-User-Id") String userId) {
+            @RequestHeader("supabaseUid") String userId) {
  
-        forumService.deleteComment(commentId, requiredUserId(userId));
+        forumService.deleteComment(commentId, UUID.fromString(userId));
         return ResponseEntity.noContent().build();
     }
 

@@ -1,0 +1,331 @@
+<div class="forum-container">
+  <!-- Left Filter Panel -->
+  <aside class="filter-sidebar">
+    <h3>Categories</h3>
+    <ul>
+      @for (filter of FILTERS; track filter.key) {
+        <li
+          [class.active]="activeFilter() === filter.key"
+          (click)="setFilter(filter.key)">
+          {{ filter.label }}
+        </li>
+      }
+    </ul>
+    <button class="btn-create-trigger" (click)="openCreateModal()">＋ New Post</button>
+  </aside>
+
+  <!-- Central Activity Stream Feed -->
+  <main class="feed-stream">
+    @if (isLoading()) {
+      <div class="loader">Loading feed...</div>
+    } @else {
+      @for (post of filteredPosts; track post.id) {
+        <article class="feed-card" (click)="openPost(post.id)">
+            <header class="card-header">
+            <div class="user-meta" (click)="openProfile(post.userId); $event.stopPropagation()">
+                <div class="avatar-initials">{{ post.authorInitials }}</div>
+                <div>
+                <h4 class="username">{{ post.authorName }}</h4>
+                <span class="timestamp">{{ formatTime(post.createdAt) }}</span>
+                </div>
+            </div>
+            <div class="type-badge">
+                <span>{{ getPostTypeIcon(post.postType) }}</span>
+                <small>{{ getPostTypeLabel(post.postType) }}</small>
+            </div>
+            </header>
+
+            <section class="card-body">
+            @if (editingPostId() === post.id) {
+                <div class="edit-mode-container" (click)="$event.stopPropagation()">
+                <textarea [(ngModel)]="editContent" class="edit-textarea"></textarea>
+                <div class="edit-actions">
+                    <button class="btn-secondary sm" (click)="cancelEdit()">Cancel</button>
+                    <button class="btn-primary sm" (click)="saveEdit(post.id)">Save</button>
+                </div>
+                </div>
+            } @else {
+                <p class="post-text">{{ post.content }}</p>
+            }
+
+            @if (post.media && post.media.length > 0) {
+                <div class="media-preview-grid">
+                @for (m of post.media; track m.url) {
+                    @if (isImageMedia(m)) {
+                    <img [src]="m.url" class="embedded-image-asset" alt="Post attachment" />
+                    }
+                }
+                </div>
+            }
+
+            @if (post.isReshare && post.originalPost) {
+                <div class="reshare-quote-box" (click)="openPost(post.originalPost.id); $event.stopPropagation()">
+                <div class="quote-header">
+                    <span class="quote-avatar">{{ post.originalPost.authorInitials }}</span>
+                    <strong>{{ post.originalPost.authorName }}</strong>
+                </div>
+                <p>{{ post.originalPost.content }}</p>
+                </div>
+            }
+            </section>
+
+            <footer class="card-footer" (click)="$event.stopPropagation()">
+            <button class="action-btn" [class.liked]="post.likedByCurrentUser" (click)="toggleLike(post)">
+                ♥️ {{ post.likeCount }}
+            </button>
+            <button class="action-btn" (click)="toggleCommentInput(post.id)">
+                💬 {{ post.commentCount }}
+            </button>
+            <button class="action-btn" (click)="openCreateModal(post)">
+                🔁 {{ post.reshareCount }}
+            </button>
+
+            @if (currentUser?.userId === post.userId) {
+                <div class="menu-container">
+                <button class="action-btn dots-btn" (click)="togglePostMenu(post.id, $event)">•••</button>
+                @if (openMenuPostId() === post.id) {
+                    <div class="dropdown-menu">
+                    <button (click)="startEdit(post)">Edit</button>
+                    <button class="delete-item" (click)="deletePost(post.id)">Delete</button>
+                    </div>
+                }
+                </div>
+            }
+            </footer>
+
+            <!-- ✅ Comments section INSIDE article, after footer -->
+            @if (showCommentInput()[post.id]) {
+            <div class="comments-section" (click)="$event.stopPropagation()">
+                <!-- Quick input -->
+                <div class="quick-comment-box">
+                <input
+                    type="text"
+                    placeholder="Write a reply..."
+                    [(ngModel)]="commentInputs()[post.id]"
+                    (keyup.enter)="submitQuickComment(post)" />
+                <button (click)="submitQuickComment(post)">Send</button>
+                </div>
+
+                <!-- Render comments -->
+                @if (commentsMap()[post.id]?.length) {
+                <div class="comment-thread">
+                    @for (comment of commentsMap()[post.id]; track comment.id) {
+                    <div class="comment">
+                        <div class="comment-header">
+                        <div class="comment-avatar">{{ comment.authorInitials }}</div>
+                        <div class="comment-meta">
+                            <strong class="comment-author">{{ comment.authorName }}</strong>
+                            <small class="comment-time">{{ formatTime(comment.createdAt) }}</small>
+                        </div>
+                        </div>
+                        <div class="comment-body">
+                        <p>{{ comment.content }}</p>
+                        </div>
+                        <div class="comment-actions">
+                        <button class="reply-btn" (click)="startReply(comment)">Reply</button>
+                        </div>
+
+                        <!-- Nested replies -->
+                        @if (comment.replies?.length) {
+                        <div class="replies">
+                            @for (reply of comment.replies; track reply.id) {
+                            <div class="reply">
+                                <div class="reply-header">
+                                <div class="reply-avatar">{{ reply.authorInitials }}</div>
+                                <div class="reply-meta">
+                                    <strong class="reply-author">{{ reply.authorName }}</strong>
+                                    <small class="reply-time">{{ formatTime(reply.createdAt) }}</small>
+                                </div>
+                                </div>
+                                <div class="reply-body">
+                                <p>{{ reply.content }}</p>
+                                </div>
+                            </div>
+                            }
+                        </div>
+                        }
+
+                        <!-- Reply input box -->
+                        <div class="reply-box" *ngIf="replyingTo === comment.id">
+                        <input type="text" [(ngModel)]="replyText" placeholder="Write a reply..." />
+                        <button (click)="submitReply(post.id, comment.id)">Post</button>
+                        </div>
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+            }
+        </article>
+        }
+@empty {
+  <div class="empty-state">No posts in this category yet.</div>
+}
+
+      @if (hasMore()) {
+        <button class="btn-load-more" [disabled]="isLoadingMore()" (click)="loadMore()">
+          {{ isLoadingMore() ? 'Loading...' : 'Load more' }}
+        </button>
+      }
+    }</main>
+</div>
+
+<!-- ══ CREATE POST MODAL ══════════════════════════════════════════════════ -->
+@if (showCreateModal()) {
+  <div class="modal-overlay" (click)="closeCreateModal()">
+    <div class="compose-modal" (click)="$event.stopPropagation()">
+
+      <!-- Header: avatar + author name + type pills -->
+      <div class="compose-header">
+        <div class="compose-author">
+          <div class="compose-avatar">
+            {{ (currentUser?.firstName?.charAt(0) ?? '') + (currentUser?.lastName?.charAt(0) ?? '') || 'ME' }}
+          </div>
+          <div>
+            <div class="compose-author-name">
+              {{ currentUser?.firstName }} {{ currentUser?.lastName }}
+            </div>
+            <!-- Post type pill selector -->
+            <div class="compose-type-row">
+              @for (type of POST_TYPES; track type.value) {
+                <button
+                  class="type-pill"
+                  [class.active]="postType() === type.value"
+                  (click)="postType.set(type.value)">
+                  {{ type.icon }} {{ type.label }}
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+        <button class="compose-close" (click)="closeCreateModal()" aria-label="Close">✕</button>
+      </div>
+
+      <!-- Text area -->
+      <textarea
+        class="compose-textarea"
+        placeholder="Share an update, achievement, or learning..."
+        [(ngModel)]="postContent"
+        rows="5">
+      </textarea>
+
+      <!-- Attached media chips -->
+      @if (uploadedMedia().length > 0) {
+        <div class="compose-media-list">
+          @for (m of uploadedMedia(); track $index) {
+            <div class="compose-media-chip">
+              <span class="chip-icon">
+                @if (m.mediaType === 'image') { 🖼️ }
+                @else if (m.mediaType === 'pdf') { 📄 }
+                @else { 📎 }
+              </span>
+              <span class="chip-name">{{ m.fileName || 'Attached file' }}</span>
+              <button class="chip-remove" (click)="removeMedia($index)" aria-label="Remove file">✕</button>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Footer toolbar -->
+      <div class="compose-footer">
+        <div class="compose-tools">
+          <input
+            type="file"
+            id="forum-file-input"
+            multiple
+            (change)="onFileSelected($event)"
+            style="display:none" />
+
+          <label
+            for="forum-file-input"
+            class="tool-btn"
+            [class.uploading]="isUploading()"
+            title="Attach files">
+            @if (isUploading()) {
+              <span class="spinner"></span>
+            } @else {
+              📎
+            }
+            <span>{{ isUploading() ? 'Uploading…' : 'Attach' }}</span>
+          </label>
+
+          <label class="tool-btn cv-toggle-btn" title="Add to your CV">
+            <input type="checkbox" [(ngModel)]="includeInCv" style="display:none" />
+            <span class="cv-icon" [class.cv-on]="includeInCv()">📋</span>
+            <span>{{ includeInCv() ? 'In CV' : 'Add to CV' }}</span>
+          </label>
+        </div>
+
+        <div class="compose-actions">
+          <button class="btn-secondary" (click)="closeCreateModal()">Cancel</button>
+          <button
+            class="btn-primary compose-submit"
+            [disabled]="isSubmitting() || isUploading() || (!postContent().trim() && !uploadedMedia().length)"
+            (click)="submitPost()">
+            @if (isSubmitting()) {
+              <span class="spinner white"></span> Publishing…
+            } @else {
+              Publish
+            }
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+}
+
+<!-- ══ RESHARE MODAL ══════════════════════════════════════════════════════ -->
+@if (showReshareModal()) {
+  <div class="modal-overlay" (click)="closeCreateModal()">
+    <div class="compose-modal" (click)="$event.stopPropagation()">
+
+      <div class="compose-header">
+        <div class="compose-author">
+          <div class="compose-avatar">
+            {{ (currentUser?.firstName?.charAt(0) ?? '') + (currentUser?.lastName?.charAt(0) ?? '') || 'ME' }}
+          </div>
+          <div class="compose-author-name">
+            {{ currentUser?.firstName }} {{ currentUser?.lastName }}
+          </div>
+        </div>
+        <button class="compose-close" (click)="closeCreateModal()" aria-label="Close">✕</button>
+      </div>
+
+      <textarea
+        class="compose-textarea"
+        placeholder="Add your thoughts… (optional)"
+        [(ngModel)]="reshareContent"
+        rows="3">
+      </textarea>
+
+      @if (resharePost()) {
+        <div class="reshare-preview">
+          <div class="reshare-preview-author">
+            <span class="reshare-avatar-sm">{{ resharePost()?.authorInitials }}</span>
+            <strong>{{ resharePost()?.authorName }}</strong>
+          </div>
+          <p class="reshare-preview-text">{{ resharePost()?.content }}</p>
+        </div>
+      }
+
+      <div class="compose-footer">
+        <div></div>
+        <div class="compose-actions">
+          <button class="btn-secondary" (click)="closeCreateModal()">Cancel</button>
+          <button
+            class="btn-primary compose-submit"
+            [disabled]="isSubmitting()"
+            (click)="submitReshare()">
+            @if (isSubmitting()) {
+              <span class="spinner white"></span> Resharing…
+            } @else {
+              Reshare
+            }
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+}

@@ -1,0 +1,184 @@
+<div class="detail-container">
+
+  <!-- BACK NAV -->
+  <button class="btn-back" routerLink="/forum">
+    ← Back to Forum Feed
+  </button>
+
+  @if (isLoading()) {
+
+    <div class="loader">
+      Loading thread details...
+    </div>
+
+  } @else if (post()) {
+
+    <!-- ================= POST CARD ================= -->
+    <article class="main-post-card">
+
+      <!-- POST HEADER -->
+      <header class="post-header">
+
+        <div class="user-block" (click)="openProfile(post()!.userId)">
+
+          <div class="avatar">
+            {{ post()?.authorInitials }}
+          </div>
+
+          <div class="user-meta">
+            <h3>{{ post()?.authorName }}</h3>
+            <span class="date">
+              {{ formatTime(post()!.createdAt) }}
+            </span>
+          </div>
+
+        </div>
+
+        <span class="badge">
+          {{ post()?.postType | uppercase }}
+        </span>
+
+      </header>
+
+      <!-- POST CONTENT -->
+      <section class="post-content">
+
+        <p class="main-text">
+          {{ post()?.content }}
+        </p>
+
+        @if (post()?.media?.length) {
+
+          <div class="image-gallery">
+            @for (m of post()!.media; track m.url) {
+              <img [src]="m.url" alt="Attachment">
+            }
+          </div>
+
+        }
+
+      </section>
+
+    </article>
+
+    <!-- ================= DISCUSSION SECTION ================= -->
+    <section class="discussion-section">
+
+      <!-- SECTION HEADER -->
+      <header class="discussion-header">
+        <h3>Discussion</h3>
+        <span class="badge-count">
+          {{ post()?.commentCount }} comments
+        </span>
+      </header>
+
+      <!-- ROOT COMMENT INPUT -->
+      <div class="root-comment-form">
+
+        <textarea
+          placeholder="Share your thoughts..."
+          [ngModel]="rootCommentText()"
+          (ngModelChange)="rootCommentText.set($event)">
+        </textarea>
+
+        <div class="comment-actions">
+          <button class="btn-send-comment" (click)="submitRootComment()">
+            Post Comment
+          </button>
+        </div>
+
+      </div>
+
+      <!-- ================= COMMENTS ================= -->
+      <div class="comments-list">
+
+        @for (comment of comments(); track comment.id) {
+
+          <div class="comment-node">
+
+            <!-- COMMENT BUBBLE -->
+            <div class="comment-main-bubble">
+
+              <div class="bubble-header">
+                <strong>{{ comment.authorName }}</strong>
+                <span class="time">
+                  {{ formatTime(comment.createdAt) }}
+                </span>
+              </div>
+
+              <p class="bubble-text">
+                {{ comment.content }}
+              </p>
+
+              <button
+                class="btn-reply-trigger"
+                (click)="toggleReplyBox(comment.id)">
+                Reply
+              </button>
+
+            </div>
+
+            <!-- REPLY INPUT -->
+            @if (showReplyBox()[comment.id]) {
+
+              <div class="nested-reply-form">
+
+                <input
+                  type="text"
+                  placeholder="Write a reply..."
+                  [ngModel]="replyInputs()[comment.id] || ''"
+                  (ngModelChange)="updateReplyInput(comment.id, $event)">
+
+                <button (click)="submitNestedReply(comment.id, comment)">
+                  Send
+                </button>
+
+              </div>
+
+            }
+
+            <!-- REPLIES -->
+            @if (comment.replies?.length) {
+
+              <div class="replies-branch">
+
+                @for (reply of comment.replies; track reply.id) {
+
+                  <div class="reply-node">
+
+                    <div class="bubble-header">
+                      <strong>{{ reply.authorName }}</strong>
+                      <span class="time">
+                        {{ formatTime(reply.createdAt) }}
+                      </span>
+                    </div>
+
+                    <p class="bubble-text">
+                      {{ reply.content }}
+                    </p>
+
+                  </div>
+
+                }
+
+              </div>
+
+            }
+
+          </div>
+
+        } @empty {
+
+          <div class="no-replies">
+            No comments yet. Start the conversation.
+          </div>
+
+        }
+
+      </div>
+
+    </section>
+
+  }
+
+</div>

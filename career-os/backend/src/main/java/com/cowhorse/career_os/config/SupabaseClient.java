@@ -9,6 +9,7 @@ public class SupabaseClient {
     
     private String url;
     private String apiKey;
+    private String serviceKey;
 
     public String getUrl() {
         return url;
@@ -24,5 +25,13 @@ public class SupabaseClient {
 
     public void setApiKey(String apiKey) {
         this.apiKey = apiKey;
+    }
+
+    public String getServiceKey() { 
+        return serviceKey; 
+    }
+    
+    public void setServiceKey(String serviceKey) { 
+        this.serviceKey = serviceKey; 
     }
 }

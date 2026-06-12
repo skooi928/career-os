@@ -35,6 +35,8 @@ export const routes: Routes = [
       // Add more routes here as you create new pages
       { path: 'resume', redirectTo: 'profile', pathMatch: 'full' },
       { path: 'cv-preview', component: CvPreviewComponent, canActivate: [emailVerificationGuard] },
+      { path: 'forum', loadComponent: () => import('./pages/forum/forum.component').then(m => m.ForumComponent) },
+      { path: 'posts/:id', loadComponent: () => import('./pages/post-detail/post-detail.component').then(m => m.PostDetailComponent) },
       { path: '**', component: PageNotFoundComponent },
     ]
   },
