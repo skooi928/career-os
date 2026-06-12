@@ -37,6 +37,7 @@ export interface JobBenefit {
 
 export interface Job {
   id?: string;
+  employerId?: string;
   title: string;
   company: string;
   initials: string;
@@ -56,6 +57,8 @@ export interface Job {
   benefits?: JobBenefit[];
 }
 
+import { EventService } from './event.service';
+
 @Injectable({
   providedIn: 'root'
 })
@@ -66,7 +69,15 @@ export class JobService {
   private loadingSubject = new BehaviorSubject<boolean>(false);
   public loading$ = this.loadingSubject.asObservable();
 
-  constructor(private http: HttpClient, private authService: AuthService) {}
+  constructor(private http: HttpClient, private authService: AuthService, private eventService: EventService) {
+    this.eventService.newJobPosted$.subscribe(newJob => {
+      const currentJobs = this.jobsSubject.value;
+      // Ensure we don't duplicate if we created it ourselves
+      if (!currentJobs.find(j => j.id === newJob.id)) {
+        this.jobsSubject.next([{...newJob, isNew: true}, ...currentJobs]);
+      }
+    });
+  }
 
   private getHeaders(): HttpHeaders {
     const token = this.authService.getToken();
@@ -163,5 +174,13 @@ export class JobService {
 
   getJobById(id: string): Observable<Job> {
     return this.http.get<Job>(`${this.API_URL}/${id}`, { headers: this.getHeaders() });
+  }
+
+  getJobsByEmployerId(employerId: string): Observable<Job[]> {
+    return this.http.get<Job[]>(`${this.API_URL}/employer/${employerId}`, { headers: this.getHeaders() });
+  }
+
+  updateJob(id: string, job: Partial<Job>): Observable<Job> {
+    return this.http.put<Job>(`${this.API_URL}/${id}`, job, { headers: this.getHeaders() });
   }
 }

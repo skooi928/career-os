@@ -1,6 +1,6 @@
 import { Component, OnInit, ViewChild, ElementRef, Inject, PLATFORM_ID } from '@angular/core';
 import { CommonModule, Location, isPlatformBrowser } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { JobService, Job } from '../../services/job.service';
 import { ApplicationService } from '../../services/application.service';
@@ -9,7 +9,7 @@ import { AuthService } from '../../services/auth.service';
 @Component({
   selector: 'app-job-application',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule],
   template: `
     <div class="application-content" *ngIf="job; else loading">
         <button class="btn-back" (click)="goBack()">
@@ -35,6 +35,7 @@ import { AuthService } from '../../services/auth.service';
           </div>
         </header>
 
+        <ng-container *ngIf="!isSubmitted">
         <!-- Step 1 -->
         <div class="step-card">
           <div class="step-header">
@@ -143,6 +144,24 @@ import { AuthService } from '../../services/auth.service';
               <i class="ph-bold ph-spinner spinner-icon"></i> Processing...
             </span>
           </button>
+        </div>
+        </ng-container>
+
+        <!-- Success Screen -->
+        <div *ngIf="isSubmitted" class="success-screen">
+          <div class="success-icon-container">
+            <i class="ph-fill ph-check-circle"></i>
+          </div>
+          <h2>Application Submitted!</h2>
+          <p>Your application for <strong>{{ job.title }}</strong> at <strong>{{ job.company }}</strong> has been successfully sent to the employer.</p>
+          <div class="success-actions">
+            <button class="btn-primary" [routerLink]="['/dashboard']">
+              <i class="ph-bold ph-house"></i> Back to Dashboard
+            </button>
+            <button class="btn-secondary" [routerLink]="['/jobs', job.id]">
+              <i class="ph-bold ph-briefcase"></i> View Job Again
+            </button>
+          </div>
         </div>
 
     </div>
@@ -479,6 +498,97 @@ import { AuthService } from '../../services/auth.service';
       display: block;
       cursor: pointer;
     }
+
+    .success-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 60px 24px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 20px;
+      box-shadow: var(--shadow-sm);
+      margin-top: 24px;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    .success-icon-container {
+      font-size: 4rem;
+      color: var(--color-success);
+      margin-bottom: 24px;
+      animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    .success-screen h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--color-text);
+      margin: 0 0 16px 0;
+    }
+
+    .success-screen p {
+      font-size: 1.1rem;
+      color: var(--color-text-secondary);
+      max-width: 500px;
+      margin: 0 0 32px 0;
+      line-height: 1.6;
+    }
+
+    .success-actions {
+      display: flex;
+      gap: 16px;
+      margin-top: 10px;
+    }
+
+    .success-actions button {
+      padding: 14px 28px;
+      border-radius: 12px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: none;
+    }
+
+    .success-actions .btn-primary {
+      background: var(--color-primary, #10b981);
+      color: white;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+    }
+
+    .success-actions .btn-primary:hover {
+      background: var(--color-primary-hover, #059669);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
+    }
+
+    .success-actions .btn-secondary {
+      background: var(--color-surface-secondary, #f1f5f9);
+      color: var(--color-text, #0f172a);
+      border: 1px solid var(--color-border, #e2e8f0);
+    }
+
+    .success-actions .btn-secondary:hover {
+      background: var(--color-border, #e2e8f0);
+      transform: translateY(-2px);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0); opacity: 0; }
+      80% { transform: scale(1.1); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
     .radio-card input {
       display: none;
     }
@@ -619,6 +729,7 @@ export class JobApplicationComponent implements OnInit {
   resumeFileName: string = '';
   isUploading = false;
   isSubmitting = false;
+  isSubmitted = false;
   successMessage = '';
   answersForm: FormGroup;
 
@@ -754,11 +865,7 @@ export class JobApplicationComponent implements OnInit {
     }, this.resumeFile || undefined).subscribe({
       next: () => {
         this.isSubmitting = false;
-        this.successMessage = 'Application submitted successfully! Redirecting to Dashboard...';
-        
-        setTimeout(() => {
-          this.router.navigate(['/dashboard']);
-        }, 3000);
+        this.isSubmitted = true;
       },
       error: (err: any) => {
         this.isSubmitting = false;

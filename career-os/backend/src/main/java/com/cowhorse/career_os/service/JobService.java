@@ -5,6 +5,7 @@ import com.cowhorse.career_os.entity.RoleRequirement;
 import com.cowhorse.career_os.entity.RoleTechnicalSkillRequirement;
 import com.cowhorse.career_os.entity.RoleMustHaveRequirement;
 import com.cowhorse.career_os.repository.JobRepository;
+import com.cowhorse.career_os.repository.JobApplicationRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -12,11 +13,12 @@ import java.util.List;
 @Service
 public class JobService {
     private final JobRepository jobRepository;
-    private final com.cowhorse.career_os.repository.JobApplicationRepository jobApplicationRepository;
+    private final SseService sseService;
+    private final JobApplicationRepository jobApplicationRepository;
 
-    public JobService(JobRepository jobRepository, 
-                      com.cowhorse.career_os.repository.JobApplicationRepository jobApplicationRepository) {
+    public JobService(JobRepository jobRepository, SseService sseService, JobApplicationRepository jobApplicationRepository) {
         this.jobRepository = jobRepository;
+        this.sseService = sseService;
         this.jobApplicationRepository = jobApplicationRepository;
     }
 
@@ -46,7 +48,9 @@ public class JobService {
                 benefit.setJob(job);
             }
         }
-        return jobRepository.save(job);
+        Job savedJob = jobRepository.save(job);
+        sseService.broadcastEvent("NEW_JOB_POSTED", savedJob);
+        return savedJob;
     }
 
     public List<Job> getAllJobs() {
@@ -85,5 +89,24 @@ public class JobService {
         job.setApplicantsCount(count);
         
         return job;
+    }
+
+    public List<Job> getJobsByEmployerId(java.util.UUID employerId) {
+        return jobRepository.findByEmployerIdOrderByCreatedAtDesc(employerId);
+    }
+
+    public Job updateJob(java.util.UUID id, Job updatedJob) {
+        Job existingJob = getJobById(id);
+        existingJob.setTitle(updatedJob.getTitle());
+        existingJob.setCompany(updatedJob.getCompany());
+        existingJob.setLocation(updatedJob.getLocation());
+        existingJob.setEmploymentType(updatedJob.getEmploymentType());
+        existingJob.setMinSalary(updatedJob.getMinSalary());
+        existingJob.setMaxSalary(updatedJob.getMaxSalary());
+        existingJob.setDeadline(updatedJob.getDeadline());
+        existingJob.setVacancies(updatedJob.getVacancies());
+        existingJob.setWebsite(updatedJob.getWebsite());
+        // For simplicity, we only update top-level job details, not the nested collections.
+        return jobRepository.save(existingJob);
     }
 }

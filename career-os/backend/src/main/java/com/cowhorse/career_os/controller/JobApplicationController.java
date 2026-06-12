@@ -37,6 +37,7 @@ public class JobApplicationController {
             
             return ResponseEntity.ok(service.applyForJob(application));
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.badRequest().build();
         }
     }
@@ -49,5 +50,25 @@ public class JobApplicationController {
     @GetMapping("/job/{jobId}")
     public ResponseEntity<List<JobApplication>> getApplicationsByJob(@PathVariable UUID jobId) {
         return ResponseEntity.ok(service.getApplicationsByJob(jobId));
+    }
+
+    @GetMapping("/employer/{employerId}")
+    public ResponseEntity<List<JobApplication>> getApplicationsByEmployer(@PathVariable UUID employerId) {
+        return ResponseEntity.ok(service.getApplicationsByEmployer(employerId));
+    }
+
+    @PutMapping("/{id}/status")
+    public ResponseEntity<JobApplication> updateApplicationStatus(
+            @PathVariable UUID id, 
+            @RequestBody java.util.Map<String, String> body) {
+        String status = body.get("status");
+        if (status == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        JobApplication app = service.updateApplicationStatus(id, status);
+        if (app != null) {
+            return ResponseEntity.ok(app);
+        }
+        return ResponseEntity.notFound().build();
     }
 }

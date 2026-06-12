@@ -638,6 +638,9 @@ export class AppShellComponent implements OnInit, OnDestroy {
       if (item.label === 'Job Application' && role !== 'candidate') {
         return false;
       }
+      if (item.label === 'Mock Interview' && role !== 'candidate') {
+        return false;
+      }
       return true;
     });
   });

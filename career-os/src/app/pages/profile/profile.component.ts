@@ -1,12 +1,16 @@
 import { Component, OnInit, signal, OnDestroy, Inject, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { ProfileService, Experience, Education, Project, Skill, UserProfileDTO } from '../../services/profile.service';
 import { ResumeService } from '../../services/resume.service';
 import { CareerAnalysisService } from '../../services/career-analysis.service';
-import { Subject } from 'rxjs';
+import { JobService, Job } from '../../services/job.service';
+import { SavedJobService, SavedJob } from '../../services/saved-job.service';
+import { EventService } from '../../services/event.service';
+import { HttpClient } from '@angular/common/http';
+import { Subject, forkJoin } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
 interface PersonalInfo {
@@ -60,7 +64,7 @@ interface SkillCategory {
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.css']
 })
@@ -69,7 +73,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   // Combined tab state
-  mainActiveTab = signal<'details' | 'resume'>('details');
+  mainActiveTab = signal<'details' | 'resume' | 'saved' | 'applications' | 'posted_jobs' | 'received_applications'>('details');
   resumeActiveTab = signal<ResumeActiveTab>('roadmap');
   
   // Sync notice minimization state
@@ -181,6 +185,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
     private profileService: ProfileService,
     private resumeService: ResumeService,
     private careerAnalysisService: CareerAnalysisService,
+    private jobService: JobService,
+    private savedJobService: SavedJobService,
+    private eventService: EventService,
+    private http: HttpClient,
     private router: Router,
     private route: ActivatedRoute,
     @Inject(PLATFORM_ID) private platformId: Object
@@ -210,8 +218,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.isSyncNoticeMinimized.set(true);
   }
 
-  switchTab(tab: 'details' | 'resume') {
-    this.mainActiveTab.set(tab);
+  switchTab(tab: 'details' | 'resume' | 'saved' | 'applications' | 'posted_jobs' | 'received_applications') {
+    this.mainActiveTab.set(tab as any);
     if (tab === 'resume') {
       if (this.pageState() === 'portfolio') {
         this.startSyncNoticeTimer();
@@ -324,6 +332,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
           // Keep the basic user info displayed even if API fails
         }
       });
+
   }
 
   toggleSection(section: keyof ExpandedSectionsState) {
