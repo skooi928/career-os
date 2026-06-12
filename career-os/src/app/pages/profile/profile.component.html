@@ -852,9 +852,9 @@
   <div class="section badges-section">
     <div class="section-header" (click)="toggleSection('badges')">
       <h2><i class="ph-medal"></i> My Badges</h2>
-      <i [class]="expandedSection() === 'badges' ? 'ph-caret-down' : 'ph-caret-right'"></i>
+      <i [class]="expandedSections().badges ? 'ph-caret-down' : 'ph-caret-right'"></i>
     </div>
-    <div *ngIf="expandedSection() === 'badges'" class="section-content">
+    <div *ngIf="expandedSections().badges" class="section-content">
       <div *ngIf="badges().length === 0" class="empty-badges">
         <p>No badges yet. Complete courses to earn digital credentials.</p>
         <a routerLink="/upskilling">Browse Courses</a>
