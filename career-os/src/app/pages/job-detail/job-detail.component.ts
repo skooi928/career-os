@@ -2,6 +2,9 @@ import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
 import { CommonModule, Location, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { JobService, Job } from '../../services/job.service';
+import { SavedJobService } from '../../services/saved-job.service';
+import { ProfileService, UserProfileDTO } from '../../services/profile.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-job-detail',
@@ -35,13 +38,17 @@ import { JobService, Job } from '../../services/job.service';
                 <span><i class="ph ph-buildings"></i> {{ job.company }}</span>
                 <span><i class="ph ph-map-pin"></i> {{ job.location }}</span>
                 <span><i class="ph ph-briefcase"></i> {{ job.employmentType }}</span>
+                <span><i class="ph ph-users"></i> {{ job.applicantsCount || 0 }} {{ job.applicantsCount === 1 ? 'applicant' : 'applicants' }}</span>
               </div>
             </div>
           </div>
 
           <!-- Actions -->
           <div class="banner-actions">
-            <button class="btn-action-banner"><i class="ph ph-bookmark"></i> Save</button>
+            <button class="btn-action-banner" (click)="toggleSaveJob()">
+              <i class="ph" [ngClass]="isSaved ? 'ph-bookmark-simple-fill text-yellow' : 'ph-bookmark'"></i> 
+              {{ isSaved ? 'Saved' : 'Save' }}
+            </button>
             <button class="btn-action-banner"><i class="ph ph-share-network"></i> Share</button>
             <button class="btn-apply-banner" (click)="applyForJob()">Apply Now <i class="ph-bold ph-arrow-right"></i></button>
           </div>
@@ -151,45 +158,34 @@ import { JobService, Job } from '../../services/job.service';
             </div>
 
             <!-- COMPANY TAB -->
-            <div *ngSwitchCase="'company'" class="tab-pane empty-state">
-              <i class="ph-light ph-buildings"></i>
-              <h3>Company Profile</h3>
-              <p>Company profile details will be displayed here in the future.</p>
+            <div *ngSwitchCase="'company'" class="tab-pane company-profile-tab">
+              <h2>Company Profile</h2>
+              <div *ngIf="companyProfile; else noCompany">
+                <div class="company-header">
+                  <div class="company-logo-large">{{ job.initials || 'CO' }}</div>
+                  <div>
+                    <h3>{{ companyProfile.firstName }} {{ companyProfile.lastName }}</h3>
+                    <p class="company-location"><i class="ph ph-map-pin"></i> {{ companyProfile.location || 'Location not specified' }}</p>
+                  </div>
+                </div>
+                <div class="company-bio mt-4">
+                  <h4>About Us</h4>
+                  <p class="description-text">{{ companyProfile.bio || 'No description available.' }}</p>
+                </div>
+              </div>
+              <ng-template #noCompany>
+                <div class="empty-state">
+                  <i class="ph-light ph-buildings"></i>
+                  <h3>Company Profile Unavailable</h3>
+                  <p>We couldn't fetch the profile details for this company.</p>
+                </div>
+              </ng-template>
             </div>
 
           </div>
         </div>
 
-        <!-- Right Column (Sidebar) -->
-        <aside class="sidebar-column">
-          
-          <!-- Similar Jobs (Mocked) -->
-          <div class="similar-jobs-card card">
-            <h3>Similar Jobs</h3>
-            <div class="similar-job-item">
-              <div class="sj-logo bg-green">G</div>
-              <div class="sj-info">
-                <h4>Marketing Manager</h4>
-                <p>Grab • RM7K–9K</p>
-              </div>
-            </div>
-            <div class="similar-job-item">
-              <div class="sj-logo bg-orange">S</div>
-              <div class="sj-info">
-                <h4>Growth Marketing Lead</h4>
-                <p>Shopee • RM8K–11K</p>
-              </div>
-            </div>
-            <div class="similar-job-item">
-              <div class="sj-logo bg-blue">A</div>
-              <div class="sj-info">
-                <h4>Digital Strategist</h4>
-                <p>Axiata • RM5K–7K</p>
-              </div>
-            </div>
-          </div>
 
-        </aside>
 
       </main>
 
@@ -382,11 +378,10 @@ import { JobService, Job } from '../../services/job.service';
 
     /* Main Layout */
     .job-content-layout {
-      display: grid;
-      grid-template-columns: 1fr 340px;
+      display: flex;
+      flex-direction: column;
       gap: 32px;
       margin-top: 32px;
-      align-items: start;
     }
 
     /* Left Column */
@@ -647,52 +642,7 @@ import { JobService, Job } from '../../services/job.service';
       background: var(--color-background);
     }
 
-    /* Similar Jobs */
-    .similar-jobs-card {
-      padding: 24px;
-    }
-    .similar-jobs-card h3 {
-      margin: 0 0 20px 0;
-      font-size: 1.125rem;
-    }
-    
-    .similar-job-item {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      margin-bottom: 16px;
-      cursor: pointer;
-    }
-    .similar-job-item:last-child {
-      margin-bottom: 0;
-    }
-    
-    .sj-logo {
-      width: 40px;
-      height: 40px;
-      border-radius: 8px;
-      color: white;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.125rem;
-      flex-shrink: 0;
-    }
-    .bg-green { background: #10B981; }
-    .bg-orange { background: #F97316; }
-    .bg-blue { background: #3B82F6; }
 
-    .sj-info h4 {
-      margin: 0 0 4px 0;
-      font-size: 0.9375rem;
-      color: var(--color-text);
-    }
-    .sj-info p {
-      margin: 0;
-      font-size: 0.8125rem;
-      color: var(--color-text-secondary);
-    }
 
     /* Utilities */
     .text-primary { color: var(--color-primary); }
@@ -723,12 +673,33 @@ import { JobService, Job } from '../../services/job.service';
 
     /* Responsive Design */
     @media (max-width: 992px) {
-      .job-content-layout {
-        grid-template-columns: 1fr;
-      }
       .quick-facts-strip {
         grid-template-columns: repeat(2, 1fr);
       }
+      .company-header {
+        display: flex;
+        gap: 24px;
+        align-items: center;
+      }
+      .company-logo-large {
+        width: 80px;
+        height: 80px;
+        background: #E11D48;
+        color: white;
+        font-size: 2rem;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 16px;
+      }
+      .company-location {
+        color: var(--color-text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .text-yellow { color: #F59E0B; }
     }
     @media (max-width: 768px) {
       .banner-main {
@@ -751,14 +722,22 @@ import { JobService, Job } from '../../services/job.service';
 export class JobDetailComponent implements OnInit {
   job: Job | null = null;
   activeTab: string = 'overview';
+  isSaved: boolean = false;
+  companyProfile: UserProfileDTO | null = null;
+  currentUser: any = null;
   
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private jobService: JobService,
+    private savedJobService: SavedJobService,
+    private profileService: ProfileService,
+    private authService: AuthService,
     private location: Location,
     @Inject(PLATFORM_ID) private platformId: Object
-  ) {}
+  ) {
+    this.currentUser = this.authService.getCurrentUser();
+  }
 
   getBenefitIcon(text: string): string {
     const lower = text.toLowerCase();
@@ -801,9 +780,25 @@ export class JobDetailComponent implements OnInit {
     if (isPlatformBrowser(this.platformId)) {
       const id = this.route.snapshot.paramMap.get('id');
       if (id) {
+        this.jobService.loadJobs();
         this.jobService.getJobById(id).subscribe({
           next: (data) => {
             this.job = data;
+            
+            // Check if saved
+            if (this.currentUser && this.currentUser.userId) {
+              this.savedJobService.checkSaved(this.currentUser.userId, data.id!).subscribe({
+                next: (saved) => this.isSaved = saved
+              });
+            }
+
+            // Fetch company profile
+            if (data.employerId) {
+              this.profileService.getProfile(data.employerId).subscribe({
+                next: (profile) => this.companyProfile = profile,
+                error: (err) => console.error('Error fetching company profile', err)
+              });
+            }
           },
           error: (err) => {
             console.error('Failed to load job', err);
@@ -812,6 +807,26 @@ export class JobDetailComponent implements OnInit {
           }
         });
       }
+    }
+  }
+
+  toggleSaveJob() {
+    if (!this.currentUser || !this.currentUser.userId) {
+      alert('Please log in to save jobs.');
+      return;
+    }
+    if (!this.job || !this.job.id) return;
+
+    if (this.isSaved) {
+      this.savedJobService.unsaveJob(this.currentUser.userId, this.job.id).subscribe({
+        next: () => this.isSaved = false,
+        error: (err) => console.error('Error unsaving job', err)
+      });
+    } else {
+      this.savedJobService.saveJob(this.currentUser.userId, this.job.id).subscribe({
+        next: () => this.isSaved = true,
+        error: (err) => console.error('Error saving job', err)
+      });
     }
   }
 
@@ -855,6 +870,32 @@ export class JobDetailComponent implements OnInit {
   applyForJob() {
     if (this.job && this.job.id) {
       this.router.navigate(['/jobs', this.job.id, 'apply']);
+    }
+  }
+
+  toggleSave() {
+    if (!this.job || !this.job.id) return;
+    
+    if (this.job.isSaved) {
+      this.jobService.unsaveJob(this.job.id).subscribe({
+        next: () => {
+          if (this.job) {
+            this.job.isSaved = false;
+          }
+          this.jobService.loadJobs();
+        },
+        error: (err) => console.error('Failed to unsave job', err)
+      });
+    } else {
+      this.jobService.saveJob(this.job.id).subscribe({
+        next: () => {
+          if (this.job) {
+            this.job.isSaved = true;
+          }
+          this.jobService.loadJobs();
+        },
+        error: (err) => console.error('Failed to save job', err)
+      });
     }
   }
 }

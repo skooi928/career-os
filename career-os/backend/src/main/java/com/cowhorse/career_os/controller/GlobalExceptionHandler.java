@@ -18,6 +18,18 @@ import lombok.extern.slf4j.Slf4j;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNoResourceFoundException(
+            org.springframework.web.servlet.resource.NoResourceFoundException ex, WebRequest request) {
+        
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("error", "Resource not found: " + ex.getResourcePath());
+        errorResponse.put("status", HttpStatus.NOT_FOUND.value());
+        errorResponse.put("timestamp", System.currentTimeMillis());
+        
+        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+    }
+
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<Map<String, Object>> handleAuthenticationException(
             AuthenticationException ex, WebRequest request) {

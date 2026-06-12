@@ -1,21 +1,49 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
+from fastapi.responses import Response
 import os
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
 import shutil
 import json
+# import weasyprint
 
 from app.extract_text import extract_resume_text, get_extraction_quality
 from app.clean_text import clean_resume_text
 from app.llm_parser import extract_structured_resume, generate_roadmap_suggestions
 from app.schema import ResumeData
 from app.normalize import normalize_resume
+from app.cv import router as cv_router
+
+# from app.supabase_client import fetch_profile_data, update_resume_preview
+# from app.cv_generator import generate_cv_html
+# from fastapi.responses import Response
+# from dotenv import load_dotenv
+# load_dotenv()
+from app.interview_router import router as interview_router
 
 app = FastAPI(
     title="Living Portfolio AI Service",
-    description="Resume extraction and roadmap service",
-    version="1.0"
+    description="Resume extraction, roadmap generation, and CV download service",
+    version="2.0"
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:4200",
+        "http://localhost:8080",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+ 
+app.include_router(cv_router)
+app.include_router(interview_router)
 
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -109,3 +137,68 @@ def generate_roadmap(req: RoadmapRequest):
         return {"suggestions": suggestions}
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Roadmap generation failed: {str(e)}")
+    
+# @app.get("/resume-preview/{user_id}")
+# def resume_preview(user_id: str):
+
+#     data = fetch_profile_data(user_id)
+
+#     return {
+#         "success": True,
+#         "data": data
+#     }
+
+# @app.post("/resume-preview/update")
+# def update_resume_preview(
+#     payload: ResumePreview
+# ):
+#     # Here you would typically update the resume preview in your database
+#     # For this example, we'll just return the received data
+
+#     return {
+#         "success": True,
+#         "message": "Resume preview updated successfully",
+#         "data": payload.dict()
+#     }
+
+# @app.post("/generate-cv")
+# def generate_cv(payload: ResumePreview):
+
+#     html = generate_cv_html(payload.model_dump())
+
+#     pdf = weasyprint.HTML(
+#         string=html
+#     ).write_pdf()
+
+#     return Response(
+#         content=pdf,
+#         media_type="application/pdf",
+#         headers={
+#             "Content-Disposition":
+#             "attachment; filename=careeros_cv.pdf"
+#         }
+#     )
+
+class CareerAnalysisRequest(BaseModel):
+    supabaseUid: str
+    bio: str
+    education: List[dict]
+    experience: List[dict]
+    skills: List[dict]
+
+@app.post("/career-analysis/analyze")
+def analyze_career_profile(req: CareerAnalysisRequest):
+    try:
+        from app.llm_parser import generate_career_predictions
+        prediction = generate_career_predictions(
+            education=req.education,
+            experience=req.experience,
+            skills=req.skills,
+            bio=req.bio
+        )
+        prediction["userId"] = req.supabaseUid
+        from datetime import date
+        prediction["analysisDate"] = date.today().isoformat()
+        return prediction
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Career analysis failed: {str(e)}")

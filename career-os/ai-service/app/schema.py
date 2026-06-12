@@ -101,3 +101,12 @@ class ResumeData(BaseModel):
 
     #raw sections for any content that doesn't fit above
     sections: List[ResumeSection] = []
+
+# class ResumePreview(BaseModel):
+
+#     name: str
+#     summary: str
+#     skills: list
+#     education: list
+#     experience: list
+#     projects: list

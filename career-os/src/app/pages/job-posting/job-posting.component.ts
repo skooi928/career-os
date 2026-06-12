@@ -2,6 +2,8 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { JobService } from '../../services/job.service';
+import { AuthService } from '../../services/auth.service';
+import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
   selector: 'app-job-posting',
@@ -11,8 +13,9 @@ import { JobService } from '../../services/job.service';
     <div class="job-posting-wrapper">
       <div class="page-header">
         <div class="header-content">
-          <h1>Create a Job Posting</h1>
-          <p>Attract the best talent with a detailed and compelling job listing.</p>
+          <h1>{{ isEditMode ? 'Edit Job Posting' : 'Create a Job Posting' }}</h1>
+          <p *ngIf="!isEditMode">Attract the best talent with a detailed and compelling job listing.</p>
+          <p *ngIf="isEditMode">Update your job listing details below.</p>
         </div>
         <div class="header-icon">
           <i class="ph-fill ph-rocket-launch"></i>
@@ -20,7 +23,10 @@ import { JobService } from '../../services/job.service';
       </div>
 
       <div class="job-posting-layout">
-        <div class="main-column">
+        <div *ngIf="isLoadingData" class="loading-overlay">
+          <i class="ph-bold ph-spinner ph-spin" style="font-size: 2rem;"></i> Loading job details...
+        </div>
+        <div class="main-column" *ngIf="!isLoadingData">
           <form [formGroup]="jobForm" (ngSubmit)="onSubmit()" class="form-layout">
         
         <!-- Section 1: Basic Information -->
@@ -331,8 +337,9 @@ import { JobService } from '../../services/job.service';
           <div *ngIf="successMessage" class="success-message">
             <i class="ph-fill ph-check-circle"></i> {{ successMessage }}
           </div>
-          <button type="submit" class="btn-primary btn-large" [disabled]="jobForm.invalid">
-            <i class="ph-bold ph-paper-plane-right"></i> Publish Job
+          <button type="submit" class="btn-primary btn-large" [disabled]="jobForm.invalid || isLoadingData">
+            <i class="ph-bold" [ngClass]="isEditMode ? 'ph-floppy-disk' : 'ph-paper-plane-right'"></i> 
+            {{ isEditMode ? 'Save Changes' : 'Publish Job' }}
           </button>
         </div>
 
@@ -533,30 +540,50 @@ import { JobService } from '../../services/job.service';
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 40px;
-      background: linear-gradient(135deg, var(--color-primary) 0%, #059669 100%);
-      border-radius: 24px;
+      padding: 48px;
+      background: linear-gradient(135deg, #059669 0%, #047857 50%, #065f46 100%);
+      border-radius: 28px;
       color: white;
-      box-shadow: 0 10px 30px -10px rgba(16, 185, 129, 0.4);
+      box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.3);
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .page-header::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.2), transparent 50%);
+      pointer-events: none;
     }
 
     .header-content h1 {
       margin: 0;
-      font-size: 2.25rem;
+      font-size: 2.5rem;
       font-weight: 800;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.03em;
+      position: relative;
+      z-index: 2;
+      color: white;
     }
 
     .header-content p {
-      margin: 8px 0 0 0;
-      font-size: 1.0625rem;
-      opacity: 0.9;
+      margin: 12px 0 0 0;
+      font-size: 1.125rem;
+      color: rgba(255, 255, 255, 0.9);
+      position: relative;
+      z-index: 2;
+      font-weight: 400;
     }
 
     .header-icon {
-      font-size: 5rem;
-      opacity: 0.2;
-      transform: rotate(15deg);
+      font-size: 9rem;
+      color: rgba(255, 255, 255, 0.03);
+      transform: rotate(15deg) translateY(-20px);
+      position: absolute;
+      right: 40px;
+      pointer-events: none;
     }
 
     @media (max-width: 600px) {
@@ -927,6 +954,22 @@ import { JobService } from '../../services/job.service';
       animation: slideIn 0.3s ease-out;
     }
 
+    .loading-overlay {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 60px;
+      background: var(--color-surface);
+      border-radius: 20px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-secondary);
+      font-size: 1.1rem;
+      font-weight: 500;
+    }
+
     @keyframes slideIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
@@ -936,6 +979,9 @@ import { JobService } from '../../services/job.service';
 export class JobPostingComponent {
   jobForm: FormGroup;
   successMessage = '';
+  isEditMode = false;
+  editingJobId: string | null = null;
+  isLoadingData = false;
   
   malaysiaData: Record<string, string[]> = {
     'Johor': ['Johor Bahru', 'Batu Pahat', 'Kluang', 'Kulai', 'Muar', 'Segamat'],
@@ -959,7 +1005,13 @@ export class JobPostingComponent {
   states = Object.keys(this.malaysiaData).sort();
   availableCities: string[] = [];
 
-  constructor(private fb: FormBuilder, private jobService: JobService) {
+  constructor(
+    private fb: FormBuilder, 
+    private jobService: JobService, 
+    private authService: AuthService,
+    private route: ActivatedRoute,
+    private router: Router
+  ) {
     this.jobForm = this.fb.group({
       title: [null, Validators.required],
       company: [null, Validators.required],
@@ -988,6 +1040,111 @@ export class JobPostingComponent {
     this.calculateCompletion();
     this.jobForm.valueChanges.subscribe(() => {
       this.calculateCompletion();
+    });
+  }
+
+  ngOnInit() {
+    this.route.queryParams.subscribe(params => {
+      if (params['edit']) {
+        this.isEditMode = true;
+        this.editingJobId = params['edit'];
+        this.loadJobData(this.editingJobId!);
+      }
+    });
+  }
+
+  loadJobData(id: string) {
+    this.isLoadingData = true;
+    this.jobService.getJobById(id).subscribe({
+      next: (job) => {
+        // Parse basic details
+        const locationParts = job.location ? job.location.split(', ') : [];
+        const city = locationParts[0] || '';
+        const state = locationParts[1] || '';
+
+        this.jobForm.patchValue({
+          title: job.title,
+          company: job.company,
+          website: job.website || '',
+          state: state,
+          employmentType: job.employmentType,
+          minSalary: job.minSalary,
+          maxSalary: job.maxSalary,
+          deadline: job.deadline,
+          vacancies: job.vacancies
+        });
+
+        if (state) {
+          this.onStateChange();
+          this.jobForm.patchValue({ city: city });
+        }
+
+        if (job.roleRequirements && job.roleRequirements.length > 0) {
+          const req = job.roleRequirements[0];
+          this.jobForm.get('roleRequirement')?.patchValue({
+            seniorityLevel: req.seniorityLevel,
+            requiredExperienceYears: req.requiredExperienceYears,
+            jobDescription: req.jobDescription
+          });
+
+          // Technical Skills
+          while (this.technicalSkillsFormArray.length !== 0) {
+            this.technicalSkillsFormArray.removeAt(0);
+          }
+          if (req.technicalSkills) {
+            req.technicalSkills.forEach(ts => {
+              this.technicalSkillsFormArray.push(this.fb.group({ technicalSkillText: [ts.technicalSkillText, Validators.required] }));
+            });
+          }
+          if (this.technicalSkillsFormArray.length === 0) this.addTechnicalSkill();
+
+          // Must Have
+          while (this.mustHaveRequirementsFormArray.length !== 0) {
+            this.mustHaveRequirementsFormArray.removeAt(0);
+          }
+          if (req.mustHaveRequirements) {
+            req.mustHaveRequirements.forEach(mh => {
+              this.mustHaveRequirementsFormArray.push(this.fb.group({ requirementText: [mh.requirementText, Validators.required] }));
+            });
+          }
+          if (this.mustHaveRequirementsFormArray.length === 0) this.addMustHaveRequirement();
+        }
+
+        // Benefits
+        while (this.benefitsFormArray.length !== 0) {
+          this.benefitsFormArray.removeAt(0);
+        }
+        if (job.benefits) {
+          job.benefits.forEach(b => {
+            this.benefitsFormArray.push(this.fb.group({ benefitText: [b.benefitText, Validators.required] }));
+          });
+        }
+
+        // Questions
+        while (this.questionsFormArray.length !== 0) {
+          this.questionsFormArray.removeAt(0);
+        }
+        if (job.questions) {
+          job.questions.forEach(q => {
+            const qGroup = this.fb.group({
+              questionText: [q.questionText, Validators.required],
+              questionType: [q.questionType, Validators.required],
+              options: this.fb.array([])
+            });
+            if (q.questionType === 'MULTIPLE_CHOICE' && q.options) {
+              const optionsArray = qGroup.get('options') as FormArray;
+              q.options.forEach(opt => optionsArray.push(this.fb.control(opt, Validators.required)));
+            }
+            this.questionsFormArray.push(qGroup);
+          });
+        }
+
+        this.isLoadingData = false;
+      },
+      error: (err) => {
+        console.error('Error loading job details', err);
+        this.isLoadingData = false;
+      }
     });
   }
 
@@ -1168,8 +1325,10 @@ export class JobPostingComponent {
       const formValue = this.jobForm.value;
       const initials = formValue.company.substring(0, 2).toUpperCase();
       const fullLocation = `${formValue.city}, ${formValue.state}`;
+      const currentUser = this.authService.getCurrentUser();
 
-      this.jobService.addJob({
+      const jobPayload = {
+        employerId: currentUser?.userId,
         title: formValue.title,
         company: formValue.company,
         website: formValue.website,
@@ -1183,55 +1342,73 @@ export class JobPostingComponent {
         roleRequirements: [formValue.roleRequirement],
         benefits: formValue.benefits,
         questions: formValue.questions
-      }).subscribe({
-        next: () => {
-          this.successMessage = 'Job successfully published! Your job posting is now live and ready to attract top talent.';
-          
-          // Reset form but keep defaults
-          this.jobForm.reset({
-            website: null,
-            employmentType: null,
-            vacancies: null,
-            state: null,
-            city: null,
-            roleRequirement: {
-              seniorityLevel: null,
-              requiredExperienceYears: null
+      };
+
+      if (this.isEditMode && this.editingJobId) {
+        this.jobService.updateJob(this.editingJobId, jobPayload).subscribe({
+          next: () => {
+            this.successMessage = 'Job successfully updated! Changes are now live.';
+            setTimeout(() => {
+              this.successMessage = '';
+              this.router.navigate(['/profile']);
+            }, 2000);
+          },
+          error: (err) => {
+            console.error('Failed to update job', err);
+            alert('Failed to update job. Please check your connection or try again later.');
+          }
+        });
+      } else {
+        this.jobService.addJob(jobPayload).subscribe({
+          next: () => {
+            this.successMessage = 'Job successfully published! Your job posting is now live and ready to attract top talent.';
+            
+            // Reset form but keep defaults
+            this.jobForm.reset({
+              website: null,
+              employmentType: null,
+              vacancies: null,
+              state: null,
+              city: null,
+              roleRequirement: {
+                seniorityLevel: null,
+                requiredExperienceYears: null
+              }
+            });
+            
+            // Reset technical skills array
+            while (this.technicalSkillsFormArray.length !== 0) {
+              this.technicalSkillsFormArray.removeAt(0);
             }
-          });
-          
-          // Reset technical skills array
-          while (this.technicalSkillsFormArray.length !== 0) {
-            this.technicalSkillsFormArray.removeAt(0);
-          }
-          this.addTechnicalSkill();
+            this.addTechnicalSkill();
 
-          // Reset must have requirements array
-          while (this.mustHaveRequirementsFormArray.length !== 0) {
-            this.mustHaveRequirementsFormArray.removeAt(0);
-          }
-          this.addMustHaveRequirement();
+            // Reset must have requirements array
+            while (this.mustHaveRequirementsFormArray.length !== 0) {
+              this.mustHaveRequirementsFormArray.removeAt(0);
+            }
+            this.addMustHaveRequirement();
 
-          // Reset benefits array
-          while (this.benefitsFormArray.length !== 0) {
-            this.benefitsFormArray.removeAt(0);
-          }
-          
-          while (this.questionsFormArray.length !== 0) {
-            this.questionsFormArray.removeAt(0);
-          }
+            // Reset benefits array
+            while (this.benefitsFormArray.length !== 0) {
+              this.benefitsFormArray.removeAt(0);
+            }
+            
+            while (this.questionsFormArray.length !== 0) {
+              this.questionsFormArray.removeAt(0);
+            }
 
-          this.availableCities = [];
+            this.availableCities = [];
 
-          setTimeout(() => {
-            this.successMessage = '';
-          }, 5000);
-        },
-        error: (err) => {
-          console.error('Failed to publish job', err);
-          alert('Failed to publish job. Please check your connection or try again later.');
-        }
-      });
+            setTimeout(() => {
+              this.successMessage = '';
+            }, 5000);
+          },
+          error: (err) => {
+            console.error('Failed to publish job', err);
+            alert('Failed to publish job. Please check your connection or try again later.');
+          }
+        });
+      }
     }
   }
 }

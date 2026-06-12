@@ -9,9 +9,10 @@ import { authGuard } from './guards/auth.guard';
 import { emailVerificationGuard } from './guards/email-verification.guard';
 import { PageNotFoundComponent } from './pages/page-not-found/page-not-found.component';
 import { AuthCallbackComponent } from './pages/auth-callback/auth-callback.component';
-import { ResumeBuilderComponent } from './pages/resume-builder/resume-builder.component';
+import { CvPreviewComponent } from './pages/cv-preview/cv-preview.component';
 import { JobPostingComponent } from './pages/job-posting/job-posting.component';
 import { JobDetailComponent } from './pages/job-detail/job-detail.component';
+import { JobsComponent } from './pages/jobs/jobs.component';
 import { JobApplicationComponent } from './pages/job-application/job-application.component';
 import { InsightsComponent } from './pages/insights/insights.component';
 import { UpskillingComponent } from './pages/upskilling/upskilling.component';
@@ -38,9 +39,11 @@ export const routes: Routes = [
       { path: 'dashboard', component: DashboardComponent },
       { path: 'insights', component: InsightsComponent },
       { path: 'job-posting', component: JobPostingComponent },
+      { path: 'jobs', component: JobsComponent },
       { path: 'jobs/:id', component: JobDetailComponent },
       { path: 'jobs/:id/apply', component: JobApplicationComponent },
       { path: 'profile', component: ProfileComponent, canActivate: [emailVerificationGuard] },
+      { path: 'mock-interview', loadComponent: () => import('./pages/mock-interview/mock-interview.component').then(m => m.MockInterviewComponent) },
       // Add more routes here as you create new pages
       { path: 'resume', component: ResumeBuilderComponent, canActivate: [emailVerificationGuard] },
       // Upskilling
@@ -54,6 +57,8 @@ export const routes: Routes = [
       { path: 'organisation/members', component: OrgMembersComponent },
       { path: 'organisation/verifications', component: OrgVerificationsComponent },
       { path: 'organisation/:id', component: OrgPublicComponent },
+      { path: 'resume', redirectTo: 'profile', pathMatch: 'full' },
+      { path: 'cv-preview', component: CvPreviewComponent, canActivate: [emailVerificationGuard] },
       { path: '**', component: PageNotFoundComponent },
     ]
   },

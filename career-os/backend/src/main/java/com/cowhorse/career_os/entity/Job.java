@@ -23,6 +23,9 @@ public class Job {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(name = "employer_id")
+    private UUID employerId;
+
     @Column(nullable = false)
     private String title;
 
@@ -64,6 +67,9 @@ public class Job {
     @OneToMany(mappedBy = "job", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<JobBenefit> benefits;
+
+    @Transient
+    private Long applicantsCount = 0L;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

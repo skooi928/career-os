@@ -24,6 +24,9 @@ public class ProfileService {
     private final ProjectRepository projectRepository;
     private final SkillRepository skillRepository;
     private final QuickTaskRepository quickTaskRepository;
+    private final OnboardingService onboardingService;
+    private final DashboardService dashboardService;
+
 
     // ==================== User Profile Methods ====================
 
@@ -96,7 +99,16 @@ public class ProfileService {
         userProfile.setBio(profileDTO.getBio());
         userProfile.setProfileImageUrl(profileDTO.getProfileImageUrl());
 
+        if (profileDTO.getRole() != null && !profileDTO.getRole().isEmpty()) {
+            String newRole = profileDTO.getRole();
+            if (!newRole.equalsIgnoreCase(userProfile.getRole())) {
+                userProfile.setRole(newRole);
+                onboardingService.initializeRoleSpecificRecords(supabaseUid, newRole);
+            }
+        }
+
         userProfileRepository.save(userProfile);
+        dashboardService.logActivity(userUuid, "PROFILE", "Profile details updated");
 
         return getUserProfileBySupabaseUid(supabaseUid);
     }
@@ -113,9 +125,11 @@ public class ProfileService {
                 .endDate(experienceDTO.getEndDate())
                 .isCurrent(experienceDTO.getCurrent() != null ? experienceDTO.getCurrent() : false)
                 .description(experienceDTO.getDescription())
+                .responsibilities(experienceDTO.getResponsibilities())
                 .build();
 
         Experience saved = experienceRepository.save(experience);
+        dashboardService.logActivity(userUuid, "PROFILE", "Added experience: <strong>" + saved.getJobTitle() + "</strong> at <strong>" + saved.getCompany() + "</strong>");
         return convertToExperienceDTO(saved);
     }
 
@@ -129,6 +143,7 @@ public class ProfileService {
         experience.setEndDate(experienceDTO.getEndDate());
         experience.setIsCurrent(experienceDTO.getCurrent() != null ? experienceDTO.getCurrent() : false);
         experience.setDescription(experienceDTO.getDescription());
+        experience.setResponsibilities(experienceDTO.getResponsibilities());
 
         Experience saved = experienceRepository.save(experience);
         return convertToExperienceDTO(saved);
@@ -150,9 +165,13 @@ public class ProfileService {
                 .startDate(educationDTO.getStartDate())
                 .endDate(educationDTO.getEndDate())
                 .isCurrent(educationDTO.getCurrent() != null ? educationDTO.getCurrent() : false)
+                .cgpa(educationDTO.getCgpa())
+                .grades(educationDTO.getGrades())
+                .minor(educationDTO.getMinor())
                 .build();
 
         Education saved = educationRepository.save(education);
+        dashboardService.logActivity(userUuid, "PROFILE", "Added education: <strong>" + saved.getDegree() + "</strong> at <strong>" + saved.getInstitution() + "</strong>");
         return convertToEducationDTO(saved);
     }
 
@@ -166,6 +185,9 @@ public class ProfileService {
         education.setStartDate(educationDTO.getStartDate());
         education.setEndDate(educationDTO.getEndDate());
         education.setIsCurrent(educationDTO.getCurrent() != null ? educationDTO.getCurrent() : false);
+        education.setCgpa(educationDTO.getCgpa());
+        education.setGrades(educationDTO.getGrades());
+        education.setMinor(educationDTO.getMinor());
 
         Education saved = educationRepository.save(education);
         return convertToEducationDTO(saved);
@@ -194,6 +216,7 @@ public class ProfileService {
                 .build();
 
         Project saved = projectRepository.save(project);
+        dashboardService.logActivity(userUuid, "PROFILE", "Added project: <strong>" + saved.getTitle() + "</strong>");
         return convertToProjectDTO(saved);
     }
 
@@ -235,6 +258,7 @@ public class ProfileService {
                 .build();
 
         Skill saved = skillRepository.save(skill);
+        dashboardService.logActivity(userUuid, "PROFILE", "Added skill: <strong>" + saved.getName() + "</strong>");
         return convertToSkillDTO(saved);
     }
 
@@ -299,6 +323,7 @@ public class ProfileService {
                 .endDate(experience.getEndDate())
                 .current(experience.getIsCurrent())
                 .description(experience.getDescription())
+                .responsibilities(experience.getResponsibilities())
                 .build();
     }
 
@@ -311,6 +336,9 @@ public class ProfileService {
                 .startDate(education.getStartDate())
                 .endDate(education.getEndDate())
                 .current(education.getIsCurrent())
+                .cgpa(education.getCgpa())
+                .grades(education.getGrades())
+                .minor(education.getMinor())
                 .build();
     }
 
