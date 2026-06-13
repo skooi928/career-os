@@ -270,3 +270,29 @@ async def generate_cv(request: CVGenerateRequest):
             "Content-Length": str(len(pdf_bytes)),
         }
     )
+
+    # ── POST /cv/analyse-posts ────────────────────────────────────────────────────
+ 
+from .post_analyser import analyse_posts_for_cv, AnalysePostsRequest, AnalysePostsResponse
+ 
+@router.post("/analyse-posts", response_model=AnalysePostsResponse)
+async def analyse_posts(request: AnalysePostsRequest):
+    """
+    Analyse posts marked include_in_cv and return structured CV suggestions.
+ 
+    Request body:
+      {
+        "user_id": "uuid",
+        "posts": [ { "id": 1, "content": "...", "post_type": "achievement" } ],
+        "current_cv": { ...CVData fields... }
+      }
+ 
+    Response: list of CvSuggestion objects with section, content, confidence
+    """
+    try:
+        result = analyse_posts_for_cv(request.posts, request.current_cv)
+        return result
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")

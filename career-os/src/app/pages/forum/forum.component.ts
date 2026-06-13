@@ -54,6 +54,10 @@ export class ForumComponent implements OnInit, OnDestroy {
   replyingTo: number | null = null;
   replyText: string = '';
 
+  showComingSoon(): void {
+    window.alert('Coming Soon');
+  }
+
   readonly POST_TYPES = [
     { value: 'general',     label: 'General',     icon: '✦' },
     { value: 'achievement', label: 'Achievement', icon: '🏆' },

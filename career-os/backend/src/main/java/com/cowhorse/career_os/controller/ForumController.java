@@ -1,7 +1,9 @@
 package com.cowhorse.career_os.controller;
  
 import com.cowhorse.career_os.dto.*;
+import com.cowhorse.career_os.entity.Post;
 import com.cowhorse.career_os.service.ForumService;
+import com.cowhorse.career_os.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -18,6 +20,7 @@ import java.util.UUID;
 public class ForumController {
  
     private final ForumService forumService;
+    private final PostRepository postRepository;
  
     // ══ HELPERS ══════════════════════════════════════════════════════════════
  
@@ -165,6 +168,13 @@ public class ForumController {
  
         forumService.deleteComment(commentId, UUID.fromString(userId));
         return ResponseEntity.noContent().build();
+    }
+
+    // cv worthy
+    @GetMapping("/posts/cv-worthy/{userId}")
+    public List<Post> getCvWorthyPosts(@PathVariable String userId) {
+        UUID uuid = UUID.fromString(userId);
+        return postRepository.findByUserIdAndIncludeInCvTrue(uuid);
     }
 
     // ══ GLOBAL ERROR LOCAL HANDLER ═══════════════════════════════════════════

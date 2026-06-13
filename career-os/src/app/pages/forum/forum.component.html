@@ -1,174 +1,311 @@
-<div class="forum-container">
-  <!-- Left Filter Panel -->
-  <aside class="filter-sidebar">
-    <h3>Categories</h3>
-    <ul>
-      @for (filter of FILTERS; track filter.key) {
-        <li
-          [class.active]="activeFilter() === filter.key"
-          (click)="setFilter(filter.key)">
-          {{ filter.label }}
-        </li>
-      }
-    </ul>
-    <button class="btn-create-trigger" (click)="openCreateModal()">＋ New Post</button>
+<div class="forum-page-wrapper">
+
+  <!-- ══ LEFT PANEL ══════════════════════════════════════════════════════ -->
+  <aside class="side-panel-left">
+
+    <!-- Profile card -->
+    <div class="profile-card">
+      <div class="profile-card-banner"></div>
+      <div class="profile-card-body">
+        <div class="profile-card-avatar">
+          {{ (currentUser?.firstName?.charAt(0) ?? '') + (currentUser?.lastName?.charAt(0) ?? '') || 'ME' }}
+        </div>
+        <p class="profile-card-name">{{ currentUser?.firstName }} {{ currentUser?.lastName }}</p>
+        <p class="profile-card-title">CS Student · Software Engineer</p>
+        <div class="profile-card-stats">
+          <div class="profile-stat-row">
+            <span class="profile-stat-label">Profile views</span>
+            <span class="profile-stat-value">142</span>
+          </div>
+          <div class="profile-stat-row">
+            <span class="profile-stat-label">Post impressions</span>
+            <span class="profile-stat-value">1,830</span>
+          </div>
+          <div class="profile-stat-row">
+            <span class="profile-stat-label">Networks</span>
+            <span class="profile-stat-value">38</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Skills widget -->
+    <div class="side-widget">
+      <p class="side-widget-title">My Skills</p>
+      <div class="skill-tags">
+        <span class="skill-tag">Angular</span>
+        <span class="skill-tag">Spring Boot</span>
+        <span class="skill-tag">TypeScript</span>
+        <span class="skill-tag">Java</span>
+        <span class="skill-tag">MySQL</span>
+        <span class="skill-tag">UI/UX</span>
+        <span class="skill-tag">REST API</span>
+      </div>
+    </div>
+
   </aside>
 
-  <!-- Central Activity Stream Feed -->
-  <main class="feed-stream">
-    @if (isLoading()) {
-      <div class="loader">Loading feed...</div>
-    } @else {
-      @for (post of filteredPosts; track post.id) {
-        <article class="feed-card" (click)="openPost(post.id)">
+  <!-- ══ CENTRE — Forum ══════════════════════════════════════════════════ -->
+  <div class="forum-container">
+
+    <!-- Categories Bar -->
+    <aside class="filter-sidebar">
+      <h3>Categories</h3>
+      <ul>
+        @for (filter of FILTERS; track filter.key) {
+          <li
+            [class.active]="activeFilter() === filter.key"
+            (click)="setFilter(filter.key)">
+            {{ filter.label }}
+          </li>
+        }
+      </ul>
+      <button class="btn-create-trigger" (click)="openCreateModal()">＋ New Post</button>
+    </aside>
+
+    <!-- Central Activity Stream Feed -->
+    <main class="feed-stream">
+      @if (isLoading()) {
+        <div class="loader">Loading feed...</div>
+      } @else {
+        @for (post of filteredPosts; track post.id) {
+          <article class="feed-card" [attr.data-type]="post.postType" (click)="openPost(post.id)">
+
             <header class="card-header">
-            <div class="user-meta" (click)="openProfile(post.userId); $event.stopPropagation()">
+              <div class="user-meta" (click)="openProfile(post.userId); $event.stopPropagation()">
                 <div class="avatar-initials">{{ post.authorInitials }}</div>
                 <div>
-                <h4 class="username">{{ post.authorName }}</h4>
-                <span class="timestamp">{{ formatTime(post.createdAt) }}</span>
+                  <h4 class="username">{{ post.authorName }}</h4>
+                  <span class="timestamp">{{ formatTime(post.createdAt) }}</span>
                 </div>
-            </div>
-            <div class="type-badge">
+              </div>
+              <div class="type-badge">
                 <span>{{ getPostTypeIcon(post.postType) }}</span>
                 <small>{{ getPostTypeLabel(post.postType) }}</small>
-            </div>
+              </div>
             </header>
 
             <section class="card-body">
-            @if (editingPostId() === post.id) {
+              @if (editingPostId() === post.id) {
                 <div class="edit-mode-container" (click)="$event.stopPropagation()">
-                <textarea [(ngModel)]="editContent" class="edit-textarea"></textarea>
-                <div class="edit-actions">
+                  <textarea [(ngModel)]="editContent" class="edit-textarea"></textarea>
+                  <div class="edit-actions">
                     <button class="btn-secondary sm" (click)="cancelEdit()">Cancel</button>
                     <button class="btn-primary sm" (click)="saveEdit(post.id)">Save</button>
+                  </div>
                 </div>
-                </div>
-            } @else {
+              } @else {
                 <p class="post-text">{{ post.content }}</p>
-            }
+              }
 
-            @if (post.media && post.media.length > 0) {
+              @if (post.media && post.media.length > 0) {
                 <div class="media-preview-grid">
-                @for (m of post.media; track m.url) {
+                  @for (m of post.media; track m.url) {
                     @if (isImageMedia(m)) {
-                    <img [src]="m.url" class="embedded-image-asset" alt="Post attachment" />
+                      <img [src]="m.url" class="embedded-image-asset" alt="Post attachment" />
                     }
-                }
+                  }
                 </div>
-            }
+              }
 
-            @if (post.isReshare && post.originalPost) {
+              @if (post.isReshare && post.originalPost) {
                 <div class="reshare-quote-box" (click)="openPost(post.originalPost.id); $event.stopPropagation()">
-                <div class="quote-header">
+                  <div class="quote-header">
                     <span class="quote-avatar">{{ post.originalPost.authorInitials }}</span>
                     <strong>{{ post.originalPost.authorName }}</strong>
+                  </div>
+                  <p>{{ post.originalPost.content }}</p>
                 </div>
-                <p>{{ post.originalPost.content }}</p>
-                </div>
-            }
+              }
             </section>
 
             <footer class="card-footer" (click)="$event.stopPropagation()">
-            <button class="action-btn" [class.liked]="post.likedByCurrentUser" (click)="toggleLike(post)">
+              <button class="action-btn" [class.liked]="post.likedByCurrentUser" (click)="toggleLike(post)">
                 ♥️ {{ post.likeCount }}
-            </button>
-            <button class="action-btn" (click)="toggleCommentInput(post.id)">
+              </button>
+              <button class="action-btn" (click)="toggleCommentInput(post.id)">
                 💬 {{ post.commentCount }}
-            </button>
-            <button class="action-btn" (click)="openCreateModal(post)">
+              </button>
+              <button class="action-btn" (click)="openCreateModal(post)">
                 🔁 {{ post.reshareCount }}
-            </button>
+              </button>
 
-            @if (currentUser?.userId === post.userId) {
+              @if (currentUser?.userId === post.userId) {
                 <div class="menu-container">
-                <button class="action-btn dots-btn" (click)="togglePostMenu(post.id, $event)">•••</button>
-                @if (openMenuPostId() === post.id) {
+                  <button class="action-btn dots-btn" (click)="togglePostMenu(post.id, $event)">•••</button>
+                  @if (openMenuPostId() === post.id) {
                     <div class="dropdown-menu">
-                    <button (click)="startEdit(post)">Edit</button>
-                    <button class="delete-item" (click)="deletePost(post.id)">Delete</button>
+                      <button (click)="startEdit(post)">Edit</button>
+                      <button class="delete-item" (click)="deletePost(post.id)">Delete</button>
                     </div>
-                }
+                  }
                 </div>
-            }
+              }
             </footer>
 
-            <!-- ✅ Comments section INSIDE article, after footer -->
+            <!-- Comments section INSIDE article, after footer -->
             @if (showCommentInput()[post.id]) {
-            <div class="comments-section" (click)="$event.stopPropagation()">
+              <div class="comments-section" (click)="$event.stopPropagation()">
                 <!-- Quick input -->
                 <div class="quick-comment-box">
-                <input
+                  <input
                     type="text"
                     placeholder="Write a reply..."
                     [(ngModel)]="commentInputs()[post.id]"
                     (keyup.enter)="submitQuickComment(post)" />
-                <button (click)="submitQuickComment(post)">Send</button>
+                  <button (click)="submitQuickComment(post)">Send</button>
                 </div>
 
                 <!-- Render comments -->
                 @if (commentsMap()[post.id]?.length) {
-                <div class="comment-thread">
+                  <div class="comment-thread">
                     @for (comment of commentsMap()[post.id]; track comment.id) {
-                    <div class="comment">
+                      <div class="comment">
                         <div class="comment-header">
-                        <div class="comment-avatar">{{ comment.authorInitials }}</div>
-                        <div class="comment-meta">
+                          <div class="comment-avatar">{{ comment.authorInitials }}</div>
+                          <div class="comment-meta">
                             <strong class="comment-author">{{ comment.authorName }}</strong>
                             <small class="comment-time">{{ formatTime(comment.createdAt) }}</small>
-                        </div>
+                          </div>
                         </div>
                         <div class="comment-body">
-                        <p>{{ comment.content }}</p>
+                          <p>{{ comment.content }}</p>
                         </div>
                         <div class="comment-actions">
-                        <button class="reply-btn" (click)="startReply(comment)">Reply</button>
+                          <button class="reply-btn" (click)="startReply(comment)">Reply</button>
                         </div>
 
                         <!-- Nested replies -->
                         @if (comment.replies?.length) {
-                        <div class="replies">
+                          <div class="replies">
                             @for (reply of comment.replies; track reply.id) {
-                            <div class="reply">
+                              <div class="reply">
                                 <div class="reply-header">
-                                <div class="reply-avatar">{{ reply.authorInitials }}</div>
-                                <div class="reply-meta">
+                                  <div class="reply-avatar">{{ reply.authorInitials }}</div>
+                                  <div class="reply-meta">
                                     <strong class="reply-author">{{ reply.authorName }}</strong>
                                     <small class="reply-time">{{ formatTime(reply.createdAt) }}</small>
-                                </div>
+                                  </div>
                                 </div>
                                 <div class="reply-body">
-                                <p>{{ reply.content }}</p>
+                                  <p>{{ reply.content }}</p>
                                 </div>
-                            </div>
+                              </div>
                             }
-                        </div>
+                          </div>
                         }
 
                         <!-- Reply input box -->
                         <div class="reply-box" *ngIf="replyingTo === comment.id">
-                        <input type="text" [(ngModel)]="replyText" placeholder="Write a reply..." />
-                        <button (click)="submitReply(post.id, comment.id)">Post</button>
+                          <input type="text" [(ngModel)]="replyText" placeholder="Write a reply..." />
+                          <button (click)="submitReply(post.id, comment.id)">Post</button>
                         </div>
-                    </div>
+                      </div>
                     }
-                </div>
+                  </div>
                 }
-            </div>
+              </div>
             }
-        </article>
-        }
-@empty {
-  <div class="empty-state">No posts in this category yet.</div>
-}
 
-      @if (hasMore()) {
-        <button class="btn-load-more" [disabled]="isLoadingMore()" (click)="loadMore()">
-          {{ isLoadingMore() ? 'Loading...' : 'Load more' }}
-        </button>
+          </article>
+        }
+        @empty {
+          <div class="empty-state">No posts in this category yet.</div>
+        }
+
+        @if (hasMore()) {
+          <button class="btn-load-more" [disabled]="isLoadingMore()" (click)="loadMore()">
+            {{ isLoadingMore() ? 'Loading...' : 'Load more' }}
+          </button>
+        }
       }
-    }</main>
+    </main>
+
+  </div>
+
+  <!-- ══ RIGHT PANEL ═════════════════════════════════════════════════════ -->
+  <aside class="side-panel-right">
+
+    <!-- People to connect -->
+    <div class="side-widget">
+      <p class="side-widget-title">People to Connect</p>
+      <div class="connect-list">
+
+        <div class="connect-item">
+          <div class="connect-avatar ca-blue">WC</div>
+          <div class="connect-info">
+            <div class="connect-name">Wei Chuen Loh</div>
+            <div class="connect-sub">Full Stack · USM</div>
+          </div>
+          <button class="btn-connect" (click)="showComingSoon()">+ Network</button>
+        </div>
+
+        <div class="connect-item">
+          <div class="connect-avatar ca-amber">AM</div>
+          <div class="connect-info">
+            <div class="connect-name">Ashman Fauzi</div>
+            <div class="connect-sub">Backend Dev · USM</div>
+          </div>
+          <button class="btn-connect" (click)="showComingSoon()">+ Network</button>
+        </div>
+
+        <div class="connect-item">
+          <div class="connect-avatar ca-purple">ST</div>
+          <div class="connect-info">
+            <div class="connect-name">Siti Thaqifah</div>
+            <div class="connect-sub">UI/UX Designer</div>
+          </div>
+          <button class="btn-connect" (click)="showComingSoon()">+ Network</button>
+        </div>
+
+        <div class="connect-item">
+          <div class="connect-avatar ca-rose">NA</div>
+          <div class="connect-info">
+            <div class="connect-name">Nur Aisyah</div>
+            <div class="connect-sub">Data Science · UTM</div>
+          </div>
+          <button class="btn-connect" (click)="showComingSoon()">+ Network</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Trending topics -->
+    <div class="side-widget">
+      <p class="side-widget-title">Trending This Week</p>
+      <div class="trending-list">
+
+        <div class="trending-item">
+          <div class="trending-label">Projects · Trending</div>
+          <div class="trending-tag">#AngularDev</div>
+          <div class="trending-count">24 posts</div>
+        </div>
+
+        <div class="trending-item">
+          <div class="trending-label">Achievements · Hot</div>
+          <div class="trending-tag">#Hackathon2025</div>
+          <div class="trending-count">18 posts</div>
+        </div>
+
+        <div class="trending-item">
+          <div class="trending-label">Learning · Popular</div>
+          <div class="trending-tag">#SpringBoot</div>
+          <div class="trending-count">31 posts</div>
+        </div>
+
+        <div class="trending-item">
+          <div class="trending-label">Hiring · New</div>
+          <div class="trending-tag">#InternshipMY</div>
+          <div class="trending-count">11 posts</div>
+        </div>
+
+      </div>
+    </div>
+
+  </aside>
+
 </div>
+
 
 <!-- ══ CREATE POST MODAL ══════════════════════════════════════════════════ -->
 @if (showCreateModal()) {
@@ -274,6 +411,7 @@
     </div>
   </div>
 }
+
 
 <!-- ══ RESHARE MODAL ══════════════════════════════════════════════════════ -->
 @if (showReshareModal()) {
