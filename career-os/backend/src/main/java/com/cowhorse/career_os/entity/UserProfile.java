@@ -30,6 +30,9 @@ public class UserProfile {
     @Column(name = "supabase_uid", unique = true, nullable = true)
     private String supabaseUid;
 
+    @Column(name = "linked_user_id")
+    private UUID linkedUserId;
+
     @Column(name = "first_name", length = 100)
     private String firstName;
 

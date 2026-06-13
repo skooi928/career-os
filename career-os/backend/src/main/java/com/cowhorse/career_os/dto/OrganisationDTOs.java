@@ -49,4 +49,19 @@ public class OrganisationDTOs {
             this.pendingVerifications = pendingVerifications;
         }
     }
+
+    @Data
+    @lombok.Builder
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
+    public static class PendingMembershipDTO {
+        private java.util.UUID id;
+        private java.util.UUID organisationId;
+        private String organisationName;
+        private java.util.UUID userId;
+        private String userName;
+        private String userEmail;
+        private String role;
+        private java.time.Instant joinedAt;
+    }
 }

@@ -6,6 +6,7 @@ import { ProfileService, UserProfileDTO } from '../services/profile.service';
 import { ThemeToggleComponent } from '../components/theme-toggle/theme-toggle.component';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { SettingsService, LinkedAccountStatus } from '../services/settings.service';
 
 interface NavItem {
   label: string;
@@ -78,10 +79,18 @@ interface NavItem {
             <a routerLink="/profile" class="menu-item" (click)="closeAllMenus()">
               <i class="ph ph-user"></i> Profile
             </a>
-            <a routerLink="/profile" class="menu-item" (click)="closeAllMenus()">
+            <a routerLink="/settings" class="menu-item" (click)="closeAllMenus()">
               <i class="ph ph-gear"></i> Settings
             </a>
-            <div class="dropdown-divider"></div>
+            <button class="menu-item btn-menu-switch" 
+                    *ngIf="linkedAccountStatus()?.linked" 
+                    [disabled]="isSwitchingAccount()"
+                    (click)="onSwitchAccount()">
+              <i class="ph ph-user-switch" *ngIf="!isSwitchingAccount()"></i>
+              <span class="spinner-sm" *ngIf="isSwitchingAccount()"></span>
+              {{ isSwitchingAccount() ? 'Switching...' : ('Switch to ' + (linkedAccountStatus()?.linkedRole === 'candidate' ? 'Personal' : 'Work') + ' Account') }}
+            </button>
+            <div class="dropdown-divider" *ngIf="linkedAccountStatus()?.linked"></div>
             <button class="menu-item btn-menu-logout" (click)="onSignOut()">
               <i class="ph ph-sign-out"></i> Sign Out
             </button>
@@ -132,10 +141,18 @@ interface NavItem {
                 <a routerLink="/profile" class="menu-item" (click)="closeAllMenus()">
                   <i class="ph ph-user"></i> Profile
                 </a>
-                <a routerLink="/profile" class="menu-item" (click)="closeAllMenus()">
+                <a routerLink="/settings" class="menu-item" (click)="closeAllMenus()">
                   <i class="ph ph-gear"></i> Settings
                 </a>
-                <div class="dropdown-divider"></div>
+                <button class="menu-item btn-menu-switch" 
+                        *ngIf="linkedAccountStatus()?.linked" 
+                        [disabled]="isSwitchingAccount()"
+                        (click)="onSwitchAccount()">
+                  <i class="ph ph-user-switch" *ngIf="!isSwitchingAccount()"></i>
+                  <span class="spinner-sm" *ngIf="isSwitchingAccount()"></span>
+                  {{ isSwitchingAccount() ? 'Switching...' : ('Switch to ' + (linkedAccountStatus()?.linkedRole === 'candidate' ? 'Personal' : 'Work') + ' Account') }}
+                </button>
+                <div class="dropdown-divider" *ngIf="linkedAccountStatus()?.linked"></div>
                 <button class="menu-item btn-menu-logout" (click)="onSignOut()">
                   <i class="ph ph-sign-out"></i> Sign Out
                 </button>
@@ -480,6 +497,28 @@ interface NavItem {
       color: var(--color-error);
     }
 
+    .btn-menu-switch {
+      color: var(--primary);
+    }
+
+    .btn-menu-switch:hover {
+      background-color: rgba(5, 150, 105, 0.08);
+      color: var(--primary);
+    }
+
+    .spinner-sm {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(5, 150, 105, 0.2);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      display: inline-block;
+      animation: spin 0.8s linear infinite;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     /* Collapse toggle */
     .sidebar-collapse-toggle {
       position: absolute;
@@ -613,21 +652,25 @@ export class AppShellComponent implements OnInit, OnDestroy {
   userProfile = signal<UserProfileDTO | null>(null);
   profileImageUrl = signal<string | null>(null);
   private destroy$ = new Subject<void>();
+  linkedAccountStatus = signal<LinkedAccountStatus | null>(null);
+  isSwitchingAccount = signal(false);
 
   // Base nav items visible to all roles
   private readonly baseNav: NavItem[] = [
-    { label: 'Dashboard',      route: '/dashboard',    icon: 'ph-house-simple' },
+    { label: 'Dashboard', route: '/dashboard', icon: 'ph-house-simple' },
     { label: 'Resume Builder', route: '/profile', queryParams: { tab: 'resume' }, icon: 'ph-file-text' },
-    { label: 'Job Application',route: '/jobs',          icon: 'ph-briefcase' },
+    { label: 'Job Application', route: '/jobs', icon: 'ph-briefcase' },
     { label: 'Mock Interview', route: '/mock-interview', icon: 'ph-video-camera' },
-    { label: 'Upskilling',     route: '/upskilling',    icon: 'ph-chalkboard-teacher' },
-    { label: 'Analytics',      route: '/insights',      icon: 'ph-chart-bar' },
+    { label: 'Upskilling', route: '/upskilling', icon: 'ph-chalkboard-teacher' },
+    { label: 'Analytics', route: '/insights', icon: 'ph-chart-bar' },
   ];
 
   navItems = signal<NavItem[]>(this.buildNav());
 
   private buildNav(role?: string): NavItem[] {
     const r = role ?? this.authService?.getRole() ?? 'candidate';
+  private buildNav(): NavItem[] {
+    const role = this.authService?.getRole() ?? '';
     const items = [...this.baseNav];
     if (r === 'employer' || r === 'admin') {
       items.splice(4, 0, { label: 'Post a Job', route: '/job-posting', icon: 'ph-plus-circle' });
@@ -659,14 +702,16 @@ export class AppShellComponent implements OnInit, OnDestroy {
   constructor(
     public authService: AuthService,
     private profileService: ProfileService,
+    private settingsService: SettingsService,
     private router: Router,
     @Inject(PLATFORM_ID) private platformId: Object
-  ) {}
+  ) { }
 
   ngOnInit() {
     if (isPlatformBrowser(this.platformId)) {
       this.loadUserProfile();
-
+      this.loadLinkedAccountStatus();
+      
       // Sync user profile name and image when updated in ProfileComponent
       this.profileService.profileUpdated$
         .pipe(takeUntil(this.destroy$))
@@ -685,9 +730,35 @@ export class AppShellComponent implements OnInit, OnDestroy {
 
       // Update nav when role resolves (async fetch after init)
       this.authService.currentUser$.pipe(takeUntil(this.destroy$)).subscribe(() => {
-        // userRole computed will auto-update filteredNavItems — no manual rebuild needed
+        this.navItems.set(this.buildNav());
+        this.loadLinkedAccountStatus();
       });
     }
+  }
+
+  loadLinkedAccountStatus() {
+    this.settingsService.getLinkedAccountStatus().subscribe({
+      next: (status) => {
+        this.linkedAccountStatus.set(status);
+      },
+      error: (err) => {
+        console.error('Failed to load linked account status in navbar:', err);
+      }
+    });
+  }
+
+  onSwitchAccount() {
+    this.closeAllMenus();
+    this.isSwitchingAccount.set(true);
+    this.authService.switchUserAccount().subscribe({
+      next: (res) => {
+        window.location.href = '/dashboard';
+      },
+      error: (err) => {
+        this.isSwitchingAccount.set(false);
+        alert(err.error?.error || 'Failed to switch account. Please try again.');
+      }
+    });
   }
 
   ngOnDestroy() {
@@ -728,10 +799,10 @@ export class AppShellComponent implements OnInit, OnDestroy {
   userInitials() {
     const profile = this.userProfile();
     const user = this.authService.getCurrentUser();
-    
+
     const firstName = profile?.firstName || user?.firstName || 'U';
     const lastName = profile?.lastName || user?.lastName || '';
-    
+
     const fn = firstName?.[0] ?? '';
     const ln = lastName?.[0] ?? '';
     return (fn + ln).toUpperCase() || '?';

@@ -28,6 +28,7 @@ import { OrgPublicComponent } from './pages/organisation/org-public/org-public.c
 import { OrgReviewComponent } from './pages/organisation/org-review/org-review.component';
 import { AdminOrganisationsComponent } from './pages/admin/admin-organisations/admin-organisations.component';
 import { roleGuard } from './guards/role.guard';
+import { SettingsComponent } from './pages/settings/settings.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -47,6 +48,7 @@ export const routes: Routes = [
       { path: 'jobs/:id', component: JobDetailComponent },
       { path: 'jobs/:id/apply', component: JobApplicationComponent },
       { path: 'profile', component: ProfileComponent, canActivate: [emailVerificationGuard] },
+      { path: 'settings', component: SettingsComponent, canActivate: [emailVerificationGuard] },
       { path: 'mock-interview', loadComponent: () => import('./pages/mock-interview/mock-interview.component').then(m => m.MockInterviewComponent) },
       // Add more routes here as you create new pages
       { path: 'resume', redirectTo: 'profile', pathMatch: 'full' },

@@ -39,8 +39,6 @@ public class Organisation {
 
     private String website;
 
-    private String description;
-
     @Column(name = "email_domain")
     private String emailDomain;
 

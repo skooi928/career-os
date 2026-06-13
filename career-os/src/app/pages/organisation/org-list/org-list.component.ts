@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { OrganisationService } from '../../../services/organisation.service';
 import { AuthService } from '../../../services/auth.service';
 import { FileUploadComponent } from '../../../components/file-upload/file-upload.component';
-import { Organisation, CreateOrganisationRequest } from '../../../types/upskilling.types';
+import { Organisation, CreateOrganisationRequest, OrganisationMember } from '../../../types/upskilling.types';
 
 type View = 'list' | 'create';
 type UploadState = { orgId: string; error: string; uploading: boolean } | null;
@@ -28,7 +28,7 @@ type UploadState = { orgId: string; error: string; uploading: boolean } | null;
             <i class="ph ph-clock-countdown"></i> Pending Reviews
           </a>
           <button class="btn-primary header-btn" (click)="setView('create')" *ngIf="isEmployer() && view() !== 'create'">
-            <i class="ph ph-plus-circle"></i> Register Organisation
+            <i class="ph ph-plus-circle"></i> Register New Organisation
           </button>
           <button class="btn-secondary header-btn" (click)="setView('list')" *ngIf="isEmployer() && view() === 'create'">
             <i class="ph ph-arrow-left"></i> Back to List
@@ -82,8 +82,9 @@ type UploadState = { orgId: string; error: string; uploading: boolean } | null;
           </div>
         </div>
       </div>
-      <!-- ── My Applications status tracker (employer only) ── -->
-      <div class="section" *ngIf="view() === 'list' && isEmployer() && myOrgs().length > 0">
+      <!-- ── My Applications status tracker (employer + mentor) ── -->
+      <div class="section" *ngIf="view() === 'list' && isEmployerOrMentor() && myOrgs().length > 0">
+        <h2 class="section-title">Your Organisations</h2>
         <div class="my-orgs-list">
           <div class="my-org-card" *ngFor="let org of myOrgs()" [class]="'status-' + org.verificationStatus.toLowerCase()">
             <div class="my-org-left">
@@ -263,23 +264,80 @@ type UploadState = { orgId: string; error: string; uploading: boolean } | null;
 
       <!-- ── Verified orgs list (candidate + employer only) ── -->
       <div class="section" *ngIf="view() === 'list' && !isAdmin()">
-        <h2 class="section-title">Verified Organisations</h2>
+        
+        <!-- Joinable Organisations Section -->
+        <div class="joinable-section" *ngIf="isEmployerOrMentor() && joinableOrgs().length > 0" style="margin-bottom: 24px;">
+          <h2 class="section-title" style="color: var(--color-primary); display: flex; align-items: center; gap: 8px;">
+            <i class="ph ph-hand-pointing"></i> Joinable Organisations
+          </h2>
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <div class="org-card joinable-card" *ngFor="let org of joinableOrgs()"
+               [style.cursor]="'default'"
+               style="border-left: 4px solid var(--color-primary); width: 100%; box-sizing: border-box; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0;">
+                <div class="org-card-logo">{{ org.name[0].toUpperCase() }}</div>
+                <div class="org-card-info" style="flex: 1; min-width: 0;">
+                  <div class="org-card-name">{{ org.name }}</div>
+                  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span class="type-badge">{{ org.type }}</span>
+                    <span class="domain-badge" *ngIf="org.emailDomain" style="font-size: 0.72rem; color: var(--color-text-secondary); display: flex; align-items: center; gap: 3px;">
+                      <i class="ph ph-envelope"></i> {{ org.emailDomain }} (Matches Your Email Domain)
+                    </span>
+                  </div>
+                  <p class="org-card-desc" *ngIf="org.description" style="margin-top: 6px;">{{ org.description }}</p>
+                </div>
+              </div>
+              
+              <div class="org-join-actions" (click)="$event.stopPropagation(); $event.preventDefault();" style="flex-shrink: 0;">
+                <button class="action-btn approve-btn" style="border: none; border-radius: 6px; padding: 8px 16px; font-weight: 700; cursor: pointer;"
+                        (click)="joinOrg(org.id)"
+                        [disabled]="joiningOrgId() === org.id">
+                  <i class="ph" [class.ph-spinner]="joiningOrgId() === org.id" [class.ph-user-plus]="joiningOrgId() !== org.id"></i> Join Organisation
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Other Verified Organisations Section -->
+        <h2 class="section-title">
+          <span *ngIf="isEmployerOrMentor() && joinableOrgs().length > 0">Other </span>Verified Organisations
+        </h2>
         <div class="loading-state" *ngIf="isLoading()"><div class="spinner"></div></div>
-        <div class="empty-state" *ngIf="!isLoading() && verifiedOrgs().length === 0">
+        <div class="empty-state" *ngIf="!isLoading() && otherOrgs().length === 0">
           <i class="ph ph-buildings"></i>
           <p>No verified organisations yet.</p>
         </div>
         <div class="org-grid" *ngIf="!isLoading()">
-          <a class="org-card" *ngFor="let org of verifiedOrgs()"
-             [routerLink]="['/organisation', org.id]">
+          <div class="org-card" *ngFor="let org of otherOrgs()"
+             [routerLink]="getMembershipStatus(org.id) === 'APPROVED' || !isEmployerOrMentor() ? ['/organisation', org.id] : null"
+             [style.cursor]="getMembershipStatus(org.id) === 'APPROVED' || !isEmployerOrMentor() ? 'pointer' : 'default'">
             <div class="org-card-logo">{{ org.name[0].toUpperCase() }}</div>
             <div class="org-card-info">
               <div class="org-card-name">{{ org.name }}</div>
-              <span class="type-badge">{{ org.type }}</span>
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span class="type-badge">{{ org.type }}</span>
+                <span class="domain-badge" *ngIf="org.emailDomain" style="font-size: 0.72rem; color: var(--color-text-secondary); display: flex; align-items: center; gap: 3px;">
+                  <i class="ph ph-envelope"></i> {{ org.emailDomain }}
+                </span>
+              </div>
               <p class="org-card-desc" *ngIf="org.description">{{ org.description }}</p>
             </div>
-            <i class="ph ph-arrow-right card-arrow"></i>
-          </a>
+            
+            <div class="org-join-actions" *ngIf="isEmployerOrMentor() && getMembershipStatus(org.id) !== 'APPROVED'" (click)="$event.stopPropagation(); $event.preventDefault();">
+              <button class="action-btn approve-btn" style="border: none; border-radius: 6px; padding: 6px 12px; font-weight: 700; cursor: pointer;"
+                      *ngIf="!getMembershipStatus(org.id) && isEmailDomainMatch(org)"
+                      (click)="joinOrg(org.id)"
+                      [disabled]="joiningOrgId() === org.id">
+                <i class="ph" [class.ph-spinner]="joiningOrgId() === org.id" [class.ph-user-plus]="joiningOrgId() !== org.id"></i> Join
+              </button>
+              <span class="status-pill pill-pending" *ngIf="getMembershipStatus(org.id) === 'PENDING'">
+                <i class="ph ph-clock"></i> Pending Approval
+              </span>
+            </div>
+
+            <i class="ph ph-arrow-right card-arrow" *ngIf="!isEmployerOrMentor() || getMembershipStatus(org.id) === 'APPROVED'"></i>
+          </div>
         </div>
       </div>
 
@@ -451,8 +509,9 @@ export class OrgListComponent implements OnInit {
   private authService = inject(AuthService);
 
   private _role = this.authService.getCurrentUser()?.role ?? 'candidate';
-  isAdmin    = signal(this._role === 'admin');
+  isAdmin = signal(this._role === 'admin');
   isEmployer = signal(this._role === 'employer');
+  isEmployerOrMentor = signal(this._role === 'employer' || this._role === 'mentor');
   allOrgs = signal<Organisation[]>([]);
   pendingOrgs = computed(() => this.allOrgs().filter(o => o.verificationStatus === 'PENDING'));
   approvedAdminOrgs = computed(() => this.allOrgs().filter(o => o.verificationStatus === 'VERIFIED'));
@@ -469,13 +528,30 @@ export class OrgListComponent implements OnInit {
   verifyDoc: File | null = null;
   docTouched = false;
 
+  userMemberships = signal<OrganisationMember[]>([]);
+  joiningOrgId = signal<string | null>(null);
+
+  joinableOrgs = computed(() => {
+    if (!this.isEmployerOrMentor()) return [];
+    return this.verifiedOrgs().filter(org => {
+      return !this.getMembershipStatus(org.id) && this.isEmailDomainMatch(org);
+    });
+  });
+
+  otherOrgs = computed(() => {
+    if (!this.isEmployerOrMentor()) return this.verifiedOrgs();
+    return this.verifiedOrgs().filter(org => {
+      return !this.getMembershipStatus(org.id) && !this.isEmailDomainMatch(org);
+    });
+  });
+
   createForm: CreateOrganisationRequest = { name: '', type: 'INDUSTRY', website: '', description: '', emailDomain: '' };
 
-  constructor() {}
+  constructor() { }
 
   ngOnInit() {
     const admin = this.isAdmin();
-    const employer = this.isEmployer();
+    const isEmpOrMen = this.isEmployerOrMentor();
 
     if (admin) {
       this.orgService.getAllOrganisations().subscribe({
@@ -487,10 +563,14 @@ export class OrgListComponent implements OnInit {
         next: orgs => { this.verifiedOrgs.set(orgs); this.isLoading.set(false); },
         error: () => this.isLoading.set(false)
       });
-      if (employer) {
+      if (isEmpOrMen) {
         this.orgService.getMyOrganisations().subscribe({
           next: orgs => this.myOrgs.set(orgs),
-          error: () => {}
+          error: () => { }
+        });
+        this.orgService.getUserMemberships().subscribe({
+          next: memberships => this.userMemberships.set(memberships),
+          error: () => { }
         });
       }
     }
@@ -523,7 +603,7 @@ export class OrgListComponent implements OnInit {
     this.docTouched = true;
     if (!this.verifyDoc) return;
     if (!this.createForm.name || !this.createForm.type || !this.createForm.website ||
-        !this.createForm.emailDomain || !this.createForm.description) return;
+      !this.createForm.emailDomain || !this.createForm.description) return;
 
     this.isSubmitting.set(true);
     this.createError.set('');
@@ -612,6 +692,38 @@ export class OrgListComponent implements OnInit {
         if (err.status === 0) msg = 'Cannot reach server — check your connection.';
         else if (err.status === 413) msg = 'File too large. Try a smaller file.';
         this.uploadState.set({ orgId, error: msg, uploading: false });
+      }
+    });
+  }
+
+  getMembershipStatus(orgId: string): string | null {
+    const m = this.userMemberships().find(x => x.organisationId === orgId);
+    return m ? m.status : null;
+  }
+
+  isEmailDomainMatch(org: Organisation): boolean {
+    if (!org.emailDomain) return false;
+    const email = this.authService.getCurrentUser()?.email;
+    if (!email || !email.includes('@')) return false;
+    const domain = email.substring(email.indexOf('@') + 1).toLowerCase().trim();
+    return domain === org.emailDomain.toLowerCase().trim();
+  }
+
+  joinOrg(orgId: string) {
+    this.joiningOrgId.set(orgId);
+    this.orgService.joinOrganisation(orgId).subscribe({
+      next: membership => {
+        this.userMemberships.update(list => [...list, membership]);
+        const org = this.verifiedOrgs().find(o => o.id === orgId);
+        if (org) {
+          this.myOrgs.update(list => [...list, org]);
+        }
+        this.joiningOrgId.set(null);
+        this.showToast('Joined organisation successfully!');
+      },
+      error: err => {
+        this.joiningOrgId.set(null);
+        this.showToast(err.error?.error || 'Failed to join organisation.');
       }
     });
   }

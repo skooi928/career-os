@@ -68,46 +68,4 @@ public class SupabaseStorageService {
     public String uploadResume(MultipartFile file) throws IOException {
         return uploadFile(file, "resumes");
     }
-
-    public String uploadFile(MultipartFile file, String bucketName) throws IOException {
-        String originalFilename = file.getOriginalFilename();
-        String extension = "";
-        if (originalFilename != null && originalFilename.contains(".")) {
-            extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-        }
-        
-        // Generate a unique filename to prevent collisions
-        String fileName = UUID.randomUUID().toString() + extension;
-        String objectPath = fileName;
-
-        String uploadUrl = supabaseClient.getUrl() + "/storage/v1/object/" + bucketName + "/" + objectPath;
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(supabaseClient.getApiKey());
-        headers.set("apikey", supabaseClient.getApiKey());
-        // Supabase storage requires the content type to be set accurately
-        headers.setContentType(MediaType.valueOf(file.getContentType() != null ? file.getContentType() : "application/octet-stream"));
-
-        HttpEntity<byte[]> requestEntity = new HttpEntity<>(file.getBytes(), headers);
-
-        try {
-            ResponseEntity<String> response = restTemplate.exchange(
-                    uploadUrl,
-                    HttpMethod.POST,
-                    requestEntity,
-                    String.class
-            );
-
-            if (response.getStatusCode().is2xxSuccessful()) {
-                // Return the public URL
-                return supabaseClient.getUrl() + "/storage/v1/object/public/" + bucketName + "/" + objectPath;
-            } else {
-                log.error("Failed to upload file to Supabase. Status: {}, Body: {}", response.getStatusCode(), response.getBody());
-                throw new RuntimeException("Failed to upload file to Supabase");
-            }
-        } catch (Exception e) {
-            log.error("Exception during file upload to Supabase", e);
-            throw new RuntimeException("Exception during file upload to Supabase: " + e.getMessage(), e);
-        }
-    }
 }

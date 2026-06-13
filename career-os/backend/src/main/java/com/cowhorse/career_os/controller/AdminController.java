@@ -70,4 +70,29 @@ public class AdminController {
         assertAdmin(auth);
         return ResponseEntity.ok(orgService.rejectOrganisation(id, getUid(auth)));
     }
+
+    @GetMapping("/memberships/pending")
+    public ResponseEntity<List<com.cowhorse.career_os.dto.OrganisationDTOs.PendingMembershipDTO>> getPendingMemberships(
+            @RequestHeader("Authorization") String auth) {
+        assertAdmin(auth);
+        return ResponseEntity.ok(orgService.getPendingMemberships(getUid(auth)));
+    }
+
+    @PutMapping("/memberships/{id}/approve")
+    public ResponseEntity<Void> approveMembership(
+            @PathVariable UUID id,
+            @RequestHeader("Authorization") String auth) {
+        assertAdmin(auth);
+        orgService.approveMembership(id, getUid(auth));
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/memberships/{id}/reject")
+    public ResponseEntity<Void> rejectMembership(
+            @PathVariable UUID id,
+            @RequestHeader("Authorization") String auth) {
+        assertAdmin(auth);
+        orgService.rejectMembership(id, getUid(auth));
+        return ResponseEntity.ok().build();
+    }
 }

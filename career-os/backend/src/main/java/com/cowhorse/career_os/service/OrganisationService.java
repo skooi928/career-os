@@ -13,11 +13,13 @@ import com.cowhorse.career_os.dto.OrganisationDTOs.DashboardStatsResponse;
 import com.cowhorse.career_os.dto.OrganisationDTOs.InviteMemberRequest;
 import com.cowhorse.career_os.dto.OrganisationDTOs.UpdateMemberRoleRequest;
 import com.cowhorse.career_os.dto.OrganisationDTOs.UpdateOrganisationRequest;
+import com.cowhorse.career_os.dto.OrganisationDTOs.PendingMembershipDTO;
 import com.cowhorse.career_os.entity.ConversionStatus;
 import com.cowhorse.career_os.entity.OrgMemberRole;
 import com.cowhorse.career_os.entity.Organisation;
 import com.cowhorse.career_os.entity.OrganisationMember;
 import com.cowhorse.career_os.entity.VerificationStatus;
+import com.cowhorse.career_os.entity.UserProfile;
 import com.cowhorse.career_os.exception.DuplicateOrganisationNameException;
 import com.cowhorse.career_os.repository.CourseEnrollmentRepository;
 import com.cowhorse.career_os.repository.CourseRepository;
@@ -26,9 +28,14 @@ import com.cowhorse.career_os.repository.OrganisationRepository;
 import com.cowhorse.career_os.repository.UniversityCourseConversionRepository;
 import com.cowhorse.career_os.repository.UserBadgeRepository;
 import com.cowhorse.career_os.repository.UserProfileRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 
 @Service
 public class OrganisationService {
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     private final OrganisationRepository orgRepo;
     private final OrganisationMemberRepository memberRepo;
@@ -57,6 +64,7 @@ public class OrganisationService {
         this.userProfileRepo = userProfileRepo;
     }
 
+
     public List<Organisation> getVerifiedOrganisations() {
         return orgRepo.findByVerificationStatus(VerificationStatus.VERIFIED);
     }
@@ -68,6 +76,7 @@ public class OrganisationService {
     public List<Organisation> getMyOrganisations(String userId) {
         List<OrganisationMember> memberships = memberRepo.findByUserId(UUID.fromString(userId));
         return memberships.stream()
+                .filter(m -> "APPROVED".equalsIgnoreCase(m.getStatus()))
                 .map(m -> orgRepo.findById(m.getOrganisationId()).orElse(null))
                 .filter(o -> o != null)
                 .toList();
@@ -192,17 +201,136 @@ public class OrganisationService {
     private void assertAdmin(UUID orgId, String userId) {
         OrganisationMember m = memberRepo.findByOrganisationIdAndUserId(orgId, UUID.fromString(userId))
                 .orElseThrow(() -> new RuntimeException("Not a member of this organisation"));
+        if (!"APPROVED".equalsIgnoreCase(m.getStatus())) {
+            throw new RuntimeException("Organisation membership is pending approval");
+        }
         if (m.getRole() != OrgMemberRole.ORG_ADMIN) throw new RuntimeException("Requires ORG_ADMIN role");
     }
 
     private void assertMember(UUID orgId, String userId) {
-        if (!memberRepo.existsByOrganisationIdAndUserId(orgId, UUID.fromString(userId)))
-            throw new RuntimeException("Not a member of this organisation");
+        OrganisationMember m = memberRepo.findByOrganisationIdAndUserId(orgId, UUID.fromString(userId))
+                .orElseThrow(() -> new RuntimeException("Not a member of this organisation"));
+        if (!"APPROVED".equalsIgnoreCase(m.getStatus())) {
+            throw new RuntimeException("Organisation membership is pending approval");
+        }
     }
 
     private void assertSystemAdmin(String userId) {
         userProfileRepo.findByUserId(UUID.fromString(userId))
             .filter(p -> "admin".equalsIgnoreCase(p.getRole()))
             .orElseThrow(() -> new RuntimeException("Requires admin role"));
+    }
+
+    // --- Join & Pending Membership Requests ---
+
+    public String getEmailByUserId(UUID userId) {
+        try {
+            return (String) entityManager.createNativeQuery("SELECT email FROM auth.users WHERE id = :userId")
+                    .setParameter("userId", userId)
+                    .getSingleResult();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    public OrganisationMember joinOrganisation(UUID orgId, String userIdStr) {
+        UUID userId = UUID.fromString(userIdStr);
+        Organisation org = orgRepo.findById(orgId)
+                .orElseThrow(() -> new IllegalArgumentException("Organisation not found"));
+
+        UserProfile profile = userProfileRepo.findByUserId(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User profile not found"));
+
+        String role = profile.getRole();
+        if (!"employer".equalsIgnoreCase(role) && !"mentor".equalsIgnoreCase(role)) {
+            throw new IllegalArgumentException("Only employers and mentors can join organisations");
+        }
+
+        // Check if already a member (pending or approved)
+        if (memberRepo.existsByOrganisationIdAndUserId(orgId, userId)) {
+            throw new IllegalArgumentException("You have already requested to join or are a member of this organisation");
+        }
+
+        // Fetch user email and extract domain
+        String email = getEmailByUserId(userId);
+        if (email == null || !email.contains("@")) {
+            throw new IllegalArgumentException("Invalid user email address");
+        }
+        String domain = email.substring(email.indexOf("@") + 1).toLowerCase().trim();
+        String orgDomain = org.getEmailDomain();
+        if (orgDomain == null || orgDomain.isEmpty()) {
+            throw new IllegalArgumentException("This organisation does not have a configured email domain");
+        }
+        orgDomain = orgDomain.toLowerCase().trim();
+
+        if (!domain.equals(orgDomain)) {
+            throw new IllegalArgumentException("Your email domain (" + domain + ") does not match the organisation's domain (" + orgDomain + ")");
+        }
+
+        // Create an approved membership directly
+        OrgMemberRole memberRole = "mentor".equalsIgnoreCase(role) ? OrgMemberRole.MENTOR : OrgMemberRole.HR;
+        OrganisationMember member = OrganisationMember.builder()
+                .organisationId(orgId)
+                .userId(userId)
+                .role(memberRole)
+                .status("APPROVED")
+                .joinedAt(Instant.now())
+                .build();
+
+        return memberRepo.save(member);
+    }
+
+    public List<OrganisationMember> getUserMemberships(String userId) {
+        return memberRepo.findByUserId(UUID.fromString(userId));
+    }
+
+    public List<PendingMembershipDTO> getPendingMemberships(String adminUserId) {
+        assertSystemAdmin(adminUserId);
+        
+        List<OrganisationMember> pendingMembers = memberRepo.findByStatus("PENDING");
+        
+        return pendingMembers.stream().map(m -> {
+            Organisation org = orgRepo.findById(m.getOrganisationId()).orElse(null);
+            String orgName = org != null ? org.getName() : "Unknown";
+            
+            UserProfile profile = userProfileRepo.findByUserId(m.getUserId()).orElse(null);
+            String userName = "Unknown";
+            if (profile != null) {
+                String first = profile.getFirstName();
+                String last = profile.getLastName();
+                userName = ((first != null ? first : "") + " " + (last != null ? last : "")).trim();
+                if (userName.isEmpty()) {
+                    userName = "User (" + m.getUserId().toString().substring(0, 8) + ")";
+                }
+            }
+            
+            String userEmail = getEmailByUserId(m.getUserId());
+            
+            return PendingMembershipDTO.builder()
+                    .id(m.getId())
+                    .organisationId(m.getOrganisationId())
+                    .organisationName(orgName)
+                    .userId(m.getUserId())
+                    .userName(userName)
+                    .userEmail(userEmail)
+                    .role(m.getRole().name())
+                    .joinedAt(m.getJoinedAt())
+                    .build();
+        }).toList();
+    }
+
+    public void approveMembership(UUID membershipId, String adminUserId) {
+        assertSystemAdmin(adminUserId);
+        OrganisationMember member = memberRepo.findById(membershipId)
+                .orElseThrow(() -> new IllegalArgumentException("Membership request not found"));
+        member.setStatus("APPROVED");
+        memberRepo.save(member);
+    }
+
+    public void rejectMembership(UUID membershipId, String adminUserId) {
+        assertSystemAdmin(adminUserId);
+        OrganisationMember member = memberRepo.findById(membershipId)
+                .orElseThrow(() -> new IllegalArgumentException("Membership request not found"));
+        memberRepo.delete(member);
     }
 }

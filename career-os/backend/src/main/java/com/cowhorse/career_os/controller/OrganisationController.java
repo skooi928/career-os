@@ -143,6 +143,23 @@ public class OrganisationController {
         return ResponseEntity.ok(orgService.getDashboardStats(id, getUid(auth)));
     }
 
+    @PostMapping("/{id}/join")
+    public ResponseEntity<?> joinOrganisation(@PathVariable UUID id,
+                                              @RequestHeader("Authorization") String auth) {
+        try {
+            return ResponseEntity.ok(orgService.joinOrganisation(id, getUid(auth)));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(java.util.Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/memberships/my")
+    public ResponseEntity<List<OrganisationMember>> getUserMemberships(@RequestHeader("Authorization") String auth) {
+        return ResponseEntity.ok(orgService.getUserMemberships(getUid(auth)));
+    }
+
     // ── Admin endpoints ──
 
     @GetMapping("/admin/all")

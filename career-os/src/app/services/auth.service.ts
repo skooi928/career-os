@@ -191,6 +191,17 @@ export class AuthService {
   isAdmin(): boolean { return this.getRole() === 'admin'; }
   isEmployer(): boolean { return this.getRole() === 'employer'; }
   isCandidate(): boolean { return this.getRole() === 'candidate'; }
+  switchUserAccount(): Observable<AuthResponse> {
+    const token = this.getToken();
+    return this.http.post<AuthResponse>(`${this.BACKEND_API_URL}/settings/switch`, {}, {
+      headers: { Authorization: `Bearer ${token}` }
+    }).pipe(
+      tap(response => {
+        this.storeAuthData(response);
+        this.currentUserSubject.next(response);
+      })
+    );
+  }
 
   private fetchAndStoreRole(token: string): void {
     this.http.get<{ role: string }>(`${this.BACKEND_API_URL}/auth/me/role`, {
