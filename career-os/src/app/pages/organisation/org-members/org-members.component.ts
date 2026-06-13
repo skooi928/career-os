@@ -21,7 +21,7 @@ import { OrganisationMember, OrgMemberRole } from '../../../types/upskilling.typ
         <form (ngSubmit)="inviteMember()" #f="ngForm">
           <div class="form-row">
             <div class="field"><label>Email <span class="req">*</span></label><input type="email" [(ngModel)]="inviteEmail" name="email" required placeholder="colleague@company.com"></div>
-            <div class="field"><label>Role</label><select [(ngModel)]="inviteRole" name="role"><option value="ORG_ADMIN">Admin</option><option value="HR">HR</option><option value="MENTOR">Mentor</option><option value="REVIEWER">Reviewer</option></select></div>
+            <div class="field"><label>Role</label><select [(ngModel)]="inviteRole" name="role"><option value="ORG_ADMIN">Admin</option><option value="HR">HR</option><option value="MENTOR">Mentor</option><option value="REVIEWER">Reviewer</option><option value="MEMBER">Member</option></select></div>
           </div>
           <div class="form-actions">
             <button type="button" class="btn-secondary" (click)="showInvite = false">Cancel</button>
@@ -45,7 +45,7 @@ import { OrganisationMember, OrgMemberRole } from '../../../types/upskilling.typ
               <td>
                 <div class="row-actions">
                   <select class="role-select" [value]="m.role" (change)="changeRole(m, $any($event.target).value)">
-                    <option value="ORG_ADMIN">Admin</option><option value="HR">HR</option><option value="MENTOR">Mentor</option><option value="REVIEWER">Reviewer</option>
+                    <option value="ORG_ADMIN">Admin</option><option value="HR">HR</option><option value="MENTOR">Mentor</option><option value="REVIEWER">Reviewer</option><option value="MEMBER">Member</option>
                   </select>
                   <button class="act-btn remove" (click)="removeMember(m)"><i class="ph ph-user-minus"></i></button>
                 </div>
@@ -116,7 +116,7 @@ export class OrgMembersComponent implements OnInit {
     });
   }
 
-  roleLabel(r: OrgMemberRole): string { return { ORG_ADMIN: 'Admin', HR: 'HR', MENTOR: 'Mentor', REVIEWER: 'Reviewer' }[r]; }
+  roleLabel(r: OrgMemberRole): string { return { ORG_ADMIN: 'Admin', HR: 'HR', MENTOR: 'Mentor', REVIEWER: 'Reviewer', MEMBER: 'Member' }[r]; }
 
   inviteMember() {
     if (!this.inviteEmail || !this.orgId) return;

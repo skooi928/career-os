@@ -26,7 +26,7 @@ public class OrganisationDTOs {
 
     @Data
     public static class InviteMemberRequest {
-        private String userId;
+        private String email;
         private OrgMemberRole role;
     }
 

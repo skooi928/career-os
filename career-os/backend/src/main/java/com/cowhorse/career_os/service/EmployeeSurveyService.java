@@ -276,17 +276,39 @@ public class EmployeeSurveyService {
     private String buildFallbackInsight(SurveyAnalytics analytics) {
         double score = analytics.overallScore();
         String sentiment = score >= 8 ? "positive" : score >= 6 ? "moderate" : "concerning";
+        String retentionRisk = score < 5 ? "critical" : score < 6 ? "high" : score < 7.5 ? "moderate" : "low";
+        String burnout = score < 6 ? "High risk — scores suggest elevated disengagement and possible burnout." : "Low to moderate — no immediate burnout signals from scores alone.";
+        String morale = score >= 7 ? "Generally positive team morale indicated by overall scores." : "Morale appears moderate; targeted engagement initiatives are recommended.";
+        // find top 3 lowest and highest categories for strengths/concerns
+        var sorted = analytics.scoreByCategory().entrySet().stream()
+                .sorted(java.util.Map.Entry.comparingByValue())
+                .toList();
+        String concerns = sorted.stream().limit(3)
+                .map(e -> "\"" + e.getKey().replace("_", " ") + " (" + String.format("%.1f", e.getValue()) + "/10)\"")
+                .collect(java.util.stream.Collectors.joining(","));
+        String strengths = sorted.stream().skip(Math.max(0, sorted.size() - 3))
+                .map(e -> "\"" + e.getKey().replace("_", " ") + " (" + String.format("%.1f", e.getValue()) + "/10)\"")
+                .collect(java.util.stream.Collectors.joining(","));
         return String.format("""
-            {"overall_sentiment":"%s","satisfaction_analysis":"Overall satisfaction score of %.1f/10 indicates a %s work environment.",
+            {"overall_sentiment":"%s","satisfaction_analysis":"Overall satisfaction score of %.1f/10 indicates a %s work environment. AI analysis is currently unavailable; scores are summarised automatically.",
             "burnout_indicators":"%s","team_morale":"%s","retention_risk":"%s",
-            "culture_assessment":"Awaiting AI service for detailed analysis.",
-            "recommendations":["Run a follow-up pulse survey within 30 days","Share aggregated results transparently with the team","Address lowest-scoring categories as priority action items"],
-            "generated_at":"%s","ai_available":false}""",
+            "retention_risk_explanation":"Based on an overall score of %.1f/10, retention risk is estimated as %s. Full AI analysis unavailable.",
+            "culture_assessment":"Automated summary only — AI service unavailable. Review category scores to identify cultural gaps.",
+            "top_strengths":[%s],
+            "critical_concerns":[%s],
+            "recommendations":[
+              {"priority":"high","action":"Address lowest-scoring categories immediately","rationale":"Low scores in key areas directly affect retention and engagement."},
+              {"priority":"medium","action":"Share aggregated results transparently with the team","rationale":"Transparency builds trust and shows leadership takes feedback seriously."},
+              {"priority":"low","action":"Schedule a follow-up pulse survey in 30 days","rationale":"Track whether interventions are having a measurable positive impact."}
+            ],
+            "low_score_categories":[],
+            "high_score_categories":[],
+            "manager_action_plan":"30 days: Review this report with your team leads. 60 days: Launch targeted improvement initiatives for lowest-scoring areas. 90 days: Run a follow-up pulse survey to measure progress.",
+            "pulse_survey_suggested":%s,"ai_available":false}""",
                 sentiment, score, sentiment,
-                score < 6 ? "High — immediate attention required" : "Low to moderate",
-                score >= 7 ? "Good" : "Needs improvement",
-                score < 5 ? "High risk" : score < 7 ? "Moderate risk" : "Low risk",
-                Instant.now());
+                burnout, morale, retentionRisk, score, retentionRisk,
+                strengths, concerns,
+                score < 7 ? "true" : "false");
     }
 
     // ── Guard helpers ──────────────────────────────────────────────────────────

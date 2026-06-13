@@ -5,7 +5,7 @@ import lombok.*;
 import java.util.UUID;
 
 @Entity
-@Table(name = "survey_questions")
+@Table(name = "survey_questions", schema = "dbo")
 @Data
 @Builder
 @NoArgsConstructor

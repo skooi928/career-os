@@ -42,6 +42,9 @@ public class Organisation {
     @Column(name = "email_domain")
     private String emailDomain;
 
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "verification_status", nullable = false)
     @Builder.Default

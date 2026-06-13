@@ -3,7 +3,7 @@
 
 export type OrgType = 'INDUSTRY' | 'UNIVERSITY';
 export type VerificationStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
-export type OrgMemberRole = 'ORG_ADMIN' | 'HR' | 'MENTOR' | 'REVIEWER';
+export type OrgMemberRole = 'ORG_ADMIN' | 'HR' | 'MENTOR' | 'REVIEWER' | 'MEMBER';
 export type DifficultyLevel = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
 export type EnrollmentStatus = 'IN_PROGRESS' | 'COMPLETED' | 'DROPPED';
 export type BadgeVerificationStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';

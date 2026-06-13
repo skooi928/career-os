@@ -3,11 +3,18 @@ package com.cowhorse.career_os.service;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.cowhorse.career_os.config.SupabaseClient;
 import com.cowhorse.career_os.dto.OrganisationDTOs.CreateOrganisationRequest;
 import com.cowhorse.career_os.dto.OrganisationDTOs.DashboardStatsResponse;
 import com.cowhorse.career_os.dto.OrganisationDTOs.InviteMemberRequest;
@@ -45,6 +52,8 @@ public class OrganisationService {
     private final UniversityCourseConversionRepository conversionRepo;
     private final SupabaseStorageService storageService;
     private final UserProfileRepository userProfileRepo;
+    private final SupabaseClient supabaseClient;
+    private final RestTemplate restTemplate;
 
     public OrganisationService(OrganisationRepository orgRepo,
                                OrganisationMemberRepository memberRepo,
@@ -53,7 +62,9 @@ public class OrganisationService {
                                UserBadgeRepository userBadgeRepo,
                                UniversityCourseConversionRepository conversionRepo,
                                SupabaseStorageService storageService,
-                               UserProfileRepository userProfileRepo) {
+                               UserProfileRepository userProfileRepo,
+                               SupabaseClient supabaseClient,
+                               RestTemplate restTemplate) {
         this.orgRepo = orgRepo;
         this.memberRepo = memberRepo;
         this.courseRepo = courseRepo;
@@ -62,6 +73,8 @@ public class OrganisationService {
         this.conversionRepo = conversionRepo;
         this.storageService = storageService;
         this.userProfileRepo = userProfileRepo;
+        this.supabaseClient = supabaseClient;
+        this.restTemplate = restTemplate;
     }
 
 
@@ -141,13 +154,33 @@ public class OrganisationService {
 
     public OrganisationMember inviteMember(UUID orgId, String inviterId, InviteMemberRequest req) {
         assertAdmin(orgId, inviterId);
+
+        // Resolve email → user UUID via Supabase Admin API
+        UUID targetUserId = resolveUserIdByEmail(req.getEmail());
+
         OrganisationMember member = OrganisationMember.builder()
                 .organisationId(orgId)
-                .userId(UUID.fromString(req.getUserId()))
-                .role(req.getRole() != null ? req.getRole() : OrgMemberRole.MENTOR)
+                .userId(targetUserId)
+                .role(req.getRole() != null ? req.getRole() : OrgMemberRole.MEMBER)
                 .invitedBy(UUID.fromString(inviterId))
                 .build();
         return memberRepo.save(member);
+    }
+
+    @SuppressWarnings("unchecked")
+    private UUID resolveUserIdByEmail(String email) {
+        String url = supabaseClient.getUrl() + "/auth/v1/admin/users?email=" + email;
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("apikey", supabaseClient.getServiceKey());
+        headers.set("Authorization", "Bearer " + supabaseClient.getServiceKey());
+        ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), Map.class);
+        Map<String, Object> body = response.getBody();
+        if (body == null) throw new RuntimeException("User not found for email: " + email);
+        java.util.List<Map<String, Object>> users = (java.util.List<Map<String, Object>>) body.get("users");
+        if (users == null || users.isEmpty()) throw new RuntimeException("No user found with email: " + email);
+        String uid = (String) users.get(0).get("id");
+        if (uid == null) throw new RuntimeException("User record missing id for email: " + email);
+        return UUID.fromString(uid);
     }
 
     public OrganisationMember updateMemberRole(UUID orgId, UUID memberId, String requesterId, UpdateMemberRoleRequest req) {

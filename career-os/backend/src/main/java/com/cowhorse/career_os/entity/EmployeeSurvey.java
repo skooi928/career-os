@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "employee_surveys")
+@Table(name = "employee_surveys", schema = "dbo")
 @Data
 @Builder
 @NoArgsConstructor
