@@ -296,3 +296,93 @@ export interface ReviewDecisionRequest {
   status: string;
   notes?: string;
 }
+
+// ─── Employee Feedback Surveys ────────────────────────────────────────────────
+
+export type SurveyStatus = 'DRAFT' | 'ACTIVE' | 'CLOSED';
+export type QuestionType = 'RATING' | 'SCALE' | 'TEXT';
+export type QuestionCategory =
+  | 'JOB_SATISFACTION' | 'WORK_ENVIRONMENT' | 'WORK_LIFE_BALANCE'
+  | 'TEAM_COLLABORATION' | 'COMMUNICATION' | 'LEADERSHIP'
+  | 'CAREER_GROWTH' | 'COMPENSATION' | 'MENTAL_WELLBEING'
+  | 'EMPLOYEE_ENGAGEMENT' | 'RETENTION_LIKELIHOOD';
+
+export const CATEGORY_LABELS: Record<QuestionCategory, string> = {
+  JOB_SATISFACTION:    'Job Satisfaction',
+  WORK_ENVIRONMENT:    'Work Environment',
+  WORK_LIFE_BALANCE:   'Work-Life Balance',
+  TEAM_COLLABORATION:  'Team Collaboration',
+  COMMUNICATION:       'Communication',
+  LEADERSHIP:          'Leadership & Management',
+  CAREER_GROWTH:       'Career Growth',
+  COMPENSATION:        'Compensation & Benefits',
+  MENTAL_WELLBEING:    'Mental Well-being',
+  EMPLOYEE_ENGAGEMENT: 'Employee Engagement',
+  RETENTION_LIKELIHOOD:'Retention Likelihood',
+};
+
+export interface EmployeeSurvey {
+  id: string;
+  organisationId: string;
+  title: string;
+  description?: string;
+  createdByUserId: string;
+  status: SurveyStatus;
+  startDate?: string;
+  endDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SurveyWithCount {
+  survey: EmployeeSurvey;
+  responseCount: number;
+}
+
+export interface SurveyQuestion {
+  id: string;
+  surveyId: string;
+  questionText: string;
+  category: QuestionCategory;
+  questionType: QuestionType;
+  orderIndex: number;
+}
+
+export interface AnswerInput {
+  questionId: string;
+  ratingValue?: number | null;
+  textAnswer?: string | null;
+}
+
+export interface SurveyAnalytics {
+  totalResponses: number;
+  overallScore: number;
+  scoreByCategory: Record<string, number>;
+  openTextResponses: string[];
+  responseRate: number;
+}
+
+export interface AiInsight {
+  id: string;
+  surveyId: string;
+  insightJson: string;
+  generatedAt: string;
+}
+
+export interface AiInsightReport {
+  overall_sentiment: string;
+  satisfaction_analysis: string;
+  burnout_indicators: string;
+  team_morale: string;
+  retention_risk: 'low' | 'moderate' | 'high' | 'critical';
+  retention_risk_explanation: string;
+  culture_assessment: string;
+  top_strengths: string[];
+  critical_concerns: string[];
+  recommendations: Array<{ priority: string; action: string; rationale: string }>;
+  low_score_categories: string[];
+  high_score_categories: string[];
+  manager_action_plan: string;
+  pulse_survey_suggested: boolean;
+  ai_available: boolean;
+}

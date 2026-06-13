@@ -24,6 +24,7 @@ from app.cv import router as cv_router
 # from dotenv import load_dotenv
 # load_dotenv()
 from app.interview_router import router as interview_router
+from app.survey_insights_router import router as survey_insights_router
 
 app = FastAPI(
     title="Living Portfolio AI Service",
@@ -44,6 +45,7 @@ app.add_middleware(
  
 app.include_router(cv_router)
 app.include_router(interview_router)
+app.include_router(survey_insights_router)
 
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)

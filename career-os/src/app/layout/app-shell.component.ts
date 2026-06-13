@@ -732,6 +732,7 @@ export class AppShellComponent implements OnInit, OnDestroy {
     { label: 'Mock Interview', route: '/mock-interview', icon: 'ph-video-camera' },
     { label: 'Upskilling',     route: '/upskilling',    icon: 'ph-chalkboard-teacher' },
     { label: 'Projects',       route: '/projects',      icon: 'ph-handshake' },
+    { label: 'Surveys',        route: '/surveys',       icon: 'ph-clipboard-text' },
     { label: 'Analytics',      route: '/insights',      icon: 'ph-chart-bar' },
   ];
 
@@ -757,6 +758,7 @@ export class AppShellComponent implements OnInit, OnDestroy {
       items.push({ label: 'Manage Courses',     route: '/organisation/courses',           icon: 'ph-books',         isSubItem: true });
       items.push({ label: 'Course Recognition', route: '/organisation/recognitions',      icon: 'ph-certificate',   isSubItem: true });
       items.push({ label: 'Manage Projects',    route: '/organisation/projects',          icon: 'ph-folder-open',   isSubItem: true });
+      items.push({ label: 'Employee Surveys',   route: '/organisation/surveys',           icon: 'ph-clipboard-text', isSubItem: true });
       if (this.hasUniversityOrg()) {
         items.push({ label: 'University Review', route: '/organisation/university-review', icon: 'ph-graduation-cap', isSubItem: true });
       }
@@ -766,6 +768,7 @@ export class AppShellComponent implements OnInit, OnDestroy {
       if (item.label === 'Job Application' && role !== 'candidate') return false;
       if (item.label === 'Mock Interview' && role !== 'candidate') return false;
       if (item.label === 'Projects' && role !== 'candidate') return false;
+      if (item.label === 'Surveys' && role !== 'candidate') return false;
       return true;
     });
   });
