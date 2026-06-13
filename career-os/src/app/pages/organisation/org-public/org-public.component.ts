@@ -5,14 +5,13 @@ import { OrganisationService } from '../../../services/organisation.service';
 import { UpskillingService } from '../../../services/upskilling.service';
 import { BadgeService } from '../../../services/badge.service';
 import { CourseCardComponent } from '../../../components/course-card/course-card.component';
-import { BadgeCardComponent } from '../../../components/badge-card/badge-card.component';
 import { StatusPillComponent } from '../../../components/status-pill/status-pill.component';
 import { Organisation, Course, Badge } from '../../../types/upskilling.types';
 
 @Component({
   selector: 'app-org-public',
   standalone: true,
-  imports: [CommonModule, CourseCardComponent, BadgeCardComponent, StatusPillComponent],
+  imports: [CommonModule, CourseCardComponent, StatusPillComponent],
   template: `
     <div *ngIf="org(); else loadingTpl">
       <div class="org-hero">
@@ -41,21 +40,11 @@ import { Organisation, Course, Badge } from '../../../types/upskilling.types';
         <button [class.active]="tab() === 'courses'" (click)="tab.set('courses')">
           <i class="ph ph-chalkboard-teacher"></i> Courses ({{ courses().length }})
         </button>
-        <button [class.active]="tab() === 'badges'" (click)="tab.set('badges')">
-          <i class="ph ph-medal"></i> Badges ({{ badges().length }})
-        </button>
       </div>
 
-      <div class="tab-body" *ngIf="tab() === 'courses'">
+      <div class="tab-body">
         <div class="empty-tab" *ngIf="courses().length === 0"><i class="ph ph-books"></i><p>No published courses</p></div>
         <div class="courses-grid"><app-course-card *ngFor="let c of courses()" [course]="c" [showEnroll]="false"></app-course-card></div>
-      </div>
-
-      <div class="tab-body" *ngIf="tab() === 'badges'">
-        <div class="empty-tab" *ngIf="badges().length === 0"><i class="ph ph-medal"></i><p>No badges yet</p></div>
-        <div class="badges-grid">
-          <app-badge-card *ngFor="let b of badges()" [name]="b.name" [description]="b.description" [imageUrl]="b.badgeImageUrl" [orgName]="org()!.name" [skillTag]="b.skillTag" status="VERIFIED"></app-badge-card>
-        </div>
       </div>
     </div>
     <ng-template #loadingTpl>
@@ -98,7 +87,11 @@ export class OrgPublicComponent implements OnInit {
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) return;
     this.orgService.getOrganisationById(id).subscribe({ next: o => this.org.set(o), error: () => {} });
-    this.upskillingService.getOrgCourses(id).subscribe({ next: c => this.courses.set(c.filter(x => x.isPublished)), error: () => {} });
+    // Use the global published-courses endpoint and filter by org — avoids needing a member token
+    this.upskillingService.getPublishedCourses().subscribe({
+      next: all => this.courses.set(all.filter(c => c.organisationId === id)),
+      error: () => {}
+    });
     this.badgeService.getOrgBadges(id).subscribe({ next: b => this.badges.set(b), error: () => {} });
   }
 }

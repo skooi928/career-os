@@ -125,7 +125,10 @@ export class OrgCoursesComponent implements OnInit {
 
   ngOnInit() {
     this.orgService.getMyOrganisations().subscribe({
-      next: orgs => { if (orgs.length > 0) { this.orgId = orgs[0].id; this.loadCourses(); this.loadBadges(); } else { this.isLoading.set(false); } },
+      next: orgs => {
+        const active = orgs.find(o => o.verificationStatus === 'VERIFIED') ?? orgs[0] ?? null;
+        if (active) { this.orgId = active.id; this.loadCourses(); this.loadBadges(); } else { this.isLoading.set(false); }
+      },
       error: () => this.isLoading.set(false)
     });
   }

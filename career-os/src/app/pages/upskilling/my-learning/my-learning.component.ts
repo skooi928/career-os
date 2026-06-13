@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { UpskillingService } from '../../../services/upskilling.service';
@@ -59,6 +59,11 @@ import { CourseEnrollment } from '../../../types/upskilling.types';
             <span class="pct">{{ e.progressPercentage }}%</span>
           </div>
 
+          <div class="badge-reward" *ngIf="e.course?.badge && e.completionStatus !== 'COMPLETED'">
+            <i class="ph ph-medal"></i>
+            <span>Complete to earn: <strong>{{ e.course!.badge!.name }}</strong></span>
+          </div>
+
           <div class="card-actions">
             <button class="btn-complete"
                     *ngIf="e.completionStatus === 'IN_PROGRESS'"
@@ -115,6 +120,15 @@ import { CourseEnrollment } from '../../../types/upskilling.types';
     }
     .pct { font-size: 0.78rem; font-weight: 700; color: var(--color-text-secondary); min-width: 36px; text-align: right; }
     .card-actions { display: flex; gap: 8px; }
+    .badge-reward {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 10px; border-radius: 8px; margin-bottom: 6px;
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border: 1px solid #f59e0b30;
+      font-size: 0.78rem; color: #92400e;
+    }
+    .badge-reward i { font-size: 0.9rem; color: #d97706; }
+    .badge-reward strong { font-weight: 700; color: #78350f; }
     .btn-complete {
       display: flex; align-items: center; gap: 5px;
       padding: 7px 14px; border-radius: 8px;
@@ -142,20 +156,36 @@ import { CourseEnrollment } from '../../../types/upskilling.types';
   `]
 })
 export class MyLearningComponent implements OnInit {
+  private upskillingService = inject(UpskillingService);
+
   isLoading = signal(true);
-  enrollments = signal<CourseEnrollment[]>([]);
   toast = signal('');
+
+  // Read directly from shared service signal — updates instantly when enroll() fires
+  enrollments = this.upskillingService.enrollments;
 
   completedCount = computed(() => this.enrollments().filter(e => e.completionStatus === 'COMPLETED').length);
   inProgressCount = computed(() => this.enrollments().filter(e => e.completionStatus === 'IN_PROGRESS').length);
 
-  constructor(private upskillingService: UpskillingService) {}
+  constructor() {}
 
   ngOnInit() {
-    this.upskillingService.getMyEnrollments().subscribe({
-      next: e => { this.enrollments.set(e); this.isLoading.set(false); },
-      error: () => this.isLoading.set(false)
-    });
+    // Always refresh on page visit so data is never stale
+    this.upskillingService.loadEnrollments(true);
+    // Show loading only if cache was empty
+    if (this.enrollments().length === 0) {
+      // loadEnrollments is async; watch for data arrival
+      const check = setInterval(() => {
+        if (this.enrollments().length > 0 || !this.isLoading()) {
+          this.isLoading.set(false);
+          clearInterval(check);
+        }
+      }, 100);
+      // Fallback: stop loading after 5s regardless
+      setTimeout(() => { this.isLoading.set(false); clearInterval(check); }, 5000);
+    } else {
+      this.isLoading.set(false);
+    }
   }
 
   statusClass(status: string): string {
@@ -165,12 +195,25 @@ export class MyLearningComponent implements OnInit {
   }
 
   markComplete(e: CourseEnrollment) {
+    // Optimistic update — instant UI feedback before server responds
+    const optimistic: CourseEnrollment = { ...e, progressPercentage: 100, completionStatus: 'COMPLETED' };
+    this.upskillingService.enrollments.update(list => list.map(en => en.id === e.id ? optimistic : en));
+
     this.upskillingService.updateProgress(e.id, { progressPercentage: 100 }).subscribe({
-      next: updated => {
-        this.enrollments.update(list => list.map(en => en.id === updated.id ? updated : en));
-        this.showToast('Course marked as complete!');
+      next: res => {
+        // Replace optimistic entry with real server response
+        this.upskillingService.enrollments.update(list => list.map(en => en.id === res.enrollment.id ? res.enrollment : en));
+        if (res.awardedBadge) {
+          this.showToast(`🎖️ Badge earned: ${res.awardedBadge.badge?.name ?? 'New badge'}!`);
+        } else {
+          this.showToast('Course marked as complete!');
+        }
       },
-      error: () => this.showToast('Failed to update progress.')
+      error: () => {
+        // Revert optimistic update on failure
+        this.upskillingService.enrollments.update(list => list.map(en => en.id === e.id ? e : en));
+        this.showToast('Failed to update progress.');
+      }
     });
   }
 
@@ -178,7 +221,7 @@ export class MyLearningComponent implements OnInit {
     if (!confirm('Drop this course?')) return;
     this.upskillingService.dropCourse(e.id).subscribe({
       next: () => {
-        this.enrollments.update(list => list.filter(en => en.id !== e.id));
+        this.upskillingService.enrollments.update(list => list.filter(en => en.id !== e.id));
         this.showToast('Course dropped.');
       },
       error: () => this.showToast('Failed to drop course.')

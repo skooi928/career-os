@@ -36,6 +36,12 @@ import { Course } from '../../types/upskilling.types';
         </span>
       </div>
 
+      <div class="badge-reward" *ngIf="course.badge">
+        <i class="ph ph-medal"></i>
+        <span>Earns: <strong>{{ course.badge.name }}</strong></span>
+        <span class="badge-tag" *ngIf="course.badge.skillTag">{{ course.badge.skillTag }}</span>
+      </div>
+
       <div class="card-actions">
         <button class="btn-view" (click)="onViewClick.emit(course)">View Details</button>
         <button class="btn-enroll"
@@ -92,6 +98,20 @@ import { Course } from '../../types/upskilling.types';
     .meta-item {
       display: flex; align-items: center; gap: 3px;
       font-size: 0.78rem; color: var(--color-text-tertiary);
+    }
+    .badge-reward {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 10px; border-radius: 8px;
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border: 1px solid #f59e0b30;
+      font-size: 0.78rem; color: #92400e;
+    }
+    .badge-reward i { font-size: 0.9rem; color: #d97706; flex-shrink: 0; }
+    .badge-reward strong { font-weight: 700; color: #78350f; }
+    .badge-tag {
+      margin-left: auto; font-size: 0.68rem; font-weight: 600;
+      padding: 2px 7px; border-radius: 999px;
+      background: #fcd34d40; color: #92400e;
     }
     .card-actions { display: flex; gap: 8px; margin-top: auto; padding-top: 8px; }
     .btn-view {

@@ -19,6 +19,7 @@ import com.cowhorse.career_os.entity.Organisation;
 import com.cowhorse.career_os.entity.OrganisationMember;
 import com.cowhorse.career_os.entity.VerificationStatus;
 import com.cowhorse.career_os.exception.DuplicateOrganisationNameException;
+import com.cowhorse.career_os.repository.CourseEnrollmentRepository;
 import com.cowhorse.career_os.repository.CourseRepository;
 import com.cowhorse.career_os.repository.OrganisationMemberRepository;
 import com.cowhorse.career_os.repository.OrganisationRepository;
@@ -32,6 +33,7 @@ public class OrganisationService {
     private final OrganisationRepository orgRepo;
     private final OrganisationMemberRepository memberRepo;
     private final CourseRepository courseRepo;
+    private final CourseEnrollmentRepository enrollmentRepo;
     private final UserBadgeRepository userBadgeRepo;
     private final UniversityCourseConversionRepository conversionRepo;
     private final SupabaseStorageService storageService;
@@ -40,6 +42,7 @@ public class OrganisationService {
     public OrganisationService(OrganisationRepository orgRepo,
                                OrganisationMemberRepository memberRepo,
                                CourseRepository courseRepo,
+                               CourseEnrollmentRepository enrollmentRepo,
                                UserBadgeRepository userBadgeRepo,
                                UniversityCourseConversionRepository conversionRepo,
                                SupabaseStorageService storageService,
@@ -47,6 +50,7 @@ public class OrganisationService {
         this.orgRepo = orgRepo;
         this.memberRepo = memberRepo;
         this.courseRepo = courseRepo;
+        this.enrollmentRepo = enrollmentRepo;
         this.userBadgeRepo = userBadgeRepo;
         this.conversionRepo = conversionRepo;
         this.storageService = storageService;
@@ -152,8 +156,10 @@ public class OrganisationService {
     public DashboardStatsResponse getDashboardStats(UUID orgId, String userId) {
         assertMember(orgId, userId);
         long publishedCourses = courseRepo.countByOrganisationIdAndIsPublishedTrue(orgId);
+        long totalEnrollments = enrollmentRepo.countByCourse_OrganisationId(orgId);
+        long totalBadgesIssued = userBadgeRepo.countByBadge_OrganisationId(orgId);
         long pendingVerifications = conversionRepo.countByStatus(ConversionStatus.PENDING);
-        return new DashboardStatsResponse(publishedCourses, 0L, 0L, pendingVerifications);
+        return new DashboardStatsResponse(publishedCourses, totalEnrollments, totalBadgesIssued, pendingVerifications);
     }
 
     // --- Admin operations ---

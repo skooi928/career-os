@@ -1,7 +1,8 @@
-﻿import { Component, OnInit, signal } from '@angular/core';
+﻿import { Component, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, ActivatedRoute } from '@angular/router';
+import { RouterLink, ActivatedRoute, Router, NavigationEnd } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { Subscription, filter } from 'rxjs';
 import { OrganisationService } from '../../../services/organisation.service';
 import { StatusPillComponent } from '../../../components/status-pill/status-pill.component';
 import { FileUploadComponent } from '../../../components/file-upload/file-upload.component';
@@ -135,6 +136,7 @@ import { Organisation, CreateOrganisationRequest, UpdateOrganisationRequest, Org
             <div><span class="stat-n">{{ stats()!.pendingVerifications }}</span><span class="stat-l">Pending Reviews</span></div>
           </div>
         </div>
+        <button class="btn-refresh" (click)="refreshStats()" *ngIf="stats()"><i class="ph ph-arrows-clockwise"></i> Refresh Stats</button>
 
         <!-- Quick actions -->
         <div class="quick-actions">
@@ -210,7 +212,9 @@ import { Organisation, CreateOrganisationRequest, UpdateOrganisationRequest, Org
     .btn-warn { margin-left: auto; flex-shrink: 0; padding: 7px 13px; border-radius: 7px; background: #d97706; color: white; border: none; font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
     .verify-upload { display: flex; flex-direction: column; gap: 12px; }
     /* Stats */
-    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 12px; }
+    .btn-refresh { display: flex; align-items: center; gap: 6px; padding: 7px 14px; background: transparent; border: 1px solid var(--color-border); border-radius: 8px; color: var(--color-text-secondary); font-size: 0.8rem; font-weight: 600; cursor: pointer; margin-bottom: 24px; transition: all 0.2s; }
+    .btn-refresh:hover { border-color: var(--color-primary); color: var(--color-primary); }
     .stat-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 16px 18px; display: flex; align-items: center; gap: 12px; }
     .stat-icon { width: 42px; height: 42px; background: var(--color-secondary); border-radius: 9px; display: flex; align-items: center; justify-content: center; color: var(--color-primary); font-size: 1.2rem; flex-shrink: 0; }
     .stat-icon.pending { background: #fef3c7; color: #d97706; }
@@ -227,7 +231,7 @@ import { Organisation, CreateOrganisationRequest, UpdateOrganisationRequest, Org
     @media (max-width: 768px) { .page { padding: 20px; } .form-row { grid-template-columns: 1fr; } .org-bar { flex-direction: column; align-items: flex-start; } }
   `]
 })
-export class OrgDashboardComponent implements OnInit {
+export class OrgDashboardComponent implements OnInit, OnDestroy {
   isLoading = signal(true);
   activeOrg = signal<Organisation | null>(null);
   stats = signal<OrgDashboardStats | null>(null);
@@ -235,14 +239,15 @@ export class OrgDashboardComponent implements OnInit {
   isEditing = signal(false);
   isSaving = signal(false);
   createError = signal('');
-  editError = signal('');
+  editError = signal('');  
   toast = signal('');
   showVerifyUpload = false;
   verifyDoc: File | null = null;
+  private routerSub?: Subscription;
 
   editFormData: UpdateOrganisationRequest = { name: '', website: '', description: '', emailDomain: '', logoUrl: '' };
 
-  constructor(private orgService: OrganisationService, private route: ActivatedRoute) {}
+  constructor(private orgService: OrganisationService, private route: ActivatedRoute, private router: Router) {}
 
   ngOnInit() {
     this.route.queryParams.subscribe(params => {
@@ -263,10 +268,31 @@ export class OrgDashboardComponent implements OnInit {
         });
       }
     });
+
+    // Refresh stats every time the user navigates back to this page
+    this.routerSub = this.router.events
+      .pipe(filter(e => e instanceof NavigationEnd && e.urlAfterRedirects.includes('/organisation/dashboard')))
+      .subscribe(() => {
+        const org = this.activeOrg();
+        if (org) this.loadStats(org.id);
+      });
+  }
+
+  ngOnDestroy() {
+    this.routerSub?.unsubscribe();
   }
 
   loadStats(id: string) {
-    this.orgService.getDashboardStats(id).subscribe({ next: s => this.stats.set(s), error: () => {} });
+    this.orgService.getDashboardStats(id).subscribe({
+      next: s => { console.log('[Stats] loaded:', s); this.stats.set(s); },
+      error: err => console.error('[Stats] failed:', err.status, err.error)
+    });
+  }
+
+  refreshStats() {
+    const org = this.activeOrg();
+    console.log('[Refresh] activeOrg:', org?.id ?? 'NULL');
+    if (org) this.loadStats(org.id);
   }
 
   toggleEdit() {

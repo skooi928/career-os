@@ -15,4 +15,5 @@ public interface CourseEnrollmentRepository extends JpaRepository<CourseEnrollme
     Optional<CourseEnrollment> findByUserIdAndCourseId(UUID userId, UUID courseId);
     boolean existsByUserIdAndCourseId(UUID userId, UUID courseId);
     long countByUserIdAndCompletionStatus(UUID userId, EnrollmentStatus status);
+    long countByCourse_OrganisationId(UUID organisationId);
 }

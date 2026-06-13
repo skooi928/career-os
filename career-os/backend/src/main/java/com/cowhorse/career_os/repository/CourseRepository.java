@@ -7,6 +7,7 @@ import java.util.UUID;
 
 public interface CourseRepository extends JpaRepository<Course, UUID> {
     List<Course> findByOrganisationId(UUID organisationId);
+    List<Course> findByOrganisationIdAndIsPublishedTrue(UUID organisationId);
     List<Course> findByIsPublishedTrue();
     List<Course> findByIsPublishedTrueAndCategory(String category);
     long countByOrganisationIdAndIsPublishedTrue(UUID organisationId);
