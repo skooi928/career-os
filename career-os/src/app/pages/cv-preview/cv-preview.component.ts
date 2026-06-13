@@ -6,7 +6,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
-import { CvService } from '../../services/cv.service';
+import { CvService, CvSuggestion } from '../../services/cv.service';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -44,6 +44,11 @@ export class CvPreviewComponent implements OnInit, OnDestroy {
   previewUrl = signal<SafeResourceUrl | null>(null);
   isRefreshingPreview = signal(false);
   cvData = signal<any>(null);
+  showSuggestionsPanel = signal(false);
+  suggestions = signal<CvSuggestion[]>([]);
+  isAnalysing = signal(false);
+  analyseError = signal('');
+  dismissedSuggestions = signal<Set<number>>(new Set());
 
   readonly SECTION_NAV = [
     { key: 'contact',         label: 'Contact',         icon: '👤' },
@@ -225,5 +230,154 @@ export class CvPreviewComponent implements OnInit, OnDestroy {
     clearTimeout(this.previewTimer);
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  // Cv suggestions panel
+  analysePosts(): void {
+    const user = this.authService.getCurrentUser();
+    if (!user?.userId || !this.cvData()) return;
+  
+    this.isAnalysing.set(true);
+    this.analyseError.set('');
+    this.showSuggestionsPanel.set(true);
+  
+    // Step 1: fetch cv-worthy posts from Spring Boot
+    this.cvService.getCvWorthyPosts(user.userId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (posts) => {
+          if (!posts.length) {
+            this.suggestions.set([]);
+            this.analyseError.set('No posts marked "Include in CV" yet. Mark posts in the Community Forum to get suggestions here.');
+            this.isAnalysing.set(false);
+            return;
+          }
+          console.log('Fetched posts:', posts);
+  
+          // Step 2: send to FastAPI for AI analysis
+          this.cvService.analysePostsForCv(user.userId, posts, this.cvData())
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (response) => {
+                this.suggestions.set(response.suggestions);
+                this.isAnalysing.set(false);
+                console.log('AI suggestions:', response.suggestions);
+              },
+              error: () => {
+                this.analyseError.set('AI analysis failed. Please try again.');
+                this.isAnalysing.set(false);
+              }
+            });
+        },
+        error: () => {
+          this.analyseError.set('Could not fetch posts. Make sure the backend is running.');
+          this.isAnalysing.set(false);
+        }
+      });
+  }
+  
+  acceptSuggestion(suggestion: CvSuggestion): void {
+    const data = structuredClone(this.cvData());
+
+    switch (suggestion.section.toLowerCase()) {
+      case 'awards':
+        if (!Array.isArray(data.awards)) data.awards = [];
+        data.awards.push({
+          title: suggestion.content,
+          issuer: suggestion.issuer ?? null,
+          year: suggestion.year ?? null,
+          level: suggestion.level ?? null
+        });
+        break;
+
+      case 'projects':
+        if (!Array.isArray(data.projects)) data.projects = [];
+        data.projects.push({
+          title: suggestion.content,
+          description: suggestion.description ?? null,
+          technologies: suggestion.technologies ?? null,
+          link: suggestion.link ?? null
+        });
+        break;
+
+      case 'skills':
+        if (!Array.isArray(data.skills)) data.skills = [];
+        data.skills.push({
+          name: suggestion.content,
+          proficiency: suggestion.proficiency ?? 'Intermediate',
+          category: suggestion.category ?? null
+        });
+        break;
+
+      case 'certifications':
+        if (!Array.isArray(data.certifications)) data.certifications = [];
+        data.certifications.push({
+          name: suggestion.content,
+          issuer: suggestion.issuer ?? null,
+          year: suggestion.year ?? null
+        });
+        break;
+
+      case 'activities':
+        if (!Array.isArray(data.activities)) data.activities = [];
+        data.activities.push({
+          role: suggestion.content,
+          organization: suggestion.organization ?? null,
+          year: suggestion.year ?? null,
+          duration: suggestion.duration ?? null
+        });
+        break;
+
+      case 'experience':
+        if (!Array.isArray(data.experience)) data.experience = [];
+        data.experience.push({
+          job_title: suggestion.content,
+          company: suggestion.company ?? null,
+          description: suggestion.description ?? null,
+          start_date: suggestion.start_date ?? null,
+          end_date: suggestion.end_date ?? null
+        });
+        break;
+
+      case 'education':
+        if (!Array.isArray(data.education)) data.education = [];
+        data.education.push({
+          degree: suggestion.content,
+          institution: suggestion.institution ?? null,
+          year: suggestion.year ?? null
+        });
+        break;
+    }
+  
+    this.cvData.set(data);
+    this.dismissSuggestion(suggestion.post_id);
+    this.schedulePreviewRefresh();
+  }
+  
+  dismissSuggestion(postId: number): void {
+    this.dismissedSuggestions.update(s => {
+      const next = new Set(s);
+      next.add(postId);
+      return next;
+    });
+  }
+  
+  get visibleSuggestions(): CvSuggestion[] {
+    return this.suggestions().filter(
+      s => !this.dismissedSuggestions().has(s.post_id)
+    );
+  }
+  
+  getSectionIcon(section: string): string {
+    const icons: Record<string, string> = {
+      awards: '🏆', projects: '🚀', skills: '⚡',
+      certifications: '📜', activities: '🎯',
+      experience: '💼', education: '🎓'
+    };
+    return icons[section] ?? '📝';
+  }
+  
+  getConfidenceBadgeClass(confidence: string): string {
+    return { high: 'badge-high', medium: 'badge-medium', low: 'badge-low' }[confidence] ?? 'badge-low';
   }
 }

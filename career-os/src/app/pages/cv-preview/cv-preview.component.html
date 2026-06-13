@@ -25,6 +25,9 @@
       <button class="btn-refresh" (click)="refreshPreview()" [disabled]="isRefreshingPreview()">
         {{ isRefreshingPreview() ? '⟳ Refreshing...' : '⟳ Refresh' }}
       </button>
+      <button class="btn-primary" (click)="analysePosts()" [disabled]="isAnalysing() || !visibleSuggestions.length">
+        {{ isAnalysing() ? 'Analysing...' : '✨ Analyse Posts' }}
+      </button>
       <button class="btn-primary" (click)="downloadPdf()" [disabled]="isDownloading()">
         {{ isDownloading() ? 'Generating...' : '↓ Download PDF' }}
       </button>
@@ -681,6 +684,40 @@
 
       </div>
     </div>
+
+    <div class="cv-suggestions-panel" *ngIf="visibleSuggestions.length">
+      <h3>Suggestions from your posts</h3>
+
+      <div *ngFor="let s of visibleSuggestions" class="suggestion-card">
+        <div class="suggestion-header">
+          <span class="section-icon">{{ getSectionIcon(s.section) }}</span>
+          <strong class="suggestion-title">{{ s.content }}</strong>
+          <span class="confidence-badge" [ngClass]="getConfidenceBadgeClass(s.confidence)">
+            {{ s.confidence | titlecase }}
+          </span>
+        </div>
+
+        <p class="suggestion-description">{{ s.description }}</p>
+
+        <div *ngIf="s.impact" class="suggestion-impact">
+          <em>Impact:</em> {{ s.impact }}
+        </div>
+
+        <div class="suggestion-actions">
+          <button class="btn-primary sm" (click)="acceptSuggestion(s)">Accept</button>
+          <button class="btn-secondary sm" (click)="dismissSuggestion(s.post_id)">Dismiss</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error / empty states -->
+    <div class="cv-suggestions-empty" *ngIf="analyseError()">
+      {{ analyseError() }}
+    </div>
+    <div class="cv-suggestions-loading" *ngIf="isAnalysing()">
+      <span class="spinner"></span> Analysing your posts…
+    </div>
+
 
     <!-- ── RIGHT: Preview ── -->
     <div class="preview-panel">
