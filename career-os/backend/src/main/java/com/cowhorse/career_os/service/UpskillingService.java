@@ -139,11 +139,17 @@ public class UpskillingService {
     private void assertAdmin(UUID orgId, String userId) {
         OrganisationMember m = memberRepo.findByOrganisationIdAndUserId(orgId, UUID.fromString(userId))
                 .orElseThrow(() -> new RuntimeException("Not a member"));
+        if (!"APPROVED".equalsIgnoreCase(m.getStatus())) {
+            throw new RuntimeException("Organisation membership is pending approval");
+        }
         if (m.getRole() != OrgMemberRole.ORG_ADMIN) throw new RuntimeException("Requires ORG_ADMIN role");
     }
 
     private void assertMember(UUID orgId, String userId) {
-        if (!memberRepo.existsByOrganisationIdAndUserId(orgId, UUID.fromString(userId)))
-            throw new RuntimeException("Not a member of this organisation");
+        OrganisationMember m = memberRepo.findByOrganisationIdAndUserId(orgId, UUID.fromString(userId))
+                .orElseThrow(() -> new RuntimeException("Not a member of this organisation"));
+        if (!"APPROVED".equalsIgnoreCase(m.getStatus())) {
+            throw new RuntimeException("Organisation membership is pending approval");
+        }
     }
 }

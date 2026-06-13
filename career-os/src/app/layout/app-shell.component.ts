@@ -78,7 +78,7 @@ interface NavItem {
             <a routerLink="/profile" class="menu-item" (click)="closeAllMenus()">
               <i class="ph ph-user"></i> Profile
             </a>
-            <a routerLink="/profile" class="menu-item" (click)="closeAllMenus()">
+            <a routerLink="/settings" class="menu-item" (click)="closeAllMenus()">
               <i class="ph ph-gear"></i> Settings
             </a>
             <div class="dropdown-divider"></div>
@@ -132,7 +132,7 @@ interface NavItem {
                 <a routerLink="/profile" class="menu-item" (click)="closeAllMenus()">
                   <i class="ph ph-user"></i> Profile
                 </a>
-                <a routerLink="/profile" class="menu-item" (click)="closeAllMenus()">
+                <a routerLink="/settings" class="menu-item" (click)="closeAllMenus()">
                   <i class="ph ph-gear"></i> Settings
                 </a>
                 <div class="dropdown-divider"></div>
@@ -616,18 +616,18 @@ export class AppShellComponent implements OnInit, OnDestroy {
 
   // Base nav items visible to all roles
   private readonly baseNav: NavItem[] = [
-    { label: 'Dashboard',      route: '/dashboard',    icon: 'ph-house-simple' },
+    { label: 'Dashboard', route: '/dashboard', icon: 'ph-house-simple' },
     { label: 'Resume Builder', route: '/profile', queryParams: { tab: 'resume' }, icon: 'ph-file-text' },
-    { label: 'Job Application',route: '/jobs',          icon: 'ph-briefcase' },
+    { label: 'Job Application', route: '/jobs', icon: 'ph-briefcase' },
     { label: 'Mock Interview', route: '/mock-interview', icon: 'ph-video-camera' },
-    { label: 'Upskilling',     route: '/upskilling',    icon: 'ph-chalkboard-teacher' },
-    { label: 'Analytics',      route: '/insights',      icon: 'ph-chart-bar' },
+    { label: 'Upskilling', route: '/upskilling', icon: 'ph-chalkboard-teacher' },
+    { label: 'Analytics', route: '/insights', icon: 'ph-chart-bar' },
   ];
 
   navItems = signal<NavItem[]>(this.buildNav());
 
   private buildNav(): NavItem[] {
-    const role = this.authService?.getRole() ?? 'candidate';
+    const role = this.authService?.getRole() ?? '';
     const items = [...this.baseNav];
     if (role === 'candidate') {
       items.push({ label: 'Organisations', route: '/organisation', icon: 'ph-buildings' });
@@ -666,7 +666,7 @@ export class AppShellComponent implements OnInit, OnDestroy {
     private profileService: ProfileService,
     private router: Router,
     @Inject(PLATFORM_ID) private platformId: Object
-  ) {}
+  ) { }
 
   ngOnInit() {
     if (isPlatformBrowser(this.platformId)) {
@@ -733,10 +733,10 @@ export class AppShellComponent implements OnInit, OnDestroy {
   userInitials() {
     const profile = this.userProfile();
     const user = this.authService.getCurrentUser();
-    
+
     const firstName = profile?.firstName || user?.firstName || 'U';
     const lastName = profile?.lastName || user?.lastName || '';
-    
+
     const fn = firstName?.[0] ?? '';
     const ln = lastName?.[0] ?? '';
     return (fn + ln).toUpperCase() || '?';

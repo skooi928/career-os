@@ -38,6 +38,10 @@ public class OrganisationMember {
     @Builder.Default
     private OrgMemberRole role = OrgMemberRole.MENTOR;
 
+    @Column(name = "status", nullable = false)
+    @Builder.Default
+    private String status = "APPROVED";
+
     @Column(name = "invited_by", insertable = false, updatable = false)
     private UUID invitedBy;
 

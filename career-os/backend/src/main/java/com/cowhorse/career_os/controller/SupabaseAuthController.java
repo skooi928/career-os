@@ -62,6 +62,31 @@ public class SupabaseAuthController {
         authorizeAzureWithRole(response, "mentor");
     }
 
+    @GetMapping("/azure/link")
+    public void linkAzure(@RequestParam("token") String token, HttpServletResponse response) throws IOException {
+        try {
+            if (token == null || token.isEmpty()) {
+                response.sendRedirect("http://localhost:4200/settings?error=" + URLEncoder.encode("Missing token", StandardCharsets.UTF_8));
+                return;
+            }
+            String uid = jwtTokenProvider.getUidFromToken(token);
+            if (uid == null || uid.isEmpty()) {
+                response.sendRedirect("http://localhost:4200/settings?error=" + URLEncoder.encode("Invalid token", StandardCharsets.UTF_8));
+                return;
+            }
+
+            Cookie linkingCookie = new Cookie("linking_user_id", uid);
+            linkingCookie.setHttpOnly(true);
+            linkingCookie.setPath("/api/auth/callback");
+            linkingCookie.setMaxAge(300);
+            response.addCookie(linkingCookie);
+
+            authorizeAzureWithRole(response, "employer");
+        } catch (Exception e) {
+            response.sendRedirect("http://localhost:4200/settings?error=" + URLEncoder.encode("Link failed: " + e.getMessage(), StandardCharsets.UTF_8));
+        }
+    }
+
     private void authorizeAzureWithRole(HttpServletResponse response, String role) throws IOException {
         try {
             SecureRandom sr = new SecureRandom();
@@ -125,12 +150,15 @@ public class SupabaseAuthController {
         // Retrieve code verifier from cookie
         String codeVerifier = null;
         String pendingRole = "employer"; // Default for Microsoft login is now employer
+        String linkingUserId = null;
         if (request.getCookies() != null) {
             for (Cookie cookie : request.getCookies()) {
                 if ("pkce_verifier".equals(cookie.getName())) {
                     codeVerifier = cookie.getValue();
                 } else if ("pending_role".equals(cookie.getName())) {
                     pendingRole = cookie.getValue();
+                } else if ("linking_user_id".equals(cookie.getName())) {
+                    linkingUserId = cookie.getValue();
                 }
             }
         }
@@ -197,6 +225,40 @@ public class SupabaseAuthController {
                             actualRole = pendingRole;
                         }
 
+                        if (linkingUserId != null) {
+                            UUID linkingUuid = UUID.fromString(linkingUserId);
+                            UUID azureUuid = UUID.fromString(uid);
+                            
+                            UserProfile linkingProfile = userProfileRepository.findByUserId(linkingUuid).orElse(null);
+                            UserProfile azureProfile = userProfileRepository.findByUserId(azureUuid).orElse(null);
+                            
+                            if (linkingProfile != null && azureProfile != null) {
+                                linkingProfile.setLinkedUserId(azureUuid);
+                                azureProfile.setLinkedUserId(linkingUuid);
+                                userProfileRepository.save(linkingProfile);
+                                userProfileRepository.save(azureProfile);
+                            }
+                            
+                            // Clear cookies
+                            Cookie clearVerifier = new Cookie("pkce_verifier", null);
+                            clearVerifier.setMaxAge(0);
+                            clearVerifier.setPath("/api/auth/callback");
+                            response.addCookie(clearVerifier);
+
+                            Cookie clearRole = new Cookie("pending_role", null);
+                            clearRole.setMaxAge(0);
+                            clearRole.setPath("/api/auth/callback");
+                            response.addCookie(clearRole);
+
+                            Cookie clearLink = new Cookie("linking_user_id", null);
+                            clearLink.setMaxAge(0);
+                            clearLink.setPath("/api/auth/callback");
+                            response.addCookie(clearLink);
+
+                            response.sendRedirect("http://localhost:4200/settings?linked=true");
+                            return;
+                        }
+
                         // Generate a backend token that includes the actual/correct role
                         finalToken = jwtTokenProvider.generateTokenWithSupabaseUid(email, uid, actualRole);
                     }
@@ -214,6 +276,11 @@ public class SupabaseAuthController {
                 clearRole.setMaxAge(0);
                 clearRole.setPath("/api/auth/callback");
                 response.addCookie(clearRole);
+
+                Cookie clearLink = new Cookie("linking_user_id", null);
+                clearLink.setMaxAge(0);
+                clearLink.setPath("/api/auth/callback");
+                response.addCookie(clearLink);
 
                 // Redirect back to frontend with our backend token
                 String redirectUrl = frontendCallbackUrl + "?token=" + URLEncoder.encode(finalToken, StandardCharsets.UTF_8);

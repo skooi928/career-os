@@ -31,6 +31,7 @@ export interface OrganisationMember {
   organisationId: string;
   userId: string;
   role: OrgMemberRole;
+  status: string;
   invitedBy?: string;
   joinedAt: string;
   organisation?: Organisation;
@@ -168,4 +169,15 @@ export interface LearnerStats {
   totalEnrolled: number;
   completed: number;
   inProgress: number;
+}
+
+export interface PendingMembership {
+  id: string;
+  organisationId: string;
+  organisationName: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  role: string;
+  joinedAt: string;
 }

@@ -30,6 +30,21 @@ public class ProfileService {
 
     // ==================== User Profile Methods ====================
 
+    public UUID getDataOwnerId(UUID userId) {
+        UserProfile profile = userProfileRepository.findByUserId(userId).orElse(null);
+        if (profile != null && profile.getLinkedUserId() != null) {
+            UserProfile linkedProfile = userProfileRepository.findByUserId(profile.getLinkedUserId()).orElse(null);
+            if (linkedProfile != null) {
+                if ("candidate".equalsIgnoreCase(profile.getRole())) {
+                    return profile.getUserId();
+                } else if ("candidate".equalsIgnoreCase(linkedProfile.getRole())) {
+                    return linkedProfile.getUserId();
+                }
+            }
+        }
+        return userId;
+    }
+
     public UserProfileDTO getUserProfileBySupabaseUid(String supabaseUid) {
         log.info("Fetching profile for Supabase UID/UUID: {}", supabaseUid);
         UUID userUuid;
@@ -40,44 +55,48 @@ public class ProfileService {
             throw new RuntimeException("Invalid user ID format");
         }
         
-        UserProfile userProfile = userProfileRepository.findByUserId(userUuid)
+        UserProfile loggedInProfile = userProfileRepository.findByUserId(userUuid)
                 .orElseThrow(() -> {
                     log.error("UserProfile not found for UUID: {}", userUuid);
                     return new RuntimeException("Profile not found for UUID: " + supabaseUid);
                 });
 
-        log.debug("Found UserProfile: {}. Fetching related records...", userProfile.getId());
+        UUID ownerUuid = getDataOwnerId(userUuid);
+        UserProfile ownerProfile = userProfileRepository.findByUserId(ownerUuid)
+                .orElse(loggedInProfile);
 
-        List<ExperienceDTO> experiences = experienceRepository.findByUserId(userUuid)
+        log.debug("Found UserProfile: {}. Fetching related records...", ownerProfile.getId());
+
+        List<ExperienceDTO> experiences = experienceRepository.findByUserId(ownerUuid)
                 .stream().map(this::convertToExperienceDTO).collect(Collectors.toList());
         log.debug("Loaded {} experiences", experiences.size());
 
-        List<EducationDTO> education = educationRepository.findByUserId(userUuid)
+        List<EducationDTO> education = educationRepository.findByUserId(ownerUuid)
                 .stream().map(this::convertToEducationDTO).collect(Collectors.toList());
         log.debug("Loaded {} education records", education.size());
 
-        List<ProjectDTO> projects = projectRepository.findByUserId(userUuid)
+        List<ProjectDTO> projects = projectRepository.findByUserId(ownerUuid)
                 .stream().map(this::convertToProjectDTO).collect(Collectors.toList());
         log.debug("Loaded {} projects", projects.size());
 
-        List<SkillDTO> skills = skillRepository.findByUserId(userUuid)
+        List<SkillDTO> skills = skillRepository.findByUserId(ownerUuid)
                 .stream().map(this::convertToSkillDTO).collect(Collectors.toList());
         log.debug("Loaded {} skills", skills.size());
 
-        List<QuickTaskDTO> quickTasks = quickTaskRepository.findByUserProfileId(userProfile.getId())
+        List<QuickTaskDTO> quickTasks = quickTaskRepository.findByUserProfileId(ownerProfile.getId())
                 .stream().map(this::convertToQuickTaskDTO).collect(Collectors.toList());
         log.debug("Loaded {} quick tasks", quickTasks.size());
 
         return UserProfileDTO.builder()
-                .id(userProfile.getId())
-                .firstName(userProfile.getFirstName())
-                .lastName(userProfile.getLastName())
+                .id(loggedInProfile.getId())
+                .firstName(ownerProfile.getFirstName())
+                .lastName(ownerProfile.getLastName())
                 .email("")     // Typically provided by client or auth service
-                .role(userProfile.getRole())
-                .phone(userProfile.getPhone())
-                .location(userProfile.getLocation())
-                .bio(userProfile.getBio())
-                .profileImageUrl(userProfile.getProfileImageUrl())
+                .role(loggedInProfile.getRole())
+                .phone(ownerProfile.getPhone())
+                .location(ownerProfile.getLocation())
+                .bio(ownerProfile.getBio())
+                .profileImageUrl(ownerProfile.getProfileImageUrl())
                 .experiences(experiences)
                 .education(education)
                 .projects(projects)
@@ -89,26 +108,32 @@ public class ProfileService {
 
     public UserProfileDTO updateUserProfileBySupabaseUid(String supabaseUid, UserProfileDTO profileDTO) {
         UUID userUuid = UUID.fromString(supabaseUid);
-        UserProfile userProfile = userProfileRepository.findByUserId(userUuid)
+        UUID ownerUuid = getDataOwnerId(userUuid);
+        
+        UserProfile ownerProfile = userProfileRepository.findByUserId(ownerUuid)
+                .orElseThrow(() -> new RuntimeException("Profile not found for UUID: " + ownerUuid));
+
+        ownerProfile.setFirstName(profileDTO.getFirstName());
+        ownerProfile.setLastName(profileDTO.getLastName());
+        ownerProfile.setPhone(profileDTO.getPhone());
+        ownerProfile.setLocation(profileDTO.getLocation());
+        ownerProfile.setBio(profileDTO.getBio());
+        ownerProfile.setProfileImageUrl(profileDTO.getProfileImageUrl());
+
+        userProfileRepository.save(ownerProfile);
+
+        UserProfile loggedInProfile = userProfileRepository.findByUserId(userUuid)
                 .orElseThrow(() -> new RuntimeException("Profile not found for UUID: " + supabaseUid));
-
-        userProfile.setFirstName(profileDTO.getFirstName());
-        userProfile.setLastName(profileDTO.getLastName());
-        userProfile.setPhone(profileDTO.getPhone());
-        userProfile.setLocation(profileDTO.getLocation());
-        userProfile.setBio(profileDTO.getBio());
-        userProfile.setProfileImageUrl(profileDTO.getProfileImageUrl());
-
         if (profileDTO.getRole() != null && !profileDTO.getRole().isEmpty()) {
             String newRole = profileDTO.getRole();
-            if (!newRole.equalsIgnoreCase(userProfile.getRole())) {
-                userProfile.setRole(newRole);
+            if (!newRole.equalsIgnoreCase(loggedInProfile.getRole())) {
+                loggedInProfile.setRole(newRole);
                 onboardingService.initializeRoleSpecificRecords(supabaseUid, newRole);
+                userProfileRepository.save(loggedInProfile);
             }
         }
 
-        userProfileRepository.save(userProfile);
-        dashboardService.logActivity(userUuid, "PROFILE", "Profile details updated");
+        dashboardService.logActivity(ownerUuid, "PROFILE", "Profile details updated");
 
         return getUserProfileBySupabaseUid(supabaseUid);
     }
@@ -116,9 +141,10 @@ public class ProfileService {
     // Experience Methods
     public ExperienceDTO addExperienceBySupabaseUid(String supabaseUid, ExperienceDTO experienceDTO) {
         UUID userUuid = UUID.fromString(supabaseUid);
+        UUID ownerUuid = getDataOwnerId(userUuid);
         
         Experience experience = Experience.builder()
-                .userId(userUuid)
+                .userId(ownerUuid)
                 .jobTitle(experienceDTO.getJobTitle())
                 .company(experienceDTO.getCompany())
                 .startDate(experienceDTO.getStartDate())
@@ -129,7 +155,7 @@ public class ProfileService {
                 .build();
 
         Experience saved = experienceRepository.save(experience);
-        dashboardService.logActivity(userUuid, "PROFILE", "Added experience: <strong>" + saved.getJobTitle() + "</strong> at <strong>" + saved.getCompany() + "</strong>");
+        dashboardService.logActivity(ownerUuid, "PROFILE", "Added experience: <strong>" + saved.getJobTitle() + "</strong> at <strong>" + saved.getCompany() + "</strong>");
         return convertToExperienceDTO(saved);
     }
 
@@ -156,9 +182,10 @@ public class ProfileService {
     // Education Methods
     public EducationDTO addEducationBySupabaseUid(String supabaseUid, EducationDTO educationDTO) {
         UUID userUuid = UUID.fromString(supabaseUid);
+        UUID ownerUuid = getDataOwnerId(userUuid);
 
         Education education = Education.builder()
-                .userId(userUuid)
+                .userId(ownerUuid)
                 .degree(educationDTO.getDegree())
                 .institution(educationDTO.getInstitution())
                 .field(educationDTO.getField())
@@ -171,7 +198,7 @@ public class ProfileService {
                 .build();
 
         Education saved = educationRepository.save(education);
-        dashboardService.logActivity(userUuid, "PROFILE", "Added education: <strong>" + saved.getDegree() + "</strong> at <strong>" + saved.getInstitution() + "</strong>");
+        dashboardService.logActivity(ownerUuid, "PROFILE", "Added education: <strong>" + saved.getDegree() + "</strong> at <strong>" + saved.getInstitution() + "</strong>");
         return convertToEducationDTO(saved);
     }
 
@@ -200,13 +227,14 @@ public class ProfileService {
     // Project Methods
     public ProjectDTO addProjectBySupabaseUid(String supabaseUid, ProjectDTO projectDTO) {
         UUID userUuid = UUID.fromString(supabaseUid);
+        UUID ownerUuid = getDataOwnerId(userUuid);
 
         String technologiesStr = projectDTO.getTechnologies() != null 
                 ? String.join(",", projectDTO.getTechnologies()) 
                 : "";
 
         Project project = Project.builder()
-                .userId(userUuid)
+                .userId(ownerUuid)
                 .title(projectDTO.getTitle())
                 .description(projectDTO.getDescription())
                 .technologies(technologiesStr)
@@ -216,7 +244,7 @@ public class ProfileService {
                 .build();
 
         Project saved = projectRepository.save(project);
-        dashboardService.logActivity(userUuid, "PROFILE", "Added project: <strong>" + saved.getTitle() + "</strong>");
+        dashboardService.logActivity(ownerUuid, "PROFILE", "Added project: <strong>" + saved.getTitle() + "</strong>");
         return convertToProjectDTO(saved);
     }
 
@@ -246,19 +274,20 @@ public class ProfileService {
     // Skill Methods
     public SkillDTO addSkillBySupabaseUid(String supabaseUid, SkillDTO skillDTO) {
         UUID userUuid = UUID.fromString(supabaseUid);
+        UUID ownerUuid = getDataOwnerId(userUuid);
 
         Skill.ProficiencyLevel proficiency = Skill.ProficiencyLevel.valueOf(
                 skillDTO.getProficiency().toUpperCase());
 
         Skill skill = Skill.builder()
-                .userId(userUuid)
+                .userId(ownerUuid)
                 .name(skillDTO.getName())
                 .proficiency(proficiency)
                 .endorsed(0)
                 .build();
 
         Skill saved = skillRepository.save(skill);
-        dashboardService.logActivity(userUuid, "PROFILE", "Added skill: <strong>" + saved.getName() + "</strong>");
+        dashboardService.logActivity(ownerUuid, "PROFILE", "Added skill: <strong>" + saved.getName() + "</strong>");
         return convertToSkillDTO(saved);
     }
 
@@ -283,8 +312,9 @@ public class ProfileService {
     // Quick Task Methods
     public QuickTaskDTO addQuickTaskBySupabaseUid(String supabaseUid, QuickTaskDTO taskDTO) {
         UUID userUuid = UUID.fromString(supabaseUid);
-        UserProfile userProfile = userProfileRepository.findByUserId(userUuid)
-                .orElseThrow(() -> new RuntimeException("Profile not found for UUID: " + supabaseUid));
+        UUID ownerUuid = getDataOwnerId(userUuid);
+        UserProfile userProfile = userProfileRepository.findByUserId(ownerUuid)
+                .orElseThrow(() -> new RuntimeException("Profile not found for UUID: " + ownerUuid));
 
         QuickTask task = QuickTask.builder()
                 .userProfile(userProfile)

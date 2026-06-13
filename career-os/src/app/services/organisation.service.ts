@@ -65,6 +65,14 @@ export class OrganisationService {
     return this.http.get<OrgDashboardStats>(`${this.base}/${orgId}/stats`);
   }
 
+  joinOrganisation(orgId: string): Observable<OrganisationMember> {
+    return this.http.post<OrganisationMember>(`${this.base}/${orgId}/join`, {});
+  }
+
+  getUserMemberships(): Observable<OrganisationMember[]> {
+    return this.http.get<OrganisationMember[]>(`${this.base}/memberships/my`);
+  }
+
   // Admin
   getAllOrganisations(): Observable<Organisation[]> {
     return this.http.get<Organisation[]>(`${this.base}/admin/all`);
