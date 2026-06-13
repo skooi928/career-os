@@ -34,6 +34,10 @@ public class SettingsService {
         }
     }
 
+    public UserProfile getProfileByUserId(UUID userId) {
+        return userProfileRepository.findByUserId(userId).orElse(null);
+    }
+
     public LinkedAccountStatusDTO getLinkedAccountStatus(UUID userId) {
         UserProfile profile = userProfileRepository.findByUserId(userId).orElse(null);
         if (profile != null && profile.getLinkedUserId() != null) {

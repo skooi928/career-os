@@ -94,11 +94,9 @@
       <i class="ph ph-user"></i> Profile Details
     </button>
 
-    <ng-container *ngIf="authService.getCurrentUser()?.role !== 'employer'">
-      <button class="profile-tab" [class.active]="mainActiveTab() === 'resume'" (click)="switchTab('resume')">
-        <i class="ph ph-file-text"></i> Resume & Alignment
-      </button>
-    </ng-container>
+    <button class="profile-tab" [class.active]="mainActiveTab() === 'resume'" (click)="switchTab('resume')">
+      <i class="ph ph-file-text"></i> Resume & Alignment
+    </button>
 
 
     <div *ngIf="mainActiveTab() === 'resume' && pageState() === 'portfolio' && isSyncNoticeMinimized()"
@@ -557,12 +555,38 @@
         </form>
       </div>
     </div>
+
+    <!-- Badges Section -->
+    <div class="section badges-section">
+      <div class="section-header" (click)="toggleSection('badges')">
+        <h2><i class="ph-medal"></i> My Badges</h2>
+        <i [class]="expandedSections().badges ? 'ph-caret-down' : 'ph-caret-right'"></i>
+      </div>
+      <div *ngIf="expandedSections().badges" class="section-content">
+        <div *ngIf="badges().length === 0" class="empty-badges">
+          <p>No badges yet. Complete courses to earn digital credentials.</p>
+          <a routerLink="/upskilling">Browse Courses</a>
+        </div>
+        <div class="badges-grid">
+          <div *ngFor="let b of badges()" class="badge-item">
+            <div class="badge-icon">🏅</div>
+            <div class="badge-info">
+              <strong>{{ b.badge?.name || 'Badge' }}</strong>
+              <span class="badge-org">{{ b.badge?.organisation?.name }}</span>
+              <span class="badge-status" [class.verified]="b.verificationStatus === 'VERIFIED'">{{ b.verificationStatus
+                }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ── RESUME & SKILL ALIGNMENT TAB ── -->
   <div *ngIf="mainActiveTab() === 'resume'" class="resume-tab-container">
-    <!-- ── LOADING ── -->
-    <div *ngIf="pageState() === 'loading'" class="state-center">
+    <ng-container *ngIf="authService.getRole() !== 'employer' && authService.getRole() !== 'mentor'; else switchAccountTemplate">
+      <!-- ── LOADING ── -->
+      <div *ngIf="pageState() === 'loading'" class="state-center">
       <div class="spinner"></div>
       <p class="loading-text">Loading your portfolio...</p>
     </div>
@@ -846,30 +870,70 @@
         </div>
       </div>
     </div>
-  </div>
+    </ng-container>
 
-  <!-- Badges Section -->
-  <div class="section badges-section">
-    <div class="section-header" (click)="toggleSection('badges')">
-      <h2><i class="ph-medal"></i> My Badges</h2>
-      <i [class]="expandedSections().badges ? 'ph-caret-down' : 'ph-caret-right'"></i>
-    </div>
-    <div *ngIf="expandedSections().badges" class="section-content">
-      <div *ngIf="badges().length === 0" class="empty-badges">
-        <p>No badges yet. Complete courses to earn digital credentials.</p>
-        <a routerLink="/upskilling">Browse Courses</a>
-      </div>
-      <div class="badges-grid">
-        <div *ngFor="let b of badges()" class="badge-item">
-          <div class="badge-icon">🏅</div>
-          <div class="badge-info">
-            <strong>{{ b.badge?.name || 'Badge' }}</strong>
-            <span class="badge-org">{{ b.badge?.organisation?.name }}</span>
-            <span class="badge-status" [class.verified]="b.verificationStatus === 'VERIFIED'">{{ b.verificationStatus
-              }}</span>
+    <ng-template #switchAccountTemplate>
+      <div class="switch-account-overlay">
+        <div class="switch-card glass animated-fade-in">
+          <div class="switch-header">
+            <div class="switch-icon-box">
+              <i class="ph-duotone ph-user-switch"></i>
+            </div>
+            <h2>Change to your personal account to proceed</h2>
+            <p class="switch-sub">The Resume Builder and Skill Alignment features are exclusive to candidate profiles.</p>
+          </div>
+
+          <div class="switch-body">
+            <!-- Loading status -->
+            <div *ngIf="isSwitchingAccount()" class="switch-loading">
+              <div class="spinner"></div>
+              <p>Switching to your personal account...</p>
+            </div>
+
+            <!-- Error Message -->
+            <div *ngIf="switchError()" class="alert error">
+              <i class="ph ph-warning-circle"></i>
+              <div>
+                <strong>Switch Failed</strong>
+                <p>{{ switchError() }}</p>
+              </div>
+            </div>
+
+            <ng-container *ngIf="!isSwitchingAccount()">
+              <!-- Case 1: Has linked account -->
+              <div *ngIf="linkedAccountStatus()?.linked" class="linked-info">
+                <div class="linked-details-card">
+                  <span class="status-badge-connected">Linked Account Connected</span>
+                  <div class="linked-row">
+                    <i class="ph ph-envelope"></i>
+                    <span class="linked-email">{{ linkedAccountStatus()?.linkedEmail }}</span>
+                  </div>
+                  <div class="linked-row">
+                    <i class="ph ph-identification-badge"></i>
+                    <span class="linked-role">Candidate Persona</span>
+                  </div>
+                </div>
+
+                <button class="btn-switch-action" (click)="switchToPersonal()">
+                  <i class="ph ph-arrow-square-out"></i> Switch to Personal Account
+                </button>
+              </div>
+
+              <!-- Case 2: No linked account -->
+              <div *ngIf="linkedAccountStatus() && !linkedAccountStatus()?.linked" class="unlinked-info">
+                <div class="empty-linked-state">
+                  <i class="ph ph-link-break empty-icon"></i>
+                  <p>No personal account connected. Link your Candidate profile in Settings to enable the Resume Builder.</p>
+                </div>
+
+                <button class="btn-settings-action" routerLink="/settings">
+                  <i class="ph ph-gear"></i> Go to Settings to Link Account
+                </button>
+              </div>
+            </ng-container>
           </div>
         </div>
       </div>
-    </div>
+    </ng-template>
   </div>
 </div>

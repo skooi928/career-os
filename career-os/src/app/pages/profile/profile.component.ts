@@ -14,6 +14,7 @@ import { EventService } from '../../services/event.service';
 import { HttpClient } from '@angular/common/http';
 import { Subject, forkJoin } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { SettingsService, LinkedAccountStatus } from '../../services/settings.service';
 
 interface PersonalInfo {
   firstName: string;
@@ -90,6 +91,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
   isDownloading = signal(false);
   isGeneratingRoadmap = signal(false);
   profile = signal<UserProfileDTO | null>(null);
+
+  // Account switching properties
+  linkedAccountStatus = signal<LinkedAccountStatus | null>(null);
+  isSwitchingAccount = signal<boolean>(false);
+  switchError = signal<string | null>(null);
   
   // Roadmap properties
   showRoadmapModal = signal(false);
@@ -197,6 +203,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     private http: HttpClient,
     private router: Router,
     private route: ActivatedRoute,
+    private settingsService: SettingsService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {}
 
@@ -245,7 +252,37 @@ export class ProfileComponent implements OnInit, OnDestroy {
         }
       });
       this.loadProfileData();
+
+      const role = this.authService.getRole();
+      if (role === 'employer' || role === 'mentor') {
+        this.loadLinkedAccountStatus();
+      }
     }
+  }
+
+  loadLinkedAccountStatus() {
+    this.settingsService.getLinkedAccountStatus().subscribe({
+      next: (status) => {
+        this.linkedAccountStatus.set(status);
+      },
+      error: (err) => {
+        console.error('Failed to load linked account status', err);
+      }
+    });
+  }
+
+  switchToPersonal() {
+    this.isSwitchingAccount.set(true);
+    this.switchError.set(null);
+    this.authService.switchUserAccount().subscribe({
+      next: (res) => {
+        window.location.href = '/profile?tab=resume';
+      },
+      error: (err) => {
+        this.isSwitchingAccount.set(false);
+        this.switchError.set(err.error?.error || 'Failed to switch account. Please try again.');
+      }
+    });
   }
 
   loadProfileData() {
@@ -283,17 +320,23 @@ export class ProfileComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (profile: UserProfileDTO) => {
           // Update only the profile-specific fields
-          this.personalInfo.update(current => ({
-            ...current,
-            firstName: profile.firstName || current.firstName,
-            lastName: profile.lastName || current.lastName,
-            email: profile.email || current.email,
-            phone: profile.phone || '',
-            location: profile.location || '',
-            bio: profile.bio || '',
-            profileImage: profile.profileImageUrl || '',
-            role: profile.role || current.role
-          }));
+          this.personalInfo.update(current => {
+            const userRole = profile.role || current.role;
+            if ((userRole === 'employer' || userRole === 'mentor') && !this.linkedAccountStatus()) {
+              this.loadLinkedAccountStatus();
+            }
+            return {
+              ...current,
+              firstName: profile.firstName || current.firstName,
+              lastName: profile.lastName || current.lastName,
+              email: profile.email || current.email,
+              phone: profile.phone || '',
+              location: profile.location || '',
+              bio: profile.bio || '',
+              profileImage: profile.profileImageUrl || '',
+              role: userRole
+            };
+          });
 
           if (profile.experiences)
             this.experiences.set(profile.experiences);

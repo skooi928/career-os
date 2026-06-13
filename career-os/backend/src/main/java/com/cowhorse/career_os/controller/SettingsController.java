@@ -69,4 +69,36 @@ public class SettingsController {
             return ResponseEntity.badRequest().body(Map.of("error", "Failed to unlink account"));
         }
     }
+
+    @PostMapping("/switch")
+    public ResponseEntity<?> switchAccount(@RequestHeader("Authorization") String authHeader) {
+        UUID uid = getUidFromHeader(authHeader);
+        com.cowhorse.career_os.entity.UserProfile profile = settingsService.getProfileByUserId(uid);
+        if (profile == null || profile.getLinkedUserId() == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "No linked account found"));
+        }
+        
+        UUID linkedUid = profile.getLinkedUserId();
+        com.cowhorse.career_os.entity.UserProfile linkedProfile = settingsService.getProfileByUserId(linkedUid);
+        if (linkedProfile == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Linked account profile not found"));
+        }
+        
+        String linkedEmail = settingsService.getEmailByUserId(linkedUid);
+        String token = jwtTokenProvider.generateTokenWithSupabaseUid(
+                linkedEmail, 
+                linkedUid.toString(), 
+                linkedProfile.getRole()
+        );
+        
+        return ResponseEntity.ok(com.cowhorse.career_os.dto.AuthResponse.builder()
+                .token(token)
+                .email(linkedEmail)
+                .userId(linkedUid.toString())
+                .firstName(linkedProfile.getFirstName())
+                .lastName(linkedProfile.getLastName())
+                .role(linkedProfile.getRole())
+                .emailVerified(true)
+                .build());
+    }
 }
