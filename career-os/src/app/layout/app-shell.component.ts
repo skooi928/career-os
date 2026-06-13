@@ -661,6 +661,7 @@ export class AppShellComponent implements OnInit, OnDestroy {
     { label: 'Resume Builder', route: '/profile', queryParams: { tab: 'resume' }, icon: 'ph-file-text' },
     { label: 'Job Application', route: '/jobs', icon: 'ph-briefcase' },
     { label: 'Mock Interview', route: '/mock-interview', icon: 'ph-video-camera' },
+    { label: 'Community Post', route: '/forum', icon: 'ph-chat-circle' },
     { label: 'Upskilling', route: '/upskilling', icon: 'ph-chalkboard-teacher' },
     { label: 'Analytics', route: '/insights', icon: 'ph-chart-bar' },
   ];
@@ -709,7 +710,7 @@ export class AppShellComponent implements OnInit, OnDestroy {
     if (isPlatformBrowser(this.platformId)) {
       this.loadUserProfile();
       this.loadLinkedAccountStatus();
-      
+
       // Sync user profile name and image when updated in ProfileComponent
       this.profileService.profileUpdated$
         .pipe(takeUntil(this.destroy$))

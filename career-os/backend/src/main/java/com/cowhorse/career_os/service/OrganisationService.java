@@ -151,7 +151,21 @@ public class OrganisationService {
     }
 
     public OrganisationMember updateMemberRole(UUID orgId, UUID memberId, String requesterId, UpdateMemberRoleRequest req) {
-        assertAdmin(orgId, requesterId);
+        boolean hasAdmin = memberRepo.findByOrganisationId(orgId).stream()
+                .anyMatch(m -> m.getRole() == OrgMemberRole.ORG_ADMIN && "APPROVED".equalsIgnoreCase(m.getStatus()));
+
+        if (hasAdmin) {
+            assertAdmin(orgId, requesterId);
+        } else {
+            if (req.getRole() != OrgMemberRole.ORG_ADMIN) {
+                throw new RuntimeException("When organisation has no admin, only role change to ORG_ADMIN is allowed");
+            }
+            String requesterEmail = getEmailByUserId(UUID.fromString(requesterId));
+            if (!"zslee0406@gmail.com".equalsIgnoreCase(requesterEmail)) {
+                throw new RuntimeException("Requires approval from super admin zslee0406@gmail.com");
+            }
+        }
+
         OrganisationMember member = memberRepo.findById(memberId).orElseThrow();
         member.setRole(req.getRole());
         return memberRepo.save(member);
