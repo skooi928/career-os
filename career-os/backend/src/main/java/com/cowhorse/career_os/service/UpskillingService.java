@@ -8,14 +8,17 @@ import org.springframework.stereotype.Service;
 import com.cowhorse.career_os.dto.UpskillingDTOs.CreateCourseRequest;
 import com.cowhorse.career_os.dto.UpskillingDTOs.EnrollRequest;
 import com.cowhorse.career_os.dto.UpskillingDTOs.LearnerStatsResponse;
+import com.cowhorse.career_os.dto.UpskillingDTOs.LinkCourseBadgeRequest;
 import com.cowhorse.career_os.dto.UpskillingDTOs.UpdateCourseRequest;
 import com.cowhorse.career_os.dto.UpskillingDTOs.UpdateProgressRequest;
+import com.cowhorse.career_os.dto.UpskillingDTOs.UpdateProgressResponse;
 import com.cowhorse.career_os.entity.Course;
 import com.cowhorse.career_os.entity.CourseEnrollment;
 import com.cowhorse.career_os.entity.DifficultyLevel;
 import com.cowhorse.career_os.entity.EnrollmentStatus;
 import com.cowhorse.career_os.entity.OrgMemberRole;
 import com.cowhorse.career_os.entity.OrganisationMember;
+import com.cowhorse.career_os.entity.UserBadge;
 import com.cowhorse.career_os.repository.CourseEnrollmentRepository;
 import com.cowhorse.career_os.repository.CourseRepository;
 import com.cowhorse.career_os.repository.OrganisationMemberRepository;
@@ -26,13 +29,16 @@ public class UpskillingService {
     private final CourseRepository courseRepo;
     private final CourseEnrollmentRepository enrollmentRepo;
     private final OrganisationMemberRepository memberRepo;
+    private final BadgeService badgeService;
 
     public UpskillingService(CourseRepository courseRepo,
                              CourseEnrollmentRepository enrollmentRepo,
-                             OrganisationMemberRepository memberRepo) {
+                             OrganisationMemberRepository memberRepo,
+                             BadgeService badgeService) {
         this.courseRepo = courseRepo;
         this.enrollmentRepo = enrollmentRepo;
         this.memberRepo = memberRepo;
+        this.badgeService = badgeService;
     }
 
     public List<Course> getPublishedCourses(String category) {
@@ -40,6 +46,11 @@ public class UpskillingService {
             return courseRepo.findByIsPublishedTrueAndCategory(category);
         }
         return courseRepo.findByIsPublishedTrue();
+    }
+
+    /** Public — no membership check. Returns only published courses for the org. */
+    public List<Course> getPublicOrgCourses(UUID orgId) {
+        return courseRepo.findByOrganisationIdAndIsPublishedTrue(orgId);
     }
 
     public Course getCourseById(UUID courseId) {
@@ -59,14 +70,25 @@ public class UpskillingService {
         return enrollmentRepo.save(enrollment);
     }
 
-    public CourseEnrollment updateProgress(UUID enrollmentId, String userId, UpdateProgressRequest req) {
+    public UpdateProgressResponse updateProgress(UUID enrollmentId, String userId, UpdateProgressRequest req) {
         CourseEnrollment enrollment = enrollmentRepo.findById(enrollmentId).orElseThrow();
         if (!enrollment.getUserId().equals(UUID.fromString(userId))) throw new RuntimeException("Unauthorized");
         enrollment.setProgressPercentage(req.getProgressPercentage());
-        if (req.getProgressPercentage() >= 100) {
+
+        UserBadge awardedBadge = null;
+        if (req.getProgressPercentage() >= 100 && enrollment.getCompletionStatus() != EnrollmentStatus.COMPLETED) {
             enrollment.setCompletionStatus(EnrollmentStatus.COMPLETED);
+            // Auto-award linked badge if course has one
+            Course course = courseRepo.findById(enrollment.getCourseId()).orElseThrow();
+            if (course.getBadgeId() != null) {
+                awardedBadge = badgeService.autoAwardFromCourse(
+                    enrollment.getUserId(), course.getId(), course.getBadgeId()
+                );
+            }
         }
-        return enrollmentRepo.save(enrollment);
+
+        CourseEnrollment saved = enrollmentRepo.save(enrollment);
+        return new UpdateProgressResponse(saved, awardedBadge);
     }
 
     public void dropCourse(UUID enrollmentId, String userId) {
@@ -133,6 +155,14 @@ public class UpskillingService {
     public List<CourseEnrollment> getCourseEnrollments(UUID orgId, UUID courseId, String userId) {
         assertMember(orgId, userId);
         return enrollmentRepo.findByCourseId(courseId);
+    }
+
+    /** Link (or unlink) a badge to a course. Only org admins can do this. */
+    public Course linkBadgeToCourse(UUID orgId, UUID courseId, String userId, LinkCourseBadgeRequest req) {
+        assertAdmin(orgId, userId);
+        Course course = courseRepo.findById(courseId).orElseThrow(() -> new RuntimeException("Course not found"));
+        course.setBadgeId(req.getBadgeId()); // null = unlink
+        return courseRepo.save(course);
     }
 
     // --- Helpers ---

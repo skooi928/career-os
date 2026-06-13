@@ -19,9 +19,11 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.cowhorse.career_os.dto.BadgeDTOs.*;
+import com.cowhorse.career_os.dto.BadgeDTOs.CandidateMatchResponse;
 import com.cowhorse.career_os.dto.BadgeDTOs.CreateBadgeRequest;
 import com.cowhorse.career_os.dto.BadgeDTOs.FileUploadResponse;
 import com.cowhorse.career_os.dto.BadgeDTOs.IssueBadgeRequest;
+import com.cowhorse.career_os.dto.BadgeDTOs.JobRequiredBadgeRequest;
 import com.cowhorse.career_os.dto.BadgeDTOs.ReviewConversionRequest;
 import com.cowhorse.career_os.dto.BadgeDTOs.SubmitConversionRequest;
 import com.cowhorse.career_os.entity.Badge;
@@ -132,5 +134,34 @@ public class BadgeController {
                                                                         @RequestHeader("Authorization") String auth,
                                                                         @RequestBody ReviewConversionRequest req) {
         return ResponseEntity.ok(badgeService.reviewConversion(conversionId, getUid(auth), req));
+    }
+
+    // ── Job Badge Requirements ────────────────────────────────────────────────
+
+    /** Employer: set required/preferred badges for a job posting. */
+    @PostMapping("/jobs/{jobId}/requirements")
+    public ResponseEntity<List<com.cowhorse.career_os.entity.JobRequiredBadge>> setJobBadgeRequirements(
+            @PathVariable UUID jobId,
+            @RequestHeader("Authorization") String auth,
+            @RequestBody List<JobRequiredBadgeRequest> requirements) {
+        return ResponseEntity.ok(badgeService.setJobBadgeRequirements(jobId, getUid(auth), requirements));
+    }
+
+    /** Public: get all badge/skill requirements for a job. */
+    @GetMapping("/jobs/{jobId}/requirements")
+    public ResponseEntity<List<com.cowhorse.career_os.entity.JobRequiredBadge>> getJobBadgeRequirements(
+            @PathVariable UUID jobId) {
+        return ResponseEntity.ok(badgeService.getJobBadgeRequirements(jobId));
+    }
+
+    /**
+     * Recruiter: rank applicants for a job by badge match score.
+     * Returns candidate IDs with match scores, sorted descending.
+     */
+    @GetMapping("/jobs/{jobId}/candidate-match")
+    public ResponseEntity<List<CandidateMatchResponse>> getCandidateMatches(
+            @PathVariable UUID jobId,
+            @RequestHeader("Authorization") String auth) {
+        return ResponseEntity.ok(badgeService.getCandidateMatchesForJob(jobId, getUid(auth)));
     }
 }

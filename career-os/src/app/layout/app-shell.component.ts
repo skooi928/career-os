@@ -667,18 +667,15 @@ export class AppShellComponent implements OnInit, OnDestroy {
 
   navItems = signal<NavItem[]>(this.buildNav());
 
+  private buildNav(role?: string): NavItem[] {
+    const r = role ?? this.authService?.getRole() ?? 'candidate';
   private buildNav(): NavItem[] {
     const role = this.authService?.getRole() ?? '';
     const items = [...this.baseNav];
-    if (role === 'candidate') {
-      items.push({ label: 'Organisations', route: '/organisation', icon: 'ph-buildings' });
-    }
-    if (role === 'employer' || role === 'admin') {
+    if (r === 'employer' || r === 'admin') {
       items.splice(4, 0, { label: 'Post a Job', route: '/job-posting', icon: 'ph-plus-circle' });
     }
-    if (role === 'employer' || role === 'admin') {
-      items.push({ label: 'Organisation', route: '/organisation', icon: 'ph-buildings' });
-    }
+    items.push({ label: 'Organisations', route: '/organisation', icon: 'ph-buildings' });
     return items;
   }
 
@@ -688,16 +685,16 @@ export class AppShellComponent implements OnInit, OnDestroy {
 
   filteredNavItems = computed(() => {
     const role = this.userRole();
-    return this.navItems().filter(item => {
-      if (item.label === 'Post a Job' && role !== 'employer') {
-        return false;
-      }
-      if (item.label === 'Job Application' && role !== 'candidate') {
-        return false;
-      }
-      if (item.label === 'Mock Interview' && role !== 'candidate') {
-        return false;
-      }
+    // Rebuild nav based on reactive role so it's always in sync with no duplicates
+    const items = [...this.baseNav];
+    if (role === 'employer' || role === 'admin') {
+      items.splice(4, 0, { label: 'Post a Job', route: '/job-posting', icon: 'ph-plus-circle' });
+    }
+    items.push({ label: 'Organisations', route: '/organisation', icon: 'ph-buildings' });
+    return items.filter(item => {
+      if (item.label === 'Post a Job' && role !== 'employer' && role !== 'admin') return false;
+      if (item.label === 'Job Application' && role !== 'candidate') return false;
+      if (item.label === 'Mock Interview' && role !== 'candidate') return false;
       return true;
     });
   });

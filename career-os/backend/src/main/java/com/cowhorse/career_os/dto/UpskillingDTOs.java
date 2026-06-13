@@ -2,7 +2,9 @@ package com.cowhorse.career_os.dto;
 
 import java.util.UUID;
 
+import com.cowhorse.career_os.entity.CourseEnrollment;
 import com.cowhorse.career_os.entity.DifficultyLevel;
+import com.cowhorse.career_os.entity.UserBadge;
 
 import lombok.Data;
 
@@ -34,6 +36,28 @@ public class UpskillingDTOs {
     @Data
     public static class UpdateProgressRequest {
         private int progressPercentage;
+    }
+
+    /** Links (or unlinks when badgeId=null) a badge to a course. */
+    @Data
+    public static class LinkCourseBadgeRequest {
+        private UUID badgeId; // null to remove the link
+    }
+
+    /**
+     * Response after updating progress.
+     * awardedBadge is non-null only when the user just completed the course
+     * AND the course had a linked badge AND the user did not already hold it.
+     */
+    @Data
+    public static class UpdateProgressResponse {
+        private CourseEnrollment enrollment;
+        private UserBadge awardedBadge; // null = no badge awarded
+
+        public UpdateProgressResponse(CourseEnrollment enrollment, UserBadge awardedBadge) {
+            this.enrollment = enrollment;
+            this.awardedBadge = awardedBadge;
+        }
     }
 
     @Data

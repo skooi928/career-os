@@ -1,15 +1,15 @@
 import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID, signal } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Router, ActivatedRoute, RouterLink, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { JobService, Job } from '../../services/job.service';
 import { ProfileService, QuickTask } from '../../services/profile.service';
 import { CareerAnalysisService } from '../../services/career-analysis.service';
 import { UpskillingService } from '../../services/upskilling.service';
 import { CourseEnrollment } from '../../types/upskilling.types';
-import { Observable, takeUntil, Subject } from 'rxjs';
-import { Router, ActivatedRoute, RouterLink } from '@angular/router';
+import { Observable, Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
 
 import { SavedJobService } from '../../services/saved-job.service';
@@ -1278,7 +1278,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.loadTasks();
       this.upskillingService.getMyEnrollments().subscribe({
         next: e => this.enrollments.set(e),
-        error: () => { }
+        error: () => {}
       });
       this.loadDashboardSummary();
 

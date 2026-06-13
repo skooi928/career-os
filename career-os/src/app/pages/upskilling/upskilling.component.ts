@@ -183,13 +183,15 @@ import { Course, LearnerStats } from '../../types/upskilling.types';
 export class UpskillingComponent implements OnInit {
   isLoading = signal(true);
   courses = signal<Course[]>([]);
-  enrolledIds = signal<Set<string>>(new Set());
   stats = signal<LearnerStats | null>(null);
   toast = signal('');
   search = signal('');
   selectedCategory = signal('');
   selectedDifficulty = signal('');
   selectedCourse = signal<Course | null>(null);
+
+  // Derived from shared service signal — stays in sync when enroll() fires
+  enrolledIds = computed(() => new Set(this.upskillingService.enrollments().map(e => e.courseId)));
 
   categories = computed(() => [...new Set(this.courses().map(c => c.category).filter(Boolean) as string[])]);
 
@@ -203,17 +205,15 @@ export class UpskillingComponent implements OnInit {
     })
   );
 
-  constructor(private upskillingService: UpskillingService) {}
+  constructor(public upskillingService: UpskillingService) {}
 
   ngOnInit() {
     this.upskillingService.getPublishedCourses().subscribe({
       next: c => { this.courses.set(c); this.isLoading.set(false); },
       error: () => this.isLoading.set(false)
     });
-    this.upskillingService.getMyEnrollments().subscribe({
-      next: enrollments => this.enrolledIds.set(new Set(enrollments.map(e => e.courseId))),
-      error: () => {}
-    });
+    // Load into shared signal (no-op if already loaded)
+    this.upskillingService.loadEnrollments();
     this.upskillingService.getMyStats().subscribe({
       next: s => this.stats.set(s),
       error: () => {}
@@ -221,11 +221,9 @@ export class UpskillingComponent implements OnInit {
   }
 
   enroll(course: Course) {
+    // enrollInCourse() automatically updates the shared signal via tap()
     this.upskillingService.enrollInCourse({ courseId: course.id }).subscribe({
-      next: () => {
-        this.enrolledIds.update(ids => new Set([...ids, course.id]));
-        this.showToast(`Enrolled in "${course.title}"!`);
-      },
+      next: () => this.showToast(`Enrolled in "${course.title}"!`),
       error: () => this.showToast('Failed to enrol. Please try again.')
     });
   }

@@ -9,6 +9,31 @@ export type EnrollmentStatus = 'IN_PROGRESS' | 'COMPLETED' | 'DROPPED';
 export type BadgeVerificationStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
 export type ConversionStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
+// ─── Job Badge Types ──────────────────────────────────────────────────────────
+
+export interface JobRequiredBadge {
+  id: string;
+  jobId: string;
+  badgeId?: string;
+  badge?: Badge;
+  skillTag?: string;
+  isRequired: boolean; // true = mandatory, false = preferred
+}
+
+export interface CandidateMatchResponse {
+  candidateId: string;
+  candidateName: string;
+  matchScore: number;       // 0–100
+  matchedBadges: string[];  // badge IDs held
+  missingBadges: string[];  // required badge IDs missing
+}
+
+/** Response from PUT /enrollments/:id/progress — includes optional badge award. */
+export interface UpdateProgressResponse {
+  enrollment: CourseEnrollment;
+  awardedBadge: UserBadge | null; // non-null when badge auto-awarded on completion
+}
+
 // ─── Core Entities ───────────────────────────────────────────────────────────
 
 export interface Organisation {
@@ -49,6 +74,9 @@ export interface Course {
   createdAt: string;
   organisation?: Organisation;
   enrolledCount?: number;
+  /** Badge awarded automatically upon 100% completion. Null = no badge. */
+  badgeId?: string;
+  badge?: Badge;
 }
 
 export interface CourseEnrollment {
@@ -79,6 +107,9 @@ export interface UserBadge {
   badgeId: string;
   verificationStatus: BadgeVerificationStatus;
   issuedAt: string;
+  /** Populated when badge was auto-awarded by completing a course. */
+  awardedByCourseId?: string;
+  /** Eagerly loaded badge details. */
   badge?: Badge;
 }
 

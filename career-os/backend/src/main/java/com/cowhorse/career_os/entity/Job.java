@@ -68,6 +68,10 @@ public class Job {
     @JsonManagedReference
     private List<JobBenefit> benefits;
 
+    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "job_id")
+    private List<JobRequiredBadge> requiredBadges;
+
     @Transient
     private Long applicantsCount = 0L;
 
