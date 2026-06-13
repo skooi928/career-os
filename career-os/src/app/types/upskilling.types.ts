@@ -212,3 +212,87 @@ export interface PendingMembership {
   role: string;
   joinedAt: string;
 }
+
+// ─── Industry Project Marketplace ─────────────────────────────────────────────
+
+export type ProjectStatus = 'DRAFT' | 'OPEN' | 'CLOSED';
+export type ProjectApplicationStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'WITHDRAWN';
+
+export interface IndustryProject {
+  id: string;
+  organisationId: string;
+  organisation?: Organisation;
+  title: string;
+  description?: string;
+  skillsRequired?: string;
+  maxCandidates: number;
+  status: ProjectStatus;
+  deadline?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectRequiredBadge {
+  id: string;
+  projectId: string;
+  badgeId: string;
+  badge?: Badge;
+}
+
+export interface ProjectApplication {
+  id: string;
+  projectId: string;
+  userId: string;
+  status: ProjectApplicationStatus;
+  note?: string;
+  appliedAt: string;
+  reviewedAt?: string;
+}
+
+export interface EligibilityResult {
+  eligible: boolean;
+  missingBadges: Badge[];
+  recommendedCourses: Course[];
+}
+
+export interface CreateProjectRequest {
+  title: string;
+  description?: string;
+  skillsRequired?: string;
+  maxCandidates?: number;
+  deadline?: string;
+}
+
+// ─── Course Recognition ───────────────────────────────────────────────────────
+
+export type RecognitionStatus = 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED' | 'REVISION_REQUESTED';
+
+export interface CourseRecognitionRequest {
+  id: string;
+  courseId: string;
+  course?: Course;
+  submittingOrgId: string;
+  submittingOrg?: Organisation;
+  reviewingUniversityId?: string;
+  reviewingUniversity?: Organisation;
+  status: RecognitionStatus;
+  syllabusUrl?: string;
+  learningOutcomes?: string;
+  creditHours?: number;
+  reviewerNotes?: string;
+  submittedAt: string;
+  reviewedAt?: string;
+  updatedAt: string;
+}
+
+export interface SubmitRecognitionRequest {
+  reviewingUniversityId?: string;
+  syllabusUrl?: string;
+  learningOutcomes?: string;
+  creditHours?: number;
+}
+
+export interface ReviewDecisionRequest {
+  status: string;
+  notes?: string;
+}

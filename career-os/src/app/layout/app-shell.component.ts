@@ -3,6 +3,8 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 import { ProfileService, UserProfileDTO } from '../services/profile.service';
+import { OrganisationService } from '../services/organisation.service';
+import { Organisation } from '../types/upskilling.types';
 import { ThemeToggleComponent } from '../components/theme-toggle/theme-toggle.component';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -14,6 +16,8 @@ interface NavItem {
   icon: string;
   count?: number;
   queryParams?: Record<string, any>;
+  isSubItem?: boolean;
+  isSectionDivider?: boolean;
 }
 
 @Component({
@@ -40,15 +44,23 @@ interface NavItem {
         
         <!-- Navigation items -->
         <nav class="sidebar-nav">
-          @for (item of filteredNavItems(); track item.route) {
-            <a [routerLink]="item.route" 
-               [queryParams]="item.queryParams || {}"
-               routerLinkActive="active" 
-               class="nav-item">
-              <i [class]="'ph ' + item.icon + ' nav-icon'"></i>
-              <span class="nav-label" *ngIf="!isSidebarCollapsed()">{{ item.label }}</span>
-              <span class="nav-badge" *ngIf="!isSidebarCollapsed() && item.count">{{ item.count }}</span>
-            </a>
+          @for (item of filteredNavItems(); track item.route + item.label) {
+            @if (item.isSectionDivider) {
+              <div class="nav-section-divider" *ngIf="!isSidebarCollapsed()">
+                <span class="nav-section-label">{{ item.label }}</span>
+              </div>
+              <div class="nav-section-divider-collapsed" *ngIf="isSidebarCollapsed()"></div>
+            } @else {
+              <a [routerLink]="item.route"
+                 [queryParams]="item.queryParams || {}"
+                 routerLinkActive="active"
+                 class="nav-item"
+                 [class.nav-sub-item]="item.isSubItem">
+                <i [class]="'ph ' + item.icon + ' nav-icon'" [class.sub-icon]="item.isSubItem"></i>
+                <span class="nav-label" *ngIf="!isSidebarCollapsed()">{{ item.label }}</span>
+                <span class="nav-badge" *ngIf="!isSidebarCollapsed() && item.count">{{ item.count }}</span>
+              </a>
+            }
           }
         </nav>
         
@@ -281,6 +293,39 @@ interface NavItem {
 
     .sidebar-nav::-webkit-scrollbar { display: none; }
 
+    /* Section divider */
+    .nav-section-divider {
+      padding: 12px 12px 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .nav-section-divider::before {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--color-border);
+    }
+    .nav-section-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color-text-tertiary, var(--color-text-secondary));
+      white-space: nowrap;
+    }
+    .nav-section-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--color-border);
+    }
+    .nav-section-divider-collapsed {
+      margin: 8px 12px;
+      height: 1px;
+      background: var(--color-border);
+    }
+
     .nav-item {
       display: flex;
       align-items: center;
@@ -290,6 +335,29 @@ interface NavItem {
       color: var(--color-text-secondary);
       transition: var(--transition);
       gap: 12px;
+    }
+
+    /* Sub-items */
+    .nav-sub-item {
+      padding: 7px 12px 7px 8px;
+      margin-left: 4px;
+      border-left: 2px solid var(--color-border);
+      border-radius: 0 8px 8px 0;
+    }
+    .nav-sub-item:hover {
+      border-left-color: var(--primary);
+    }
+    .nav-sub-item.active {
+      border-left-color: var(--primary);
+    }
+    .sub-indent {
+      display: none;
+    }
+    .sub-icon {
+      font-size: 14px !important;
+    }
+    .nav-sub-item .nav-label {
+      font-size: 13px;
     }
 
     .nav-item:hover {
@@ -651,6 +719,7 @@ export class AppShellComponent implements OnInit, OnDestroy {
   isHeaderMenuOpen = signal(false);
   userProfile = signal<UserProfileDTO | null>(null);
   profileImageUrl = signal<string | null>(null);
+  myOrgs = signal<Organisation[]>([]);
   private destroy$ = new Subject<void>();
   linkedAccountStatus = signal<LinkedAccountStatus | null>(null);
   isSwitchingAccount = signal(false);
@@ -661,40 +730,42 @@ export class AppShellComponent implements OnInit, OnDestroy {
     { label: 'Resume Builder', route: '/profile', queryParams: { tab: 'resume' }, icon: 'ph-file-text' },
     { label: 'Job Application', route: '/jobs', icon: 'ph-briefcase' },
     { label: 'Mock Interview', route: '/mock-interview', icon: 'ph-video-camera' },
-    { label: 'Upskilling', route: '/upskilling', icon: 'ph-chalkboard-teacher' },
-    { label: 'Analytics', route: '/insights', icon: 'ph-chart-bar' },
+    { label: 'Upskilling',     route: '/upskilling',    icon: 'ph-chalkboard-teacher' },
+    { label: 'Projects',       route: '/projects',      icon: 'ph-handshake' },
+    { label: 'Analytics',      route: '/insights',      icon: 'ph-chart-bar' },
   ];
-
-  navItems = signal<NavItem[]>(this.buildNav());
-
-  private buildNav(role?: string): NavItem[] {
-    const r = role ?? this.authService?.getRole() ?? 'candidate';
-  private buildNav(): NavItem[] {
-    const role = this.authService?.getRole() ?? '';
-    const items = [...this.baseNav];
-    if (r === 'employer' || r === 'admin') {
-      items.splice(4, 0, { label: 'Post a Job', route: '/job-posting', icon: 'ph-plus-circle' });
-    }
-    items.push({ label: 'Organisations', route: '/organisation', icon: 'ph-buildings' });
-    return items;
-  }
 
   userRole = computed(() => {
     return this.userProfile()?.role || this.authService.getCurrentUser()?.role || 'candidate';
   });
 
+  hasUniversityOrg = computed(() => this.myOrgs().some(o => o.type === 'UNIVERSITY'));
+
   filteredNavItems = computed(() => {
     const role = this.userRole();
-    // Rebuild nav based on reactive role so it's always in sync with no duplicates
-    const items = [...this.baseNav];
+    const isEmployer = role === 'employer';
+    const items: NavItem[] = [...this.baseNav];
     if (role === 'employer' || role === 'admin') {
       items.splice(4, 0, { label: 'Post a Job', route: '/job-posting', icon: 'ph-plus-circle' });
     }
+    // Organisation section divider
+    items.push({ label: 'Organisation', route: '__divider_org__', icon: '', isSectionDivider: true });
     items.push({ label: 'Organisations', route: '/organisation', icon: 'ph-buildings' });
+    // Employer-only org sub-items
+    if (isEmployer) {
+      items.push({ label: 'Org Dashboard',      route: '/organisation/dashboard',        icon: 'ph-gauge',         isSubItem: true });
+      items.push({ label: 'Manage Courses',     route: '/organisation/courses',           icon: 'ph-books',         isSubItem: true });
+      items.push({ label: 'Course Recognition', route: '/organisation/recognitions',      icon: 'ph-certificate',   isSubItem: true });
+      items.push({ label: 'Manage Projects',    route: '/organisation/projects',          icon: 'ph-folder-open',   isSubItem: true });
+      if (this.hasUniversityOrg()) {
+        items.push({ label: 'University Review', route: '/organisation/university-review', icon: 'ph-graduation-cap', isSubItem: true });
+      }
+    }
     return items.filter(item => {
       if (item.label === 'Post a Job' && role !== 'employer' && role !== 'admin') return false;
       if (item.label === 'Job Application' && role !== 'candidate') return false;
       if (item.label === 'Mock Interview' && role !== 'candidate') return false;
+      if (item.label === 'Projects' && role !== 'candidate') return false;
       return true;
     });
   });
@@ -703,6 +774,7 @@ export class AppShellComponent implements OnInit, OnDestroy {
     public authService: AuthService,
     private profileService: ProfileService,
     private settingsService: SettingsService,
+    private orgService: OrganisationService,
     private router: Router,
     @Inject(PLATFORM_ID) private platformId: Object
   ) { }
@@ -728,9 +800,13 @@ export class AppShellComponent implements OnInit, OnDestroy {
           }
         });
 
+      // Load orgs to determine if user has a UNIVERSITY-type org (for University Review nav)
+      this.orgService.getMyOrganisations()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({ next: orgs => this.myOrgs.set(orgs), error: () => {} });
+
       // Update nav when role resolves (async fetch after init)
       this.authService.currentUser$.pipe(takeUntil(this.destroy$)).subscribe(() => {
-        this.navItems.set(this.buildNav());
         this.loadLinkedAccountStatus();
       });
     }

@@ -16,6 +16,8 @@ export interface JobApplication {
   resumeUrl?: string;
   status?: string;
   answers?: JobApplicationAnswer[];
+  /** IDs of UserBadges the candidate attaches to this application. */
+  badgeIds?: string[];
   appliedAt?: string;
   updatedAt?: string;
 }
