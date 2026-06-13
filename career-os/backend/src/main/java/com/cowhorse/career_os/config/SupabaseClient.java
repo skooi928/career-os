@@ -27,11 +27,17 @@ public class SupabaseClient {
         this.apiKey = apiKey;
     }
 
-    public String getServiceKey() { 
-        return serviceKey; 
+    /** Service-role key — bypasses RLS for server-side Storage operations. */
+    public String getServiceKey() {
+        return serviceKey;
     }
-    
-    public void setServiceKey(String serviceKey) { 
-        this.serviceKey = serviceKey; 
+
+    public void setServiceKey(String serviceKey) {
+        this.serviceKey = serviceKey;
+    }
+
+    /** Returns service-key if configured, otherwise falls back to api-key. */
+    public String getStorageKey() {
+        return (serviceKey != null && !serviceKey.isBlank()) ? serviceKey : apiKey;
     }
 }

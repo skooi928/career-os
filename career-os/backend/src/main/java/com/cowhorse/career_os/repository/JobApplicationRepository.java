@@ -11,4 +11,8 @@ import java.util.UUID;
 public interface JobApplicationRepository extends JpaRepository<JobApplication, UUID> {
     List<JobApplication> findByCandidateIdOrderByAppliedAtDesc(UUID candidateId);
     List<JobApplication> findByJobIdOrderByAppliedAtDesc(UUID jobId);
+    long countByJobId(UUID jobId);
+
+    @org.springframework.data.jpa.repository.Query("SELECT a FROM JobApplication a JOIN Job j ON a.jobId = j.id WHERE j.employerId = :employerId ORDER BY a.appliedAt DESC")
+    List<JobApplication> findApplicationsByEmployerId(@org.springframework.data.repository.query.Param("employerId") UUID employerId);
 }

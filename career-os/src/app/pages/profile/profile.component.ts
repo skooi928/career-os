@@ -1,13 +1,20 @@
 import { Component, OnInit, signal, OnDestroy, Inject, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { ProfileService, Experience, Education, Project, Skill, UserProfileDTO } from '../../services/profile.service';
 import { ResumeService } from '../../services/resume.service';
 import { CareerAnalysisService } from '../../services/career-analysis.service';
-import { Subject } from 'rxjs';
+import { BadgeService } from '../../services/badge.service';
+import { UserBadge } from '../../types/upskilling.types';
+import { JobService, Job } from '../../services/job.service';
+import { SavedJobService, SavedJob } from '../../services/saved-job.service';
+import { EventService } from '../../services/event.service';
+import { HttpClient } from '@angular/common/http';
+import { Subject, forkJoin } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { SettingsService, LinkedAccountStatus } from '../../services/settings.service';
 
 interface PersonalInfo {
   firstName: string;
@@ -26,6 +33,7 @@ interface ExpandedSectionsState {
   education: boolean;
   projects: boolean;
   skills: boolean;
+  badges: boolean;
 }
 
 type PageState = 'loading' | 'upload' | 'uploading' | 'portfolio';
@@ -60,7 +68,7 @@ interface SkillCategory {
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.css']
 })
@@ -69,7 +77,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   // Combined tab state
-  mainActiveTab = signal<'details' | 'resume'>('details');
+  mainActiveTab = signal<'details' | 'resume' | 'saved' | 'applications' | 'posted_jobs' | 'received_applications'>('details');
   resumeActiveTab = signal<ResumeActiveTab>('roadmap');
   
   // Sync notice minimization state
@@ -83,6 +91,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
   isDownloading = signal(false);
   isGeneratingRoadmap = signal(false);
   profile = signal<UserProfileDTO | null>(null);
+
+  // Account switching properties
+  linkedAccountStatus = signal<LinkedAccountStatus | null>(null);
+  isSwitchingAccount = signal<boolean>(false);
+  switchError = signal<string | null>(null);
   
   // Roadmap properties
   showRoadmapModal = signal(false);
@@ -136,7 +149,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
     experience: true,
     education: true,
     projects: true,
-    skills: true
+    skills: true,
+    badges: true
   });
   isLoading = signal(false);
   errorMessage = signal<string | null>(null);
@@ -155,6 +169,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   education = signal<Education[]>([]);
   projects = signal<Project[]>([]);
   skills = signal<Skill[]>([]);
+  badges = signal<UserBadge[]>([]);
 
   // Form states for adding new items
   showAddExperience = signal(false);
@@ -179,10 +194,16 @@ export class ProfileComponent implements OnInit, OnDestroy {
   constructor(
     public authService: AuthService,
     private profileService: ProfileService,
+    private badgeService: BadgeService,
     private resumeService: ResumeService,
     private careerAnalysisService: CareerAnalysisService,
+    private jobService: JobService,
+    private savedJobService: SavedJobService,
+    private eventService: EventService,
+    private http: HttpClient,
     private router: Router,
     private route: ActivatedRoute,
+    private settingsService: SettingsService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {}
 
@@ -210,8 +231,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.isSyncNoticeMinimized.set(true);
   }
 
-  switchTab(tab: 'details' | 'resume') {
-    this.mainActiveTab.set(tab);
+  switchTab(tab: 'details' | 'resume' | 'saved' | 'applications' | 'posted_jobs' | 'received_applications') {
+    this.mainActiveTab.set(tab as any);
     if (tab === 'resume') {
       if (this.pageState() === 'portfolio') {
         this.startSyncNoticeTimer();
@@ -231,7 +252,37 @@ export class ProfileComponent implements OnInit, OnDestroy {
         }
       });
       this.loadProfileData();
+
+      const role = this.authService.getRole();
+      if (role === 'employer' || role === 'mentor') {
+        this.loadLinkedAccountStatus();
+      }
     }
+  }
+
+  loadLinkedAccountStatus() {
+    this.settingsService.getLinkedAccountStatus().subscribe({
+      next: (status) => {
+        this.linkedAccountStatus.set(status);
+      },
+      error: (err) => {
+        console.error('Failed to load linked account status', err);
+      }
+    });
+  }
+
+  switchToPersonal() {
+    this.isSwitchingAccount.set(true);
+    this.switchError.set(null);
+    this.authService.switchUserAccount().subscribe({
+      next: (res) => {
+        window.location.href = '/profile?tab=resume';
+      },
+      error: (err) => {
+        this.isSwitchingAccount.set(false);
+        this.switchError.set(err.error?.error || 'Failed to switch account. Please try again.');
+      }
+    });
   }
 
   loadProfileData() {
@@ -269,17 +320,23 @@ export class ProfileComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (profile: UserProfileDTO) => {
           // Update only the profile-specific fields
-          this.personalInfo.update(current => ({
-            ...current,
-            firstName: profile.firstName || current.firstName,
-            lastName: profile.lastName || current.lastName,
-            email: profile.email || current.email,
-            phone: profile.phone || '',
-            location: profile.location || '',
-            bio: profile.bio || '',
-            profileImage: profile.profileImageUrl || '',
-            role: profile.role || current.role
-          }));
+          this.personalInfo.update(current => {
+            const userRole = profile.role || current.role;
+            if ((userRole === 'employer' || userRole === 'mentor') && !this.linkedAccountStatus()) {
+              this.loadLinkedAccountStatus();
+            }
+            return {
+              ...current,
+              firstName: profile.firstName || current.firstName,
+              lastName: profile.lastName || current.lastName,
+              email: profile.email || current.email,
+              phone: profile.phone || '',
+              location: profile.location || '',
+              bio: profile.bio || '',
+              profileImage: profile.profileImageUrl || '',
+              role: userRole
+            };
+          });
 
           if (profile.experiences)
             this.experiences.set(profile.experiences);
@@ -324,6 +381,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
           // Keep the basic user info displayed even if API fails
         }
       });
+
+    // Load badges independently
+    this.badgeService.getMyBadges()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({ next: b => this.badges.set(b), error: () => {} });
   }
 
   toggleSection(section: keyof ExpandedSectionsState) {
@@ -345,6 +407,15 @@ export class ProfileComponent implements OnInit, OnDestroy {
   savePersonalInfo() {
     const form = this.editPersonalForm();
     if (!form) return;
+
+    const currentRole = this.personalInfo().role;
+    if ((currentRole === 'employer' || currentRole === 'mentor') && form.role === 'candidate') {
+      this.errorMessage.set('Employer/Mentor accounts cannot change their role to Candidate.');
+      this.isEditingPersonal.set(false);
+      this.editPersonalForm.set(null);
+      return;
+    }
+
     this.isLoading.set(true);
     const profileDTO = {
       firstName: form.firstName,

@@ -153,7 +153,7 @@ interface RoadmapPath {
     .career-analysis-container { background: var(--color-background); min-height: 100vh; }
     .page-header { display: flex; justify-content: space-between; align-items: center; padding: 40px; background: linear-gradient(135deg, var(--color-primary) 0%, #059669 100%); border-radius: 24px; color: white; box-shadow: 0 10px 30px -10px rgba(5, 150, 105, 0.4); margin-bottom: 40px; }
     .header-content h1 { font-size: 2.25rem; font-weight: 800; margin: 0; }
-    .header-icon { font-size: 5rem; opacity: 0.2; transform: rotate(15deg); }
+    .header-icon { font-size: 5rem; opacity: 1.0; transform: rotate(15deg); }
     
     .roadmap-container { background: var(--color-surface); border-radius: 16px; padding: 32px; border: 1px solid var(--color-border); position: relative; }
     

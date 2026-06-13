@@ -1,16 +1,25 @@
 package com.cowhorse.career_os.security;
 
+import java.util.Base64;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Function;
+
+import javax.crypto.SecretKey;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import com.cowhorse.career_os.repository.UserProfileRepository;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-import javax.crypto.SecretKey;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Function;
 
 @Component
 public class JwtTokenProvider {
@@ -57,8 +66,23 @@ public class JwtTokenProvider {
     }
 
     public String getUidFromToken(String token) {
-        // Supabase JWT tokens use "sub" claim for the UID
-        return getClaimFromToken(token, Claims::getSubject);
+        // Decode JWT payload WITHOUT signature verification so both
+        // backend-generated JWTs and Supabase JWTs are supported.
+        try {
+            String[] parts = token.split("\\.");
+            if (parts.length < 2) throw new com.cowhorse.career_os.exception.AuthenticationException("Invalid JWT format");
+            byte[] payloadBytes = Base64.getUrlDecoder().decode(
+                parts[1].length() % 4 == 0 ? parts[1] : parts[1] + "=".repeat(4 - parts[1].length() % 4)
+            );
+            JsonNode payload = new ObjectMapper().readTree(payloadBytes);
+            JsonNode sub = payload.get("sub");
+            if (sub == null || sub.asText().isBlank()) throw new com.cowhorse.career_os.exception.AuthenticationException("Missing sub claim in token");
+            return sub.asText();
+        } catch (com.cowhorse.career_os.exception.AuthenticationException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new com.cowhorse.career_os.exception.AuthenticationException("Failed to parse JWT: " + e.getMessage());
+        }
     }
 
     public Long getUserIdFromToken(String token) {
@@ -89,6 +113,20 @@ public class JwtTokenProvider {
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
+    }
+
+    /**
+     * Resolves the role of a user from the DB given their UUID string (from JWT sub claim).
+     * Returns "candidate" as default if profile not found.
+     */
+    public String getRoleForUser(String userId, UserProfileRepository userProfileRepo) {
+        try {
+            return userProfileRepo.findByUserId(UUID.fromString(userId))
+                    .map(p -> p.getRole() != null ? p.getRole() : "candidate")
+                    .orElse("candidate");
+        } catch (Exception e) {
+            return "candidate";
+        }
     }
 }
 

@@ -53,32 +53,49 @@ public class ResumeService {
 
     //  ====== MAIN METHOD: upload PDF → call FastAPI → save ===========
 
+    private UUID getDataOwnerId(UUID userId) {
+        UserProfile profile = userProfileRepository.findByUserId(userId).orElse(null);
+        if (profile != null && profile.getLinkedUserId() != null) {
+            UserProfile linkedProfile = userProfileRepository.findByUserId(profile.getLinkedUserId()).orElse(null);
+            if (linkedProfile != null) {
+                if ("candidate".equalsIgnoreCase(profile.getRole())) {
+                    return profile.getUserId();
+                } else if ("candidate".equalsIgnoreCase(linkedProfile.getRole())) {
+                    return linkedProfile.getUserId();
+                }
+            }
+        }
+        return userId;
+    }
+
     public ResumeDTO processAndSaveResume(MultipartFile file, String supabaseUid) throws IOException {
 
         log.info("Processing resume upload for user: {}", supabaseUid);
         UUID userUuid = UUID.fromString(supabaseUid);
+        UUID ownerUuid = getDataOwnerId(userUuid);
+        String ownerSupabaseUid = ownerUuid.toString();
 
         // 1. Call FastAPI with the PDF file
         ResumeDTO resumeData = callFastApiExtraction(file);
         log.info("FastAPI extraction successful for user: {}", supabaseUid);
 
         // 2. Update UserProfile with basic info (name, location, bio/summary)
-        updateUserProfile(userUuid, resumeData);
+        updateUserProfile(ownerUuid, resumeData);
 
         // 3. Clear existing extracted data before saving new
         // This handles re-uploads — user uploads new CV, old data gets replaced
-        clearExistingResumeData(userUuid);
+        clearExistingResumeData(ownerUuid);
 
         // 4. Save all sections
-        saveEducation(userUuid, supabaseUid, resumeData);
-        saveExperience(userUuid, supabaseUid, resumeData);
-        saveProjects(userUuid, supabaseUid, resumeData);
-        saveSkills(userUuid, supabaseUid, resumeData);
-        saveLanguages(userUuid, resumeData);
-        saveAwards(userUuid, resumeData);
-        saveActivities(userUuid, resumeData);
-        saveCertifications(userUuid, resumeData);
-        saveReferences(userUuid, resumeData);
+        saveEducation(ownerUuid, ownerSupabaseUid, resumeData);
+        saveExperience(ownerUuid, ownerSupabaseUid, resumeData);
+        saveProjects(ownerUuid, ownerSupabaseUid, resumeData);
+        saveSkills(ownerUuid, ownerSupabaseUid, resumeData);
+        saveLanguages(ownerUuid, resumeData);
+        saveAwards(ownerUuid, resumeData);
+        saveActivities(ownerUuid, resumeData);
+        saveCertifications(ownerUuid, resumeData);
+        saveReferences(ownerUuid, resumeData);
 
         log.info("Resume saved successfully for user: {}", supabaseUid);
         return resumeData;
@@ -121,8 +138,8 @@ public class ResumeService {
             }
 
             // Convert the data map to ResumeDTO
-            com.fasterxml.jackson.databind.ObjectMapper mapper =
-                    new com.fasterxml.jackson.databind.ObjectMapper();
+            tools.jackson.databind.ObjectMapper mapper =
+                    new tools.jackson.databind.ObjectMapper();
             return mapper.convertValue(dataObj, ResumeDTO.class);
 
         } catch (Exception e) {

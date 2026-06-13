@@ -28,6 +28,19 @@ export class AuthService {
     if (isPlatformBrowser(this.platformId)) {
       const user = this.getUserFromStorage();
       this.currentUserSubject.next(user);
+      // Re-fetch role from backend so it's always fresh
+      if (user?.token) {
+        this.http.get<{ role: string }>(`${this.BACKEND_API_URL}/auth/me/role`, {
+          headers: { Authorization: `Bearer ${user.token}` }
+        }).subscribe({
+          next: ({ role }) => {
+            const updated = { ...user, role };
+            this.storeAuthData(updated);
+            this.currentUserSubject.next(updated);
+          },
+          error: () => {}
+        });
+      }
     }
   }
 
@@ -40,6 +53,7 @@ export class AuthService {
         console.log('✓ Login successful');
         this.storeAuthData(response);
         this.currentUserSubject.next(response);
+        this.fetchAndStoreRole(response.token);
       }),
       catchError(error => {
         console.error('Login failed:', error);
@@ -53,15 +67,13 @@ export class AuthService {
    */
   signup(email: string, password: string, firstName: string, lastName: string): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.BACKEND_API_URL}/auth/signup`, {
-      email,
-      password,
-      firstName,
-      lastName
+      email, password, firstName, lastName
     }).pipe(
       tap(response => {
         console.log('✓ Signup successful');
         this.storeAuthData(response);
         this.currentUserSubject.next(response);
+        this.fetchAndStoreRole(response.token);
       }),
       catchError(error => {
         console.error('Signup failed:', error);
@@ -168,5 +180,42 @@ export class AuthService {
       return userString ? JSON.parse(userString) : null;
     }
     return null;
+  }
+
+  // ── Role helpers ────────────────────────────────────────────────────────────
+
+  getRole(): string {
+    return this.currentUserSubject.value?.role ?? 'candidate';
+  }
+
+  isAdmin(): boolean { return this.getRole() === 'admin'; }
+  isEmployer(): boolean { return this.getRole() === 'employer'; }
+  isCandidate(): boolean { return this.getRole() === 'candidate'; }
+  switchUserAccount(): Observable<AuthResponse> {
+    const token = this.getToken();
+    return this.http.post<AuthResponse>(`${this.BACKEND_API_URL}/settings/switch`, {}, {
+      headers: { Authorization: `Bearer ${token}` }
+    }).pipe(
+      tap(response => {
+        this.storeAuthData(response);
+        this.currentUserSubject.next(response);
+      })
+    );
+  }
+
+  private fetchAndStoreRole(token: string): void {
+    this.http.get<{ role: string }>(`${this.BACKEND_API_URL}/auth/me/role`, {
+      headers: { Authorization: `Bearer ${token}` }
+    }).subscribe({
+      next: ({ role }) => {
+        const current = this.currentUserSubject.value;
+        if (current) {
+          const updated = { ...current, role };
+          this.storeAuthData(updated);
+          this.currentUserSubject.next(updated);
+        }
+      },
+      error: () => {}
+    });
   }
 }
