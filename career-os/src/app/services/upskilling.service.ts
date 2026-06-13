@@ -15,7 +15,7 @@ export class UpskillingService {
   readonly enrollments = signal<CourseEnrollment[]>([]);
   private _enrollmentsLoaded = false;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   // ── Public ──────────────────────────────────────────────────────────────────
 
@@ -58,18 +58,17 @@ export class UpskillingService {
    * Fetches enrollments once and caches in shared signal.
    * Subsequent calls are no-ops unless forceRefresh=true.
    */
-loadEnrollments(forceRefresh = false): void {
-  if (this._enrollmentsLoaded && !forceRefresh) return;
-  this.http.get<CourseEnrollment[]>(`${this.base}/my-enrollments`).subscribe({
-    next: list => {
-      this.enrollments.set(list);
-      this._enrollmentsLoaded = true;
-    },
-    error: () => {
-      this._enrollmentsLoaded = false;
-    }
-  });
-}
+  loadEnrollments(forceRefresh = false): void {
+    if (this._enrollmentsLoaded && !forceRefresh) return;
+    this.http.get<CourseEnrollment[]>(`${this.base}/my-enrollments`).subscribe({
+      next: list => {
+        this.enrollments.set(list);
+        this._enrollmentsLoaded = true;
+      },
+      error: () => {
+        this._enrollmentsLoaded = false;
+      }
+    });
   }
 
   getMyStats(): Observable<LearnerStats> {

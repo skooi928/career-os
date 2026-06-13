@@ -669,8 +669,6 @@ export class AppShellComponent implements OnInit, OnDestroy {
 
   private buildNav(role?: string): NavItem[] {
     const r = role ?? this.authService?.getRole() ?? 'candidate';
-  private buildNav(): NavItem[] {
-    const role = this.authService?.getRole() ?? '';
     const items = [...this.baseNav];
     if (r === 'employer' || r === 'admin') {
       items.splice(4, 0, { label: 'Post a Job', route: '/job-posting', icon: 'ph-plus-circle' });
