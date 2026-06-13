@@ -364,6 +364,15 @@ export class ProfileComponent implements OnInit, OnDestroy {
   savePersonalInfo() {
     const form = this.editPersonalForm();
     if (!form) return;
+
+    const currentRole = this.personalInfo().role;
+    if ((currentRole === 'employer' || currentRole === 'mentor') && form.role === 'candidate') {
+      this.errorMessage.set('Employer/Mentor accounts cannot change their role to Candidate.');
+      this.isEditingPersonal.set(false);
+      this.editPersonalForm.set(null);
+      return;
+    }
+
     this.isLoading.set(true);
     const profileDTO = {
       firstName: form.firstName,

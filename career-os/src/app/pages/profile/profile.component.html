@@ -169,7 +169,7 @@
             <label for="role">Role</label>
             <select id="role" [(ngModel)]="editPersonalForm()!.role" class="form-input"
               style="height: auto; padding: 10px;">
-              <option value="candidate">Candidate</option>
+              <option value="candidate" *ngIf="personalInfo().role !== 'employer' && personalInfo().role !== 'mentor'">Candidate</option>
               <option value="employer">Employer</option>
               <option value="mentor">Mentor</option>
             </select>

@@ -127,6 +127,11 @@ public class ProfileService {
         if (profileDTO.getRole() != null && !profileDTO.getRole().isEmpty()) {
             String newRole = profileDTO.getRole();
             if (!newRole.equalsIgnoreCase(loggedInProfile.getRole())) {
+                String currentRole = loggedInProfile.getRole();
+                if (("employer".equalsIgnoreCase(currentRole) || "mentor".equalsIgnoreCase(currentRole))
+                        && "candidate".equalsIgnoreCase(newRole)) {
+                    throw new IllegalArgumentException("Employer or mentor accounts cannot change their role to candidate");
+                }
                 loggedInProfile.setRole(newRole);
                 onboardingService.initializeRoleSpecificRecords(supabaseUid, newRole);
                 userProfileRepository.save(loggedInProfile);
