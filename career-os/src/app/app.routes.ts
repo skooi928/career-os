@@ -27,8 +27,14 @@ import { OrgVerificationsComponent } from './pages/organisation/org-verification
 import { OrgPublicComponent } from './pages/organisation/org-public/org-public.component';
 import { OrgReviewComponent } from './pages/organisation/org-review/org-review.component';
 import { AdminOrganisationsComponent } from './pages/admin/admin-organisations/admin-organisations.component';
+import { ProjectsBrowseComponent } from './pages/projects/projects-browse.component';
+import { OrgProjectsComponent } from './pages/organisation/org-projects/org-projects.component';
+import { OrgRecognitionsComponent } from './pages/organisation/org-recognitions/org-recognitions.component';
+import { UniversityReviewComponent } from './pages/organisation/university-review/university-review.component';
 import { roleGuard } from './guards/role.guard';
 import { SettingsComponent } from './pages/settings/settings.component';
+import { OrgSurveysComponent } from './pages/organisation/org-surveys/org-surveys.component';
+import { EmployeeSurveysComponent } from './pages/surveys/employee-surveys.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -66,8 +72,15 @@ export const routes: Routes = [
       { path: 'organisation/courses', component: OrgCoursesComponent, canActivate: [roleGuard(['employer', 'admin'])] },
       { path: 'organisation/members', component: OrgMembersComponent, canActivate: [roleGuard(['employer', 'admin'])] },
       { path: 'organisation/verifications', component: OrgVerificationsComponent, canActivate: [roleGuard(['employer', 'admin'])] },
+      { path: 'organisation/projects', component: OrgProjectsComponent, canActivate: [roleGuard(['employer'])] },
+      { path: 'organisation/recognitions', component: OrgRecognitionsComponent, canActivate: [roleGuard(['employer'])] },
+      { path: 'organisation/university-review', component: UniversityReviewComponent, canActivate: [roleGuard(['employer'])] },
+      { path: 'organisation/surveys', component: OrgSurveysComponent, canActivate: [roleGuard(['employer', 'admin'])] },
+      { path: 'surveys', component: EmployeeSurveysComponent, canActivate: [authGuard] },
       { path: 'organisation/:id/review', component: OrgReviewComponent, canActivate: [roleGuard(['admin'])] },
       { path: 'organisation/:id', component: OrgPublicComponent },
+      // Projects marketplace
+      { path: 'projects', component: ProjectsBrowseComponent },
       // Admin
       { path: 'admin/organisations', component: AdminOrganisationsComponent, canActivate: [roleGuard(['admin'])] },
       { path: '**', component: PageNotFoundComponent },

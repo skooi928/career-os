@@ -6,7 +6,7 @@ export type PillType =
   | 'PENDING' | 'IN_PROGRESS'
   | 'REJECTED' | 'DROPPED'
   | 'INDUSTRY' | 'UNIVERSITY'
-  | 'ORG_ADMIN' | 'HR' | 'MENTOR' | 'REVIEWER';
+  | 'ORG_ADMIN' | 'HR' | 'MENTOR' | 'REVIEWER' | 'MEMBER';
 
 @Component({
   selector: 'app-status-pill',
@@ -43,7 +43,7 @@ export class StatusPillComponent {
     const green  = ['VERIFIED', 'APPROVED', 'COMPLETED'];
     const yellow = ['PENDING', 'IN_PROGRESS'];
     const red    = ['REJECTED', 'DROPPED'];
-    const blue   = ['INDUSTRY', 'HR', 'MENTOR'];
+    const blue   = ['INDUSTRY', 'HR', 'MENTOR', 'MEMBER'];
     const purple = ['UNIVERSITY', 'REVIEWER'];
     const gray   = ['ORG_ADMIN'];
     if (green.includes(this.status))  return 'green';

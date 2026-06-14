@@ -6,7 +6,8 @@ import { OrganisationService } from '../../../services/organisation.service';
 import { AuthService } from '../../../services/auth.service';
 import { FileUploadComponent } from '../../../components/file-upload/file-upload.component';
 import { Organisation, CreateOrganisationRequest, OrganisationMember } from '../../../types/upskilling.types';
-
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 type View = 'list' | 'create';
 type UploadState = { orgId: string; error: string; uploading: boolean } | null;
 
@@ -507,11 +508,13 @@ type UploadState = { orgId: string; error: string; uploading: boolean } | null;
 export class OrgListComponent implements OnInit {
   private orgService = inject(OrganisationService);
   private authService = inject(AuthService);
+  private destroy$ = new Subject<void>();
 
-  private _role = this.authService.getCurrentUser()?.role ?? 'candidate';
-  isAdmin = signal(this._role === 'admin');
-  isEmployer = signal(this._role === 'employer');
-  isEmployerOrMentor = signal(this._role === 'employer' || this._role === 'mentor');
+  // Reactive role — updates when async /auth/me/role refresh completes
+  private _roleSignal = signal(this.authService.getCurrentUser()?.role ?? 'candidate');
+  isAdmin            = computed(() => this._roleSignal() === 'admin');
+  isEmployer         = computed(() => this._roleSignal() === 'employer');
+  isEmployerOrMentor = computed(() => this._roleSignal() === 'employer' || this._roleSignal() === 'mentor');
   allOrgs = signal<Organisation[]>([]);
   pendingOrgs = computed(() => this.allOrgs().filter(o => o.verificationStatus === 'PENDING'));
   approvedAdminOrgs = computed(() => this.allOrgs().filter(o => o.verificationStatus === 'VERIFIED'));
@@ -550,20 +553,25 @@ export class OrgListComponent implements OnInit {
   constructor() { }
 
   ngOnInit() {
-    const admin = this.isAdmin();
-    const isEmpOrMen = this.isEmployerOrMentor();
+    // Always load verified orgs (visible to all roles)
+    this.orgService.getVerifiedOrganisations().subscribe({
+      next: orgs => { this.verifiedOrgs.set(orgs); this.isLoading.set(false); },
+      error: () => this.isLoading.set(false)
+    });
 
-    if (admin) {
-      this.orgService.getAllOrganisations().subscribe({
-        next: orgs => { this.allOrgs.set(orgs); this.isLoading.set(false); },
-        error: () => this.isLoading.set(false)
-      });
-    } else {
-      this.orgService.getVerifiedOrganisations().subscribe({
-        next: orgs => { this.verifiedOrgs.set(orgs); this.isLoading.set(false); },
-        error: () => this.isLoading.set(false)
-      });
-      if (isEmpOrMen) {
+    // Keep role signal in sync — fires immediately with cached value, then
+    // again when async /auth/me/role refresh resolves
+    this.authService.currentUser$.pipe(takeUntil(this.destroy$)).subscribe(user => {
+      if (!user?.role) return;
+      this._roleSignal.set(user.role);
+
+      if (user.role === 'admin' && this.allOrgs().length === 0) {
+        this.orgService.getAllOrganisations().subscribe({
+          next: orgs => this.allOrgs.set(orgs),
+          error: () => {}
+        });
+      }
+      if ((user.role === 'employer' || user.role === 'admin' || user.role === 'mentor') && this.myOrgs().length === 0) {
         this.orgService.getMyOrganisations().subscribe({
           next: orgs => this.myOrgs.set(orgs),
           error: () => { }
@@ -573,7 +581,7 @@ export class OrgListComponent implements OnInit {
           error: () => { }
         });
       }
-    }
+    });
   }
 
   setView(v: View) {
@@ -732,4 +740,6 @@ export class OrgListComponent implements OnInit {
     this.toast.set(msg);
     setTimeout(() => this.toast.set(''), 4000);
   }
+
+  ngOnDestroy() { this.destroy$.next(); this.destroy$.complete(); }
 }

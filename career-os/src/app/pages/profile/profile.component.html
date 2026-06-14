@@ -567,14 +567,17 @@
           <p>No badges yet. Complete courses to earn digital credentials.</p>
           <a routerLink="/upskilling">Browse Courses</a>
         </div>
-        <div class="badges-grid">
+        <div *ngIf="badges().length > 0" class="badges-grid">
           <div *ngFor="let b of badges()" class="badge-item">
-            <div class="badge-icon">🏅</div>
+            <div class="badge-icon">
+              <img *ngIf="b.badge?.badgeImageUrl; else badgeEmoji" [src]="b.badge!.badgeImageUrl" [alt]="b.badge?.name" class="badge-img">
+              <ng-template #badgeEmoji>🎖️</ng-template>
+            </div>
             <div class="badge-info">
               <strong>{{ b.badge?.name || 'Badge' }}</strong>
-              <span class="badge-org">{{ b.badge?.organisation?.name }}</span>
-              <span class="badge-status" [class.verified]="b.verificationStatus === 'VERIFIED'">{{ b.verificationStatus
-                }}</span>
+              <span class="badge-skill" *ngIf="b.badge?.skillTag">{{ b.badge!.skillTag }}</span>
+              <span class="badge-desc" *ngIf="b.badge?.description">{{ b.badge!.description }}</span>
+              <span class="badge-status" [class.verified]="b.verificationStatus === 'VERIFIED'">{{ b.verificationStatus }}</span>
             </div>
           </div>
         </div>

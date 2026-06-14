@@ -1,0 +1,15 @@
+package com.cowhorse.career_os.entity;
+
+public enum QuestionCategory {
+    JOB_SATISFACTION,
+    WORK_ENVIRONMENT,
+    WORK_LIFE_BALANCE,
+    TEAM_COLLABORATION,
+    COMMUNICATION,
+    LEADERSHIP,
+    CAREER_GROWTH,
+    COMPENSATION,
+    MENTAL_WELLBEING,
+    EMPLOYEE_ENGAGEMENT,
+    RETENTION_LIKELIHOOD
+}
