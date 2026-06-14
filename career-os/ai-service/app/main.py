@@ -36,8 +36,8 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://career-gwx2o6pz1-skooi928s-projects.vercel.app/",
-        "http://localhost:8080", # yet to add the actual deployed backend url
+        "https://career-os-mauve-three.vercel.app/",
+        "https://career-os-production-6ab0.up.railway.app/", # yet to add the actual deployed backend url
     ],
     allow_credentials=True,
     allow_methods=["*"],
