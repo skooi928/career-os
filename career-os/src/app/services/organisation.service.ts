@@ -6,10 +6,11 @@ import {
   CreateOrganisationRequest, UpdateOrganisationRequest,
   InviteMemberRequest, OrgDashboardStats
 } from '../types/upskilling.types';
+import { environment } from '../../environments/environment.prod';
 
 @Injectable({ providedIn: 'root' })
 export class OrganisationService {
-  private base = 'http://localhost:8080/api/organisations';
+  private base = `${environment.apiUrl}/api/organisations`;
 
   constructor(private http: HttpClient) {}
 

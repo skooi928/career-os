@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SettingsService, LinkedAccountStatus } from '../../services/settings.service';
 import { AuthService } from '../../services/auth.service';
+import { environment } from '../../../environments/environment.prod';
 
 @Component({
   selector: 'app-settings',
@@ -302,7 +303,7 @@ export class SettingsComponent implements OnInit {
       return;
     }
     // Redirect browser to link endpoint
-    window.location.href = `http://localhost:8080/api/auth/azure/link?token=${encodeURIComponent(token)}`;
+    window.location.href = `${environment.apiUrl}/api/auth/azure/link?token=${encodeURIComponent(token)}`;
   }
 
   onLinkPersonal() {

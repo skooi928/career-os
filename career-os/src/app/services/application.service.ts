@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { AuthService } from './auth.service';
+import { environment } from '../../environments/environment.prod';
 
 export interface JobApplicationAnswer {
   id?: string;
@@ -26,7 +27,7 @@ export interface JobApplication {
   providedIn: 'root'
 })
 export class ApplicationService {
-  private readonly API_URL = 'http://localhost:8080/api/applications';
+  private readonly API_URL = `${environment.apiUrl}/api/applications`;
 
   constructor(private http: HttpClient, private authService: AuthService) {}
 

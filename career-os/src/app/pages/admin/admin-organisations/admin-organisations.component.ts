@@ -2,6 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Organisation } from '../../../types/upskilling.types';
+import { environment } from '../../../../environments/environment.prod';
 
 @Component({
   selector: 'app-admin-organisations',
@@ -120,7 +121,7 @@ export class AdminOrganisationsComponent implements OnInit {
   orgs = signal<Organisation[]>([]);
   toast = signal('');
 
-  private base = 'http://localhost:8080/api/admin';
+  private base = `${environment.apiUrl}/api/admin`;
 
   constructor(private http: HttpClient) {}
 

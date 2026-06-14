@@ -5,10 +5,11 @@ import {
   EmployeeSurvey, SurveyWithCount, SurveyQuestion,
   SurveyAnalytics, AiInsight, AnswerInput
 } from '../types/upskilling.types';
+import { environment } from '../../environments/environment.prod';
 
 @Injectable({ providedIn: 'root' })
 export class SurveyService {
-  private base = 'http://localhost:8080/api/surveys';
+  private base = `${environment.apiUrl}/api/surveys`;
 
   constructor(private http: HttpClient) {}
 

@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { AuthService } from './auth.service';
+import { environment } from '../../environments/environment.prod';
 
 export interface StartSessionRequest {
   userId: string;
@@ -53,7 +54,7 @@ export interface InterviewEvaluation {
   providedIn: 'root'
 })
 export class MockInterviewService {
-  private readonly API_URL = 'http://localhost:8080/api/mock-interview';
+  private readonly API_URL = `${environment.apiUrl}/api/mock-interview`;
 
   constructor(private http: HttpClient, private authService: AuthService) {}
 

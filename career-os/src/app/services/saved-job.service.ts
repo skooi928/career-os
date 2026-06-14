@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { AuthService } from './auth.service';
+import { environment } from '../../environments/environment.prod';
 
 export interface SavedJob {
   id?: number;
@@ -14,7 +15,7 @@ export interface SavedJob {
   providedIn: 'root'
 })
 export class SavedJobService {
-  private readonly API_URL = 'http://localhost:8080/api/saved-jobs';
+  private readonly API_URL = `${environment.apiUrl}/api/saved-jobs`;
 
   constructor(private http: HttpClient, private authService: AuthService) {}
 

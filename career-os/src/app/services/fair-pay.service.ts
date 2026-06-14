@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment.prod';
 
 export interface FairPayCompensationBreakdown {
   base: number;
@@ -41,7 +42,7 @@ export interface FairPayHistoryEntry {
 @Injectable({ providedIn: 'root' })
 export class FairPayService {
   private readonly http = inject(HttpClient);
-  private readonly API_URL = 'http://localhost:8080/api/fair-pay';
+  private readonly API_URL = `${environment.apiUrl}/api/fair-pay`;
 
   // JWT interceptor automatically attaches Authorization header
   analyze(jobTitle: string, location: string, employmentType: string): Observable<FairPayResult> {

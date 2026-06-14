@@ -5,10 +5,11 @@ import {
   IndustryProject, ProjectRequiredBadge, ProjectApplication,
   EligibilityResult, CreateProjectRequest
 } from '../types/upskilling.types';
+import { environment } from '../../environments/environment.prod';
 
 @Injectable({ providedIn: 'root' })
 export class ProjectService {
-  private base = 'http://localhost:8080/api/industry-projects';
+  private base = `${environment.apiUrl}/api/industry-projects`;
 
   constructor(private http: HttpClient) {}
 

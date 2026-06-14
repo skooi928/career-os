@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ProfileService, UserProfileDTO } from './profile.service';
+import { environment } from '../../environments/environment.prod';
 
 export interface CareerPrediction {
   id?: number;
@@ -52,7 +53,7 @@ export interface CareerTrajectoryPoint {
   providedIn: 'root'
 })
 export class CareerAnalysisService {
-  private readonly API_URL = 'http://localhost:8080/api/career-analysis';
+  private readonly API_URL = `${environment.apiUrl}/api/career-analysis`;
 
   constructor(
     private http: HttpClient,

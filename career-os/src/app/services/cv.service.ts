@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment.prod';
 
 export interface CvGenerateRequest {
   user_id: string;
@@ -54,7 +55,7 @@ export class CvService {
   // FastAPI runs on 8000, Spring Boot on 8080
   // CV endpoints go directly to FastAPI
   private aiUrl = 'http://localhost:8000/cv';
-  private springUrl = 'http://localhost:8080/api/forum';
+  private springUrl = `${environment.apiUrl}/api/forum`;
 
   /**
    * GET /cv/preview/{user_id}

@@ -1,6 +1,7 @@
 import { Injectable, NgZone } from '@angular/core';
 import { Subject, Observable } from 'rxjs';
 import { AuthService } from './auth.service';
+import { environment } from '../../environments/environment.prod';
 
 @Injectable({
   providedIn: 'root'
@@ -32,7 +33,7 @@ export class EventService {
       this.eventSource.close();
     }
 
-    this.eventSource = new EventSource(`http://localhost:8080/api/events/subscribe/${userId}`);
+    this.eventSource = new EventSource(`${environment.apiUrl}/api/events/subscribe/${userId}`);
 
     this.eventSource.addEventListener('CONNECTED', (event) => {
       console.log('SSE Connected:', event.data);

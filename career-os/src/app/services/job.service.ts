@@ -59,12 +59,13 @@ export interface Job {
 }
 
 import { EventService } from './event.service';
+import { environment } from '../../environments/environment.prod';
 
 @Injectable({
   providedIn: 'root'
 })
 export class JobService {
-  private readonly API_URL = 'http://localhost:8080/api/jobs';
+  private readonly API_URL = `${environment.apiUrl}/api/jobs`;
   private jobsSubject = new BehaviorSubject<Job[]>([]);
   public jobs$ = this.jobsSubject.asObservable();
   private loadingSubject = new BehaviorSubject<boolean>(false);
@@ -111,7 +112,7 @@ export class JobService {
 
     combineLatest([
       this.http.get<Job[]>(this.API_URL, { headers: this.getHeaders() }),
-      this.http.get<Job[]>('http://localhost:8080/api/saved-jobs', { headers: this.getHeaders() })
+      this.http.get<Job[]>(`${environment.apiUrl}/api/saved-jobs`, { headers: this.getHeaders() })
     ]).subscribe({
       next: ([jobsData, savedJobs]) => {
         const savedIds = new Set((savedJobs || []).map(sj => sj.id));
@@ -153,11 +154,11 @@ export class JobService {
   }
 
   saveJob(jobId: string): Observable<any> {
-    return this.http.post('http://localhost:8080/api/saved-jobs', { jobId }, { headers: this.getHeaders() });
+    return this.http.post(`${environment.apiUrl}/api/saved-jobs`, { jobId }, { headers: this.getHeaders() });
   }
 
   unsaveJob(jobId: string): Observable<any> {
-    return this.http.delete(`http://localhost:8080/api/saved-jobs/${jobId}`, { headers: this.getHeaders() });
+    return this.http.delete(`${environment.apiUrl}/api/saved-jobs/${jobId}`, { headers: this.getHeaders() });
   }
 
   addJob(job: Job): Observable<Job> {

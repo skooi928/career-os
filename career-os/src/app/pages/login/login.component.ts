@@ -4,6 +4,7 @@ import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
 import { ThemeToggleComponent } from '../../components/theme-toggle/theme-toggle.component';
+import { environment } from '../../../environments/environment.prod';
 
 @Component({
   selector: 'app-login',
@@ -84,7 +85,7 @@ export class LoginComponent implements OnInit {
     } else {
       this.mentorLoading.set(true);
     }
-    window.location.href = `http://localhost:8080/api/auth/azure/${role}`;
+    window.location.href = `${environment.apiUrl}/api/auth/azure/${role}`;
   }
 
   private disableForm(disabled: boolean): void {

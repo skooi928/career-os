@@ -2,10 +2,11 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { CourseRecognitionRequest, SubmitRecognitionRequest, ReviewDecisionRequest } from '../types/upskilling.types';
+import { environment } from '../../environments/environment.prod';
 
 @Injectable({ providedIn: 'root' })
 export class RecognitionService {
-  private base = 'http://localhost:8080/api/course-recognition';
+  private base = `${environment.apiUrl}/api/course-recognition`;
 
   constructor(private http: HttpClient) {}
 

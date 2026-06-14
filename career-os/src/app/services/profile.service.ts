@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, Subject } from 'rxjs';
+import { environment } from '../../environments/environment.prod';
 
 export interface PersonalInfo {
   firstName: string;
@@ -82,7 +83,7 @@ export interface UserProfileDTO {
   providedIn: 'root'
 })
 export class ProfileService {
-  private readonly API_URL = 'http://localhost:8080/api/profile';
+  private readonly API_URL = `${environment.apiUrl}/api/profile`;
 
   private profileUpdatedSource = new Subject<UserProfileDTO>();
   profileUpdated$ = this.profileUpdatedSource.asObservable();

@@ -2,6 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, interval } from 'rxjs';
 import { switchMap, startWith } from 'rxjs/operators';
+import { environment } from '../../environments/environment.prod';
 
 export interface NotificationDTO {
   id: number;
@@ -19,7 +20,7 @@ export interface NotificationDTO {
 @Injectable({ providedIn: 'root' })
 export class NotificationService {
   private http = inject(HttpClient);
-  private api = 'http://localhost:8080/api/notifications';
+  private api = `${environment.apiUrl}/api/notifications`;
 
   unreadCount = signal(0);
 

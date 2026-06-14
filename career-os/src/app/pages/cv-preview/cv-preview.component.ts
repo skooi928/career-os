@@ -7,6 +7,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 import { CvService, CvSuggestion } from '../../services/cv.service';
+import { environment } from '../../../environments/environment.prod';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -178,7 +179,7 @@ export class CvPreviewComponent implements OnInit, OnDestroy {
           this.isRefreshingPreview.set(false);
         },
         error: () => {
-          const url = `http://localhost:8000/cv/preview-html/${user.userId}`;
+          const url = `${environment.apiUrl}/cv/preview-html/${user.userId}`;
           this.previewUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(url));
           this.isRefreshingPreview.set(false);
         }

@@ -6,10 +6,11 @@ import {
   CreateBadgeRequest, IssueBadgeRequest,
   SubmitConversionRequest, ReviewConversionRequest
 } from '../types/upskilling.types';
+import { environment } from '../../environments/environment.prod';
 
 @Injectable({ providedIn: 'root' })
 export class BadgeService {
-  private base = 'http://localhost:8080/api/badges';
+  private base = `${environment.apiUrl}/api/badges`;
 
   constructor(private http: HttpClient) {}
 

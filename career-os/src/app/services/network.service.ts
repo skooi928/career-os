@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment.prod';
 
 export interface NetworkDTO {
   id: number;
@@ -15,7 +16,7 @@ export interface NetworkDTO {
 @Injectable({ providedIn: 'root' })
 export class NetworkService {
   private http = inject(HttpClient);
-  private api = 'http://localhost:8080/api/network';
+  private api = `${environment.apiUrl}/api/network`;
 
   sendRequest(addresseeId: string, supabaseUid: string): Observable<NetworkDTO> {
     return this.http.post<NetworkDTO>(

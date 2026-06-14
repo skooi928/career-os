@@ -5,11 +5,12 @@ import {
   Course, CourseEnrollment, CreateCourseRequest, UpdateProgressRequest,
   UpdateProgressResponse, LearnerStats, JobRequiredBadge, CandidateMatchResponse
 } from '../types/upskilling.types';
+import { environment } from '../../environments/environment.prod';
 
 @Injectable({ providedIn: 'root' })
 export class UpskillingService {
-  private base = 'http://localhost:8080/api/upskilling';
-  private badgeBase = 'http://localhost:8080/api/badges';
+  private base = `${environment.apiUrl}/api/upskilling`;
+  private badgeBase = `${environment.apiUrl}/api/badges`;
 
   /** Shared enrollment cache — updated by enroll(), drop(), updateProgress(). */
   readonly enrollments = signal<CourseEnrollment[]>([]);

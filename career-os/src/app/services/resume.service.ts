@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment.prod';
 
 export interface ResumeUploadResponse {
   message: string;
@@ -20,7 +21,7 @@ export interface RoadmapRequest {
 })
 export class ResumeService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8080/api/resume';
+  private apiUrl = `${environment.apiUrl}/api/resume`;
 
   uploadResume(file: File, supabaseUid: string): Observable<ResumeUploadResponse> {
     const formData = new FormData();

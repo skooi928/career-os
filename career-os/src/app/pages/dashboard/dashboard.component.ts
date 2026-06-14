@@ -15,6 +15,7 @@ import { HttpClient } from '@angular/common/http';
 import { SavedJobService } from '../../services/saved-job.service';
 import { ApplicationService } from '../../services/application.service';
 import { DashboardService } from '../../services/dashboard.service';
+import { environment } from '../../../environments/environment.prod';
 @Component({
   // ... imports and template ...
   selector: 'app-dashboard',
@@ -1349,7 +1350,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           error: (err) => console.error('Error fetching posted jobs', err)
         });
 
-      this.http.get<any[]>(`http://localhost:8080/api/applications/employer/${userId}`, {
+      this.http.get<any[]>(`${environment.apiUrl}/api/applications/employer/${userId}`, {
         headers: { 'Authorization': `Bearer ${this.authService.getToken()}` }
       }).pipe(takeUntil(this.destroy$))
         .subscribe({
@@ -1368,7 +1369,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     updateApplicationStatus(applicationId: string, status: string) {
-      this.http.put<any>(`http://localhost:8080/api/applications/${applicationId}/status`, { status }, {
+      this.http.put<any>(`${environment.apiUrl}/api/applications/${applicationId}/status`, { status }, {
         headers: { 'Authorization': `Bearer ${this.authService.getToken()}` }
       }).pipe(takeUntil(this.destroy$))
         .subscribe({
