@@ -731,11 +731,11 @@ export class AppShellComponent implements OnInit, OnDestroy {
     { label: 'Job Application', route: '/jobs', icon: 'ph-briefcase' },
     { label: 'Mock Interview', route: '/mock-interview', icon: 'ph-video-camera' },
     { label: 'Community Post', route: '/forum', icon: 'ph-chat-circle' },
-    { label: 'Upskilling',     route: '/upskilling',    icon: 'ph-chalkboard-teacher' },
-    { label: 'Projects',       route: '/projects',      icon: 'ph-handshake' },
-    { label: 'Surveys',        route: '/surveys',       icon: 'ph-clipboard-text' },
-    { label: 'Fair Pay',       route: '/fair-pay',      icon: 'ph-currency-circle-dollar' },
-    { label: 'Analytics',      route: '/insights',      icon: 'ph-chart-bar' },
+    { label: 'Upskilling', route: '/upskilling', icon: 'ph-chalkboard-teacher' },
+    { label: 'Projects', route: '/projects', icon: 'ph-handshake' },
+    { label: 'Surveys', route: '/surveys', icon: 'ph-clipboard-text' },
+    { label: 'Fair Pay', route: '/fair-pay', icon: 'ph-currency-circle-dollar' },
+    { label: 'Analytics', route: '/insights', icon: 'ph-chart-bar' },
   ];
 
   navItems = signal<NavItem[]>(this.buildNav());
@@ -759,16 +759,45 @@ export class AppShellComponent implements OnInit, OnDestroy {
   filteredNavItems = computed(() => {
     const role = this.userRole();
     const isEmployer = role === 'employer';
-    const items: NavItem[] = [...this.baseNav];
-    if (role === 'employer' || role === 'admin') {
-      items.splice(4, 0, { label: 'Post a Job', route: '/job-posting', icon: 'ph-plus-circle' });
+    const isAdmin = role === 'admin';
+    const isCandidate = role === 'candidate';
+    const isMentor = role === 'mentor';
+
+    const items: NavItem[] = [
+      { label: 'Dashboard', route: '/dashboard', icon: 'ph-house-simple' },
+      { label: 'Resume Builder', route: '/profile', queryParams: { tab: 'resume' }, icon: 'ph-file-text' }
+    ];
+
+    if (isCandidate) {
+      items.push({ label: 'Job Application', route: '/jobs', icon: 'ph-briefcase' });
+      items.push({ label: 'Mock Interview', route: '/mock-interview', icon: 'ph-video-camera' });
     }
-    // Organisation section divider
+
+    if (isEmployer || isAdmin) {
+      items.push({ label: 'Post a Job', route: '/job-posting', icon: 'ph-plus-circle' });
+    }
+
+    items.push({ label: 'Community Post', route: '/forum', icon: 'ph-chat-circle' });
+    items.push({ label: 'Upskilling',     route: '/upskilling',    icon: 'ph-chalkboard-teacher' });
+
+    if (isCandidate) {
+      items.push({ label: 'Projects',       route: '/projects',      icon: 'ph-handshake' });
+    }
+
+    if (isEmployer || isMentor || isAdmin) {
+      items.push({ label: 'Surveys',        route: '/surveys',       icon: 'ph-clipboard-text' });
+      items.push({ label: 'Fair Pay',       route: '/fair-pay',      icon: 'ph-currency-circle-dollar' });
+    }
+
+    items.push({ label: 'Analytics',      route: '/insights',      icon: 'ph-chart-bar' });
+
+    // Organisation Section
     items.push({ label: 'Organisation', route: '__divider_org__', icon: '', isSectionDivider: true });
-    items.push({ label: 'Organisations', route: '/organisation', icon: 'ph-buildings' });
-    // Employer-only org sub-items
+
     if (isEmployer) {
-      items.push({ label: 'Org Dashboard',      route: '/organisation/dashboard',        icon: 'ph-gauge',         isSubItem: true });
+      // For employers, the primary landing page under "Organisation" is their Org Dashboard,
+      // and all management pages are sub-items under it.
+      items.push({ label: 'Org Dashboard',      route: '/organisation/dashboard',        icon: 'ph-gauge' });
       items.push({ label: 'Manage Courses',     route: '/organisation/courses',           icon: 'ph-books',         isSubItem: true });
       items.push({ label: 'Course Recognition', route: '/organisation/recognitions',      icon: 'ph-certificate',   isSubItem: true });
       items.push({ label: 'Manage Projects',    route: '/organisation/projects',          icon: 'ph-folder-open',   isSubItem: true });
@@ -776,15 +805,14 @@ export class AppShellComponent implements OnInit, OnDestroy {
       if (this.hasUniversityOrg()) {
         items.push({ label: 'University Review', route: '/organisation/university-review', icon: 'ph-graduation-cap', isSubItem: true });
       }
+      // "Organisations" is at the bottom as a regular peer item to browse other organisations
+      items.push({ label: 'Organisations',       route: '/organisation',                  icon: 'ph-buildings' });
+    } else {
+      // For candidates/admins, just show the general Organisations directory
+      items.push({ label: 'Organisations',       route: '/organisation',                  icon: 'ph-buildings' });
     }
-    return items.filter(item => {
-      if (item.label === 'Post a Job' && role !== 'employer' && role !== 'admin') return false;
-      if (item.label === 'Job Application' && role !== 'candidate') return false;
-      if (item.label === 'Mock Interview' && role !== 'candidate') return false;
-      if (item.label === 'Projects' && role !== 'candidate') return false;
-      if (item.label === 'Surveys' && role !== 'candidate') return false;
-      return true;
-    });
+
+    return items;
   });
 
   constructor(
@@ -820,7 +848,7 @@ export class AppShellComponent implements OnInit, OnDestroy {
       // Load orgs to determine if user has a UNIVERSITY-type org (for University Review nav)
       this.orgService.getMyOrganisations()
         .pipe(takeUntil(this.destroy$))
-        .subscribe({ next: orgs => this.myOrgs.set(orgs), error: () => {} });
+        .subscribe({ next: orgs => this.myOrgs.set(orgs), error: () => { } });
 
       // Update nav when role resolves (async fetch after init)
       this.authService.currentUser$.pipe(takeUntil(this.destroy$)).subscribe(() => {

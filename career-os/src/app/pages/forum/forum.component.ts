@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, signal, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
@@ -13,7 +13,7 @@ type FeedFilter = 'all' | 'achievement' | 'project' | 'learning' | 'hiring' | 'g
 @Component({
   selector: 'app-forum',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule],
   templateUrl: './forum.component.html',
   styleUrls: ['./forum.component.css']
 })

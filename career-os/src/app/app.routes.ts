@@ -77,8 +77,8 @@ export const routes: Routes = [
       { path: 'organisation/recognitions', component: OrgRecognitionsComponent, canActivate: [roleGuard(['employer'])] },
       { path: 'organisation/university-review', component: UniversityReviewComponent, canActivate: [roleGuard(['employer'])] },
       { path: 'organisation/surveys', component: OrgSurveysComponent, canActivate: [roleGuard(['employer', 'admin'])] },
-      { path: 'surveys', component: EmployeeSurveysComponent, canActivate: [authGuard] },
-      { path: 'fair-pay', component: FairPayComponent },
+      { path: 'surveys', component: EmployeeSurveysComponent, canActivate: [roleGuard(['employer', 'mentor', 'admin'])] },
+      { path: 'fair-pay', component: FairPayComponent, canActivate: [roleGuard(['employer', 'mentor', 'admin'])] },
       { path: 'organisation/:id/review', component: OrgReviewComponent, canActivate: [roleGuard(['admin'])] },
       { path: 'organisation/:id', component: OrgPublicComponent },
       // Projects marketplace

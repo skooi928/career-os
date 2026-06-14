@@ -81,7 +81,7 @@ import { IndustryProject, ProjectRequiredBadge, EligibilityResult } from '../../
               <div class="missing-badges">
                 <span class="missing-chip" *ngFor="let b of el.missingBadges">{{ b.name }}</span>
               </div>
-              <div class="rec-courses" *ngIf="el.recommendedCourses?.length">
+              <div class="rec-courses" *ngIf="el.recommendedCourses.length">
                 <div class="rec-label">Enrol to earn them:</div>
                 <a routerLink="/upskilling" class="rec-course-link" *ngFor="let c of el.recommendedCourses">
                   <i class="ph ph-arrow-right"></i> {{ c.title }}
