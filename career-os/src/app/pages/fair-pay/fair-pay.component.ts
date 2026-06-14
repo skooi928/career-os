@@ -396,18 +396,20 @@ import { FairPayService, FairPayResult, FairPayHistoryEntry } from '../../servic
     }
     .score-display { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem; }
     .score-circle {
-      width: 64px; height: 64px;
+      width: 72px; height: 72px;
       border-radius: 50%;
-      display: flex; align-items: baseline; justify-content: center;
-      font-weight: 800; font-size: 1.4rem;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      font-weight: 800;
       flex-shrink: 0;
       border: 3px solid;
+      line-height: 1;
     }
     .score-circle.high { border-color: #22c55e; color: #16a34a; }
     .score-circle.medium { border-color: #f59e0b; color: #d97706; }
     .score-circle.low { border-color: #ef4444; color: #dc2626; }
     .score-circle.percentile { border-color: #6366f1; color: #4f46e5; }
-    .score-max { font-size: 0.75rem; font-weight: 400; }
+    .score-number { font-size: 1.4rem; font-weight: 800; line-height: 1; }
+    .score-max { font-size: 0.6rem; font-weight: 500; opacity: 0.75; line-height: 1.4; }
     .score-label { font-size: 0.8rem; color: var(--text-secondary, #64748b); }
     .score-bar { height: 6px; background: var(--border, #e2e8f0); border-radius: 3px; overflow: hidden; }
     .score-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }

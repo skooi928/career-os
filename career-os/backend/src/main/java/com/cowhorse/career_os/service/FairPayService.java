@@ -1,16 +1,12 @@
 package com.cowhorse.career_os.service;
 
-import com.cowhorse.career_os.dto.UserProfileDTO;
-import com.cowhorse.career_os.entity.Badge;
-import com.cowhorse.career_os.entity.FairPayAnalysis;
-import com.cowhorse.career_os.entity.Job;
-import com.cowhorse.career_os.entity.UserBadge;
-import com.cowhorse.career_os.repository.BadgeRepository;
-import com.cowhorse.career_os.repository.FairPayAnalysisRepository;
-import com.cowhorse.career_os.repository.JobRepository;
-import com.cowhorse.career_os.repository.UserBadgeRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -20,8 +16,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import com.cowhorse.career_os.dto.UserProfileDTO;
+import com.cowhorse.career_os.entity.FairPayAnalysis;
+import com.cowhorse.career_os.entity.Job;
+import com.cowhorse.career_os.entity.UserBadge;
+import com.cowhorse.career_os.repository.BadgeRepository;
+import com.cowhorse.career_os.repository.FairPayAnalysisRepository;
+import com.cowhorse.career_os.repository.JobRepository;
+import com.cowhorse.career_os.repository.UserBadgeRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
@@ -60,13 +65,35 @@ public class FairPayService {
             log.warn("Could not load badges for fair pay analysis: {}", e.getMessage());
         }
 
-        // Find market jobs matching job title (case-insensitive, up to 20 jobs)
+        // Find market jobs from public.jobs — broad multi-word matching
         List<Job> allJobs = jobRepository.findAllByOrderByCreatedAtDesc();
-        String titleLower = jobTitle.toLowerCase();
+        String titleLower = jobTitle.toLowerCase().trim();
+        String[] titleWords = titleLower.split("\\s+");
+
+        // Primary: jobs where title contains any word from the search term
         List<Job> matchedJobs = allJobs.stream()
-                .filter(j -> j.getTitle() != null && j.getTitle().toLowerCase().contains(titleLower))
+                .filter(j -> {
+                    if (j.getTitle() == null) return false;
+                    String jt = j.getTitle().toLowerCase();
+                    for (String word : titleWords) {
+                        if (word.length() >= 3 && jt.contains(word)) return true;
+                    }
+                    return false;
+                })
                 .limit(20)
                 .collect(Collectors.toList());
+
+        // Supplement with broader market data if fewer than 5 exact matches
+        if (matchedJobs.size() < 5) {
+            List<UUID> matchedIds = matchedJobs.stream().map(Job::getId).collect(Collectors.toList());
+            List<Job> supplement = allJobs.stream()
+                    .filter(j -> !matchedIds.contains(j.getId()))
+                    .limit(20 - matchedJobs.size())
+                    .collect(Collectors.toList());
+            matchedJobs.addAll(supplement);
+            log.info("Fair pay: only {} title matches found for '{}', supplemented with {} broader market jobs",
+                    matchedIds.size(), jobTitle, supplement.size());
+        }
 
         // Build market_jobs payload
         List<Map<String, Object>> marketJobs = new ArrayList<>();
