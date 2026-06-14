@@ -54,7 +54,7 @@ export class CvService {
 
   // FastAPI runs on 8000, Spring Boot on 8080
   // CV endpoints go directly to FastAPI
-  private aiUrl = 'http://localhost:8000/cv';
+  private aiUrl = 'https://skooi928-career-os.hf.space/cv';
   private springUrl = `${environment.apiUrl}/api/forum`;
 
   /**
