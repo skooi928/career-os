@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'career-os-production-49d5.up.railway.app'
+  apiUrl: 'career-os-production-6ab0.up.railway.app'
 };
