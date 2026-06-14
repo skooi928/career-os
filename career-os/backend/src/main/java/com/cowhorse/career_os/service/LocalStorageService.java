@@ -37,6 +37,7 @@ public class LocalStorageService {
         file.transferTo(destinationFile);
         
         // Return a local URL that can be served by our Spring Boot app
-        return "http://localhost:8080/uploads/" + filename;
+        // return "http://localhost:8080/uploads/" + filename;
+        return "/uploads/" + filename; // Relative URL to be served by Spring Boot
     }
 }

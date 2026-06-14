@@ -66,12 +66,12 @@ public class SupabaseAuthController {
     public void linkAzure(@RequestParam("token") String token, HttpServletResponse response) throws IOException {
         try {
             if (token == null || token.isEmpty()) {
-                response.sendRedirect("http://localhost:4200/settings?error=" + URLEncoder.encode("Missing token", StandardCharsets.UTF_8));
+                response.sendRedirect("https://career-os-mauve-three.vercel.app/settings?error=" + URLEncoder.encode("Missing token", StandardCharsets.UTF_8));
                 return;
             }
             String uid = jwtTokenProvider.getUidFromToken(token);
             if (uid == null || uid.isEmpty()) {
-                response.sendRedirect("http://localhost:4200/settings?error=" + URLEncoder.encode("Invalid token", StandardCharsets.UTF_8));
+                response.sendRedirect("https://career-os-mauve-three.vercel.app/settings?error=" + URLEncoder.encode("Invalid token", StandardCharsets.UTF_8));
                 return;
             }
 
@@ -83,7 +83,7 @@ public class SupabaseAuthController {
 
             authorizeAzureWithRole(response, "employer");
         } catch (Exception e) {
-            response.sendRedirect("http://localhost:4200/settings?error=" + URLEncoder.encode("Link failed: " + e.getMessage(), StandardCharsets.UTF_8));
+            response.sendRedirect("https://career-os-mauve-three.vercel.app/settings?error=" + URLEncoder.encode("Link failed: " + e.getMessage(), StandardCharsets.UTF_8));
         }
     }
 
@@ -113,7 +113,8 @@ public class SupabaseAuthController {
             roleCookie.setMaxAge(300);
             response.addCookie(roleCookie);
 
-            String redirectUri = "http://localhost:8080/api/auth/callback";
+            // String redirectUri = "http://localhost:8080/api/auth/callback";
+            String redirectUri = "/api/auth/callback";
             String authUrl = supabaseUrl + "/auth/v1/authorize?provider=azure" +
                              "&redirect_to=" + URLEncoder.encode(redirectUri, StandardCharsets.UTF_8) +
                              "&code_challenge=" + codeChallenge +
@@ -134,8 +135,8 @@ public class SupabaseAuthController {
             @RequestParam(required = false) String error_description,
             HttpServletResponse response) throws IOException {
 
-        String frontendCallbackUrl = "http://localhost:4200/auth-callback";
-        String frontendLoginUrl = "http://localhost:4200/login";
+        String frontendCallbackUrl = "https://career-os-mauve-three.vercel.app/auth-callback";
+        String frontendLoginUrl = "https://career-os-mauve-three.vercel.app/login";
 
         if (error != null) {
             response.sendRedirect(frontendLoginUrl + "?error=" + URLEncoder.encode(error_description != null ? error_description : error, StandardCharsets.UTF_8));
@@ -255,7 +256,7 @@ public class SupabaseAuthController {
                             clearLink.setPath("/api/auth/callback");
                             response.addCookie(clearLink);
 
-                            response.sendRedirect("http://localhost:4200/settings?linked=true");
+                            response.sendRedirect("https://career-os-mauve-three.vercel.app/settings?linked=true");
                             return;
                         }
 
