@@ -15,7 +15,7 @@ export class UpskillingService {
   readonly enrollments = signal<CourseEnrollment[]>([]);
   private _enrollmentsLoaded = false;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   // ── Public ──────────────────────────────────────────────────────────────────
 

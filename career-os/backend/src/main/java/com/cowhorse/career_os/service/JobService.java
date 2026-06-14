@@ -4,8 +4,10 @@ import com.cowhorse.career_os.entity.Job;
 import com.cowhorse.career_os.entity.RoleRequirement;
 import com.cowhorse.career_os.entity.RoleTechnicalSkillRequirement;
 import com.cowhorse.career_os.entity.RoleMustHaveRequirement;
+import com.cowhorse.career_os.entity.OrganisationMember;
 import com.cowhorse.career_os.repository.JobRepository;
 import com.cowhorse.career_os.repository.JobApplicationRepository;
+import com.cowhorse.career_os.repository.OrganisationMemberRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,14 +17,23 @@ public class JobService {
     private final JobRepository jobRepository;
     private final SseService sseService;
     private final JobApplicationRepository jobApplicationRepository;
+    private final OrganisationMemberRepository organisationMemberRepository;
 
-    public JobService(JobRepository jobRepository, SseService sseService, JobApplicationRepository jobApplicationRepository) {
+    public JobService(JobRepository jobRepository, SseService sseService, JobApplicationRepository jobApplicationRepository, OrganisationMemberRepository organisationMemberRepository) {
         this.jobRepository = jobRepository;
         this.sseService = sseService;
         this.jobApplicationRepository = jobApplicationRepository;
+        this.organisationMemberRepository = organisationMemberRepository;
     }
 
     public Job createJob(Job job) {
+        if (job.getEmployerId() != null) {
+            List<OrganisationMember> memberships = organisationMemberRepository.findByUserId(job.getEmployerId());
+            if (!memberships.isEmpty()) {
+                job.setOrganisationId(memberships.get(0).getOrganisationId());
+            }
+        }
+
         if (job.getRoleRequirements() != null) {
             for (RoleRequirement req : job.getRoleRequirements()) {
                 req.setJob(job);

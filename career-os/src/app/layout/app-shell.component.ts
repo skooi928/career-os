@@ -730,11 +730,24 @@ export class AppShellComponent implements OnInit, OnDestroy {
     { label: 'Resume Builder', route: '/profile', queryParams: { tab: 'resume' }, icon: 'ph-file-text' },
     { label: 'Job Application', route: '/jobs', icon: 'ph-briefcase' },
     { label: 'Mock Interview', route: '/mock-interview', icon: 'ph-video-camera' },
+    { label: 'Community Post', route: '/forum', icon: 'ph-chat-circle' },
     { label: 'Upskilling',     route: '/upskilling',    icon: 'ph-chalkboard-teacher' },
     { label: 'Projects',       route: '/projects',      icon: 'ph-handshake' },
     { label: 'Surveys',        route: '/surveys',       icon: 'ph-clipboard-text' },
     { label: 'Analytics',      route: '/insights',      icon: 'ph-chart-bar' },
   ];
+
+  navItems = signal<NavItem[]>(this.buildNav());
+
+  private buildNav(role?: string): NavItem[] {
+    const r = role ?? this.authService?.getRole() ?? 'candidate';
+    const items = [...this.baseNav];
+    if (r === 'employer' || r === 'admin') {
+      items.splice(4, 0, { label: 'Post a Job', route: '/job-posting', icon: 'ph-plus-circle' });
+    }
+    items.push({ label: 'Organisations', route: '/organisation', icon: 'ph-buildings' });
+    return items;
+  }
 
   userRole = computed(() => {
     return this.userProfile()?.role || this.authService.getCurrentUser()?.role || 'candidate';
@@ -786,7 +799,7 @@ export class AppShellComponent implements OnInit, OnDestroy {
     if (isPlatformBrowser(this.platformId)) {
       this.loadUserProfile();
       this.loadLinkedAccountStatus();
-      
+
       // Sync user profile name and image when updated in ProfileComponent
       this.profileService.profileUpdated$
         .pipe(takeUntil(this.destroy$))

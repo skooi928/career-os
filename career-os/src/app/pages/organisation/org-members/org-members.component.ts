@@ -128,7 +128,16 @@ export class OrgMembersComponent implements OnInit {
   }
 
   changeRole(m: OrganisationMember, role: OrgMemberRole) {
-    this.orgService.updateMemberRole(this.orgId, m.id, role).subscribe({ next: u => { this.members.update(l => l.map(x => x.id === u.id ? u : x)); this.showToast('Role updated.'); }, error: () => this.showToast('Failed to update role.') });
+    this.orgService.updateMemberRole(this.orgId, m.id, role).subscribe({
+      next: u => {
+        this.members.update(l => l.map(x => x.id === u.id ? u : x));
+        this.showToast('Role updated.');
+      },
+      error: (err) => {
+        const msg = err?.error?.error || 'Failed to update role.';
+        this.showToast(msg);
+      }
+    });
   }
 
   removeMember(m: OrganisationMember) {

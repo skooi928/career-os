@@ -26,6 +26,9 @@ public class Job {
     @Column(name = "employer_id")
     private UUID employerId;
 
+    @Column(name = "organisation_id")
+    private UUID organisationId;
+
     @Column(nullable = false)
     private String title;
 

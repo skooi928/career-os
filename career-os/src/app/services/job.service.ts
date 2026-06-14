@@ -38,6 +38,7 @@ export interface JobBenefit {
 export interface Job {
   id?: string;
   employerId?: string;
+  organisationId?: string;
   title: string;
   company: string;
   initials: string;
