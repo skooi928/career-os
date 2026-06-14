@@ -114,7 +114,7 @@ public class SupabaseAuthController {
             response.addCookie(roleCookie);
 
             // String redirectUri = "http://localhost:8080/api/auth/callback";
-            String redirectUri = "/api/auth/callback";
+            String redirectUri = "https://career-os-production-6ab0.up.railway.app/api/auth/callback";
             String authUrl = supabaseUrl + "/auth/v1/authorize?provider=azure" +
                              "&redirect_to=" + URLEncoder.encode(redirectUri, StandardCharsets.UTF_8) +
                              "&code_challenge=" + codeChallenge +
