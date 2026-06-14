@@ -5,7 +5,7 @@ import { Observable } from 'rxjs';
 export interface FairPayCompensationBreakdown {
   base: number;
   benefits: number;
-  totalPackage: number;
+  total_package: number;
 }
 
 export interface FairPaySkillImpact {
@@ -14,19 +14,19 @@ export interface FairPaySkillImpact {
 }
 
 export interface FairPayResult {
-  minSalary: number;
-  avgSalary: number;
-  maxSalary: number;
+  min_salary: number;
+  avg_salary: number;
+  max_salary: number;
   currency: string;
-  marketCompetitivenessScore: number;
+  market_competitiveness_score: number;
   percentile: number;
-  benefitsValueEstimate: number;
-  compensationBreakdown: FairPayCompensationBreakdown;
-  salaryExplanation: string;
-  skillsToIncreaseSalary: FairPaySkillImpact[];
-  certificationsToIncreaseSalary: string[];
-  comparisonSummary: string;
-  aiAvailable: boolean;
+  benefits_value_estimate: number;
+  compensation_breakdown: FairPayCompensationBreakdown;
+  salary_explanation: string;
+  skills_to_increase_salary: FairPaySkillImpact[];
+  certifications_to_increase_salary: string[];
+  comparison_summary: string;
+  ai_available: boolean;
 }
 
 export interface FairPayHistoryEntry {

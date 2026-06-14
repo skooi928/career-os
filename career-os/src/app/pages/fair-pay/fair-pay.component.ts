@@ -70,27 +70,27 @@ import { FairPayService, FairPayResult, FairPayHistoryEntry } from '../../servic
 
       @if (result()) {
         <!-- AI Badge -->
-        <div class="ai-badge" [class.offline]="!result()!.aiAvailable">
-          <i class="ph" [class.ph-robot]="result()!.aiAvailable" [class.ph-database]="!result()!.aiAvailable"></i>
-          {{ result()!.aiAvailable ? 'AI-powered analysis' : 'Market data estimate (AI offline)' }}
+        <div class="ai-badge" [class.offline]="!result()!.ai_available">
+          <i class="ph" [class.ph-robot]="result()!.ai_available" [class.ph-database]="!result()!.ai_available"></i>
+          {{ result()!.ai_available ? 'AI-powered analysis' : 'Market data estimate (AI offline)' }}
         </div>
 
         <!-- Salary Range Cards -->
         <div class="salary-grid">
           <div class="salary-card min">
             <span class="salary-label">Minimum</span>
-            <span class="salary-amount">{{ result()!.currency }} {{ result()!.minSalary | number }}</span>
+            <span class="salary-amount">{{ result()!.currency }} {{ result()!.min_salary | number }}</span>
             <span class="salary-unit">/month</span>
           </div>
           <div class="salary-card avg">
             <span class="salary-label">Average</span>
-            <span class="salary-amount">{{ result()!.currency }} {{ result()!.avgSalary | number }}</span>
+            <span class="salary-amount">{{ result()!.currency }} {{ result()!.avg_salary | number }}</span>
             <span class="salary-unit">/month</span>
             <span class="avg-badge">Market Median</span>
           </div>
           <div class="salary-card max">
             <span class="salary-label">Maximum</span>
-            <span class="salary-amount">{{ result()!.currency }} {{ result()!.maxSalary | number }}</span>
+            <span class="salary-amount">{{ result()!.currency }} {{ result()!.max_salary | number }}</span>
             <span class="salary-unit">/month</span>
           </div>
         </div>
@@ -102,13 +102,13 @@ import { FairPayService, FairPayResult, FairPayHistoryEntry } from '../../servic
             <h3><i class="ph ph-gauge"></i> Market Competitiveness</h3>
             <div class="score-display">
               <div class="score-circle" [class]="scoreClass()">
-                <span class="score-number">{{ result()!.marketCompetitivenessScore }}</span>
+                <span class="score-number">{{ result()!.market_competitiveness_score }}</span>
                 <span class="score-max">/100</span>
               </div>
               <p class="score-label">{{ scoreLabel() }}</p>
             </div>
             <div class="score-bar">
-              <div class="score-fill" [style.width.%]="result()!.marketCompetitivenessScore" [class]="scoreClass()"></div>
+              <div class="score-fill" [style.width.%]="result()!.market_competitiveness_score" [class]="scoreClass()"></div>
             </div>
           </div>
 
@@ -131,21 +131,21 @@ import { FairPayService, FairPayResult, FairPayHistoryEntry } from '../../servic
           <div class="metric-card card">
             <h3><i class="ph ph-gift"></i> Benefits Value</h3>
             <div class="benefit-value">
-              <span class="benefit-amount">{{ result()!.currency }} {{ result()!.benefitsValueEstimate | number }}</span>
+              <span class="benefit-amount">{{ result()!.currency }} {{ result()!.benefits_value_estimate | number }}</span>
               <span class="benefit-unit">/month estimated</span>
             </div>
             <div class="compensation-breakdown">
               <div class="breakdown-row">
                 <span>Base Salary</span>
-                <span>{{ result()!.currency }} {{ result()!.compensationBreakdown.base | number }}</span>
+                <span>{{ result()!.currency }} {{ result()!.compensation_breakdown.base | number }}</span>
               </div>
               <div class="breakdown-row">
                 <span>Benefits</span>
-                <span>{{ result()!.currency }} {{ result()!.compensationBreakdown.benefits | number }}</span>
+                <span>{{ result()!.currency }} {{ result()!.compensation_breakdown.benefits | number }}</span>
               </div>
               <div class="breakdown-row total">
                 <span>Total Package</span>
-                <span>{{ result()!.currency }} {{ result()!.compensationBreakdown.totalPackage | number }}</span>
+                <span>{{ result()!.currency }} {{ result()!.compensation_breakdown.total_package | number }}</span>
               </div>
             </div>
           </div>
@@ -154,13 +154,13 @@ import { FairPayService, FairPayResult, FairPayHistoryEntry } from '../../servic
         <!-- AI Explanation -->
         <div class="card explanation-card">
           <h3><i class="ph ph-lightbulb"></i> Why This Range?</h3>
-          <p>{{ result()!.salaryExplanation }}</p>
+          <p>{{ result()!.salary_explanation }}</p>
         </div>
 
         <!-- Comparison Summary -->
         <div class="card comparison-card">
           <h3><i class="ph ph-arrows-left-right"></i> Profile vs Market</h3>
-          <p>{{ result()!.comparisonSummary }}</p>
+          <p>{{ result()!.comparison_summary }}</p>
         </div>
 
         <!-- Skills & Certs to Increase Salary -->
@@ -168,11 +168,11 @@ import { FairPayService, FairPayResult, FairPayHistoryEntry } from '../../servic
           <!-- Skills -->
           <div class="card boost-card">
             <h3><i class="ph ph-trend-up"></i> Skills That Boost Salary</h3>
-            @if (result()!.skillsToIncreaseSalary.length === 0) {
+            @if (result()!.skills_to_increase_salary.length === 0) {
               <p class="empty-msg">No skill recommendations available.</p>
             } @else {
               <div class="skill-list">
-                @for (skill of result()!.skillsToIncreaseSalary; track skill.skill) {
+                @for (skill of result()!.skills_to_increase_salary; track skill.skill) {
                   <div class="skill-row">
                     <div class="skill-info">
                       <span class="skill-name">{{ skill.skill }}</span>
@@ -188,11 +188,11 @@ import { FairPayService, FairPayResult, FairPayHistoryEntry } from '../../servic
           <!-- Certifications -->
           <div class="card boost-card">
             <h3><i class="ph ph-certificate"></i> Certifications to Pursue</h3>
-            @if (result()!.certificationsToIncreaseSalary.length === 0) {
+            @if (result()!.certifications_to_increase_salary.length === 0) {
               <p class="empty-msg">No certification recommendations available.</p>
             } @else {
               <div class="cert-list">
-                @for (cert of result()!.certificationsToIncreaseSalary; track cert) {
+                @for (cert of result()!.certifications_to_increase_salary; track cert) {
                   <div class="cert-row">
                     <i class="ph ph-seal-check"></i>
                     <span>{{ cert }}</span>
@@ -216,7 +216,7 @@ import { FairPayService, FairPayResult, FairPayHistoryEntry } from '../../servic
                   <span class="history-meta">{{ entry.location || 'Any location' }} · {{ entry.employmentType || 'Any type' }}</span>
                 </div>
                 <div class="history-salary">
-                  <span>{{ entry.result.currency }} {{ entry.result.avgSalary | number }}/mo</span>
+                  <span>{{ entry.result.currency }} {{ entry.result.avg_salary | number }}/mo</span>
                   <span class="history-date">{{ entry.createdAt | date:'dd MMM yyyy' }}</span>
                 </div>
               </div>
@@ -534,14 +534,14 @@ export class FairPayComponent implements OnInit {
   history = signal<FairPayHistoryEntry[]>([]);
 
   scoreClass = computed(() => {
-    const score = this.result()?.marketCompetitivenessScore ?? 0;
+    const score = this.result()?.market_competitiveness_score ?? 0;
     if (score >= 70) return 'high';
     if (score >= 40) return 'medium';
     return 'low';
   });
 
   scoreLabel = computed(() => {
-    const score = this.result()?.marketCompetitivenessScore ?? 0;
+    const score = this.result()?.market_competitiveness_score ?? 0;
     if (score >= 80) return 'Highly competitive market';
     if (score >= 60) return 'Above average demand';
     if (score >= 40) return 'Moderate market demand';
