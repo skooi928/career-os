@@ -13,9 +13,19 @@ Strategy order (best to worst for resume layouts):
 
 from __future__ import annotations
 import re
-import fitz
-import pdfplumber
-import pymupdf4llm
+
+try:
+    import fitz
+    import pymupdf4llm
+    _FITZ_AVAILABLE = True
+except ImportError:
+    _FITZ_AVAILABLE = False
+
+try:
+    import pdfplumber
+    _PDFPLUMBER_AVAILABLE = True
+except ImportError:
+    _PDFPLUMBER_AVAILABLE = False
 
 #quality scoring function
 def _text_quality_score(text: str) -> float:

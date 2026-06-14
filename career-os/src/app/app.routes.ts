@@ -35,6 +35,7 @@ import { roleGuard } from './guards/role.guard';
 import { SettingsComponent } from './pages/settings/settings.component';
 import { OrgSurveysComponent } from './pages/organisation/org-surveys/org-surveys.component';
 import { EmployeeSurveysComponent } from './pages/surveys/employee-surveys.component';
+import { FairPayComponent } from './pages/fair-pay/fair-pay.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -77,6 +78,7 @@ export const routes: Routes = [
       { path: 'organisation/university-review', component: UniversityReviewComponent, canActivate: [roleGuard(['employer'])] },
       { path: 'organisation/surveys', component: OrgSurveysComponent, canActivate: [roleGuard(['employer', 'admin'])] },
       { path: 'surveys', component: EmployeeSurveysComponent, canActivate: [authGuard] },
+      { path: 'fair-pay', component: FairPayComponent },
       { path: 'organisation/:id/review', component: OrgReviewComponent, canActivate: [roleGuard(['admin'])] },
       { path: 'organisation/:id', component: OrgPublicComponent },
       // Projects marketplace
