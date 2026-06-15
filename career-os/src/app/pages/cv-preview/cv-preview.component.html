@@ -25,7 +25,7 @@
       <button class="btn-refresh" (click)="refreshPreview()" [disabled]="isRefreshingPreview()">
         {{ isRefreshingPreview() ? '⟳ Refreshing...' : '⟳ Refresh' }}
       </button>
-      <button class="btn-primary" (click)="analysePosts()" [disabled]="isAnalysing() || !visibleSuggestions.length">
+      <button class="btn-primary" (click)="analysePosts()" [disabled]="isAnalysing()">
         {{ isAnalysing() ? 'Analysing...' : '✨ Analyse Posts' }}
       </button>
       <button class="btn-primary" (click)="downloadPdf()" [disabled]="isDownloading()">
